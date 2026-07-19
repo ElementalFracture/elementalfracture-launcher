@@ -1,0 +1,704 @@
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+
+/* External links — edit in one place. */
+const LINKS = {
+  discord: "https://dsc.gg/elefrac",
+  donate: "https://patreon.com/elementalfracture",
+  patchnotes: "https://docs.elefrac.com/patchnotes",
+  x: "https://x.com/elefracture",
+  twitch: "https://twitch.tv/elementalfracture",
+  youtube: "https://youtube.com/@elementalfracture",
+};
+
+/* Shown when the patchnotes feed isn't reachable. */
+const FALLBACK_NEWS = [
+  {
+    title: "Launcher 7.0",
+    body: "The launcher has been rewritten from scratch: one app now handles installing, patching, tokens and launching — on Windows and Linux.",
+    date: "18 Jul 2026",
+    url: "https://docs.elefrac.com/patchnotes",
+  },
+];
+
+let settings = null;
+let status = null;
+
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, isError = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = isError ? "error" : "";
+  t.hidden = false;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => (t.hidden = true), isError ? 5000 : 2600);
+}
+
+function openLink(url) {
+  invoke("open_url", { url }).catch((e) => toast(String(e), true));
+}
+
+/* ---------------- navigation ---------------- */
+
+document.querySelectorAll(".nav-btn[data-view]").forEach((btn) => {
+  btn.addEventListener("click", () => showView(btn.dataset.view));
+});
+
+function showView(name) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.querySelectorAll(".nav-btn[data-view]").forEach((b) =>
+    b.classList.toggle("active", b.dataset.view === name)
+  );
+  $("view-" + name).classList.add("active");
+  if (name === "mods") {
+    refreshFiles();
+    refreshVersions();
+  }
+}
+
+$("pill-account").addEventListener("click", () => showView("mods"));
+
+/* ---------------- external links ---------------- */
+
+$("btn-discord").addEventListener("click", () => openLink(LINKS.discord));
+document.querySelectorAll(".img-btn[data-url]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const url = LINKS[btn.dataset.url];
+    if (url) openLink(url);
+  });
+});
+
+/* ---------------- hero art rotation ---------------- */
+
+const HERO_ART = [
+  "assets/art/art-0.jpg",
+  "assets/art/art-1.jpg",
+  "assets/art/art-2.jpg",
+  "assets/art/art-3.jpg",
+  "assets/art/art-4.jpg",
+  "assets/art/art-5.jpg",
+  "assets/art/art-6.jpg",
+];
+
+(function heroRotation() {
+  const layers = [$("hero-bg-a"), $("hero-bg-b")];
+  let index = Math.floor(Math.random() * HERO_ART.length);
+  let front = 0;
+
+  // preload so crossfades never pop in half-loaded
+  for (const src of HERO_ART) new Image().src = src;
+
+  function show(i) {
+    const back = 1 - front;
+    layers[back].style.backgroundImage = `url("${HERO_ART[i]}")`;
+    layers[back].classList.add("visible");
+    layers[front].classList.remove("visible");
+    front = back;
+  }
+
+  show(index);
+  setInterval(() => {
+    index = (index + 1) % HERO_ART.length;
+    show(index);
+  }, 18_000);
+})();
+
+/* ---------------- greeting ---------------- */
+
+function greeting() {
+  const name = settings?.username?.trim() || "breaker";
+  const h = new Date().getHours();
+  let lines;
+  if (h >= 22 || h < 5) {
+    lines = [
+      `Burning the midnight oil, ${name}?`,
+      `The Hollow Lands never sleep, ${name}.`,
+    ];
+  } else if (h < 12) {
+    lines = [
+      `Good morning, ${name}!`,
+      `Rise and cast, ${name}!`,
+    ];
+  } else if (h < 17) {
+    lines = [
+      `Good afternoon, ${name}!`,
+      `Perfect weather for a Spellstorm, ${name}.`,
+    ];
+  } else {
+    lines = [
+      `Good evening, ${name}!`,
+      `The storm rolls in at dusk, ${name}.`,
+    ];
+  }
+  // Stable pick for the session so it doesn't flicker between refreshes.
+  if (greeting._pick === undefined) greeting._pick = Math.floor(Math.random() * lines.length);
+  return lines[greeting._pick % lines.length];
+}
+
+function renderAccount() {
+  const name = settings.username?.trim();
+  $("account-name").textContent = name || "Guest";
+  $("account-sub").textContent = name ? "Breaker" : "No token set";
+  $("avatar").textContent = (name || "EF").slice(0, 2).toUpperCase();
+  $("greet").textContent = greeting();
+}
+
+/* ---------------- status / home ---------------- */
+
+async function refreshStatus() {
+  try {
+    status = await invoke("get_status");
+  } catch (e) {
+    console.error(e);
+    return;
+  }
+  const dot = $("game-dot");
+  const state = $("game-state");
+  const hint = $("launch-hint");
+  const installed = status.exe_present;
+
+  $("play-block").hidden = !installed;
+  $("install-block").hidden = installed;
+
+  if (!status.game_path) {
+    dot.className = "dot";
+    state.textContent = "Not installed";
+    $("install-msg").textContent =
+      "No Spellbreak install configured. Locate an existing install or download the game.";
+  } else if (!installed) {
+    dot.className = "dot";
+    state.textContent = "Not found";
+    $("install-msg").textContent =
+      "Spellbreak.exe was not found in the configured folder. Locate the right folder or re-download.";
+  } else {
+    dot.className = "dot ok";
+    state.textContent = status.local_version ? `v${status.local_version}` : "Installed";
+    hint.textContent = "";
+  }
+
+  document.querySelectorAll(".variant-pill").forEach((p) => {
+    p.classList.toggle("active", p.dataset.variant === status.variant);
+  });
+}
+
+document.querySelectorAll(".variant-pill").forEach((pill) => {
+  pill.addEventListener("click", async () => {
+    try {
+      const v = await invoke("set_variant", { variant: pill.dataset.variant });
+      toast(v === "ef" ? "Elemental Fracture balance active" : "Classic Spellbreak active");
+    } catch (e) {
+      toast(String(e), true);
+    }
+    refreshStatus();
+  });
+});
+
+$("btn-launch").addEventListener("click", async () => {
+  try {
+    await invoke("launch_game");
+    toast("Launching Spellbreak…");
+  } catch (e) {
+    toast(String(e), true);
+  }
+});
+
+/* ---------------- game install / download ---------------- */
+
+$("btn-locate").addEventListener("click", async () => {
+  let dir = await invoke("auto_find_game");
+  if (!dir) {
+    toast("Nothing found in the usual places — pick the folder yourself.");
+    dir = await invoke("pick_game_dir", { title: "Select your Spellbreak folder" });
+  }
+  if (!dir) return;
+  settings.game_path = dir;
+  await invoke("save_settings", { settings });
+  fillSettingsForm();
+  toast("Game folder set: " + dir);
+  refreshStatus();
+});
+
+listen("install-progress", (ev) => {
+  const p = ev.payload;
+  const stages = {
+    "download-base": "Downloading game",
+    "extract-base": "Extracting game",
+    "download-patch": "Downloading update",
+    "extract-patch": "Installing update",
+    "done": "Done",
+  };
+  $("progress").hidden = false;
+  $("progress-stage").textContent = stages[p.stage] ?? p.stage;
+  $("progress-msg").textContent = p.message ?? "";
+  $("progress-fill").style.width = `${Math.max(0, Math.min(100, p.percent)).toFixed(1)}%`;
+  if (p.stage === "done") {
+    clearTimeout(listen._hideTimer);
+    listen._hideTimer = setTimeout(() => ($("progress").hidden = true), 2500);
+  }
+});
+
+/* Startup update check: if the install disagrees with the CDN version,
+   pull the patch automatically and bump version.txt once it matches. */
+async function autoUpdate() {
+  let v;
+  try {
+    v = await invoke("get_versions");
+  } catch {
+    return;
+  }
+  if (!v?.remote || !status?.exe_present || v.local === v.remote) return;
+  toast(`Update available — updating to v${v.remote}…`);
+  $("btn-launch").disabled = true;
+  try {
+    const version = await invoke("update_patch");
+    toast(version && version !== "unknown" ? `Game updated to v${version}` : "Game updated");
+  } catch (e) {
+    toast("Update failed: " + e, true);
+  } finally {
+    $("btn-launch").disabled = false;
+    refreshStatus();
+    refreshVersions();
+  }
+}
+
+$("btn-download-game").addEventListener("click", async () => {
+  const dest = await invoke("pick_game_dir", {
+    title: "Choose where to install Spellbreak (approx. 25 GB needed)",
+  });
+  if (!dest) return;
+  const btn = $("btn-download-game");
+  btn.disabled = true;
+  $("btn-locate").disabled = true;
+  $("install-msg").textContent = "Installing — this is a big download, leave the launcher open.";
+  try {
+    const root = await invoke("download_game", { dest });
+    toast("Game installed to " + root);
+    settings = await invoke("get_settings");
+    fillSettingsForm();
+  } catch (e) {
+    toast(String(e), true);
+    $("install-msg").textContent = "Install failed: " + e;
+  } finally {
+    btn.disabled = false;
+    $("btn-locate").disabled = false;
+    refreshStatus();
+  }
+});
+
+/* ---------------- players / news ---------------- */
+
+let playersData = null;
+
+async function refreshPlayers() {
+  try {
+    playersData = await invoke("get_players");
+  } catch {
+    playersData = null;
+  }
+  const inGame = Number.isFinite(playersData?.online) ? playersData.online : null;
+  const connected = Number.isFinite(playersData?.connected) ? playersData.connected : null;
+  $("online-count").textContent = connected ?? inGame ?? "–";
+  $("ingame-count").textContent = inGame ?? "–";
+  if (!$("ingame-popover").hidden) renderIngamePopover();
+}
+
+/* ---- in-game breakdown by mode ---- */
+
+const MODE_LABELS = [
+  [/solo/i, "Solos"],
+  [/duo/i, "Duos"],
+  [/squad/i, "Squads"],
+  [/arena|tdm|capture/i, "Arena/TDM"],
+];
+
+function modeLabel(srv) {
+  const s = srv.display_name || srv.name || "";
+  for (const [re, label] of MODE_LABELS) if (re.test(s)) return label;
+  return s || "Other";
+}
+
+function renderIngamePopover() {
+  const pop = $("ingame-popover");
+  pop.innerHTML = "";
+  const servers = playersData?.servers ?? [];
+  const modes = new Map(); // label → {count, names}
+  for (const [, label] of MODE_LABELS) modes.set(label, { count: 0, names: [] });
+  for (const srv of servers) {
+    const label = modeLabel(srv);
+    if (!modes.has(label)) modes.set(label, { count: 0, names: [] });
+    const m = modes.get(label);
+    m.count += srv.players ?? 0;
+    if (Array.isArray(srv.names)) m.names.push(...srv.names);
+  }
+  for (const [label, m] of modes) {
+    const row = document.createElement("div");
+    row.className = "mode-row";
+    const name = document.createElement("span");
+    name.textContent = label;
+    const count = document.createElement("span");
+    count.className = "mode-count";
+    count.textContent = m.count;
+    row.append(name, count);
+    const names = document.createElement("div");
+    names.className = "mode-names";
+    names.textContent =
+      m.count === 0 ? "No one in game" : m.names.length ? m.names.join(", ") : `${m.count} player(s)`;
+    pop.append(row, names);
+  }
+  if (servers.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "mode-names";
+    empty.textContent = "Server data unavailable.";
+    pop.append(empty);
+  }
+}
+
+$("pill-ingame").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const pop = $("ingame-popover");
+  if (pop.hidden) {
+    renderIngamePopover();
+    pop.hidden = false;
+    refreshPlayers(); // pull fresh names while it's open
+  } else {
+    pop.hidden = true;
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const pop = $("ingame-popover");
+  if (!pop.hidden && !pop.contains(e.target)) pop.hidden = true;
+});
+
+async function refreshNews() {
+  let items;
+  try {
+    items = await invoke("get_news");
+  } catch {
+    /* feed unreachable */
+  }
+  if (!Array.isArray(items) || items.length === 0) items = FALLBACK_NEWS;
+
+  const wrap = $("news-cards");
+  wrap.innerHTML = "";
+  for (const item of items.slice(0, 6)) {
+    const card = document.createElement("div");
+    card.className = "card";
+    const h = document.createElement("h4");
+    h.textContent = item.title ?? "";
+    const p = document.createElement("p");
+    p.textContent = item.body ?? "";
+    const d = document.createElement("span");
+    d.className = "date";
+    d.textContent = item.date ?? "";
+    card.append(h, p, d);
+    if (item.url) card.addEventListener("click", () => openLink(item.url));
+    wrap.appendChild(card);
+  }
+}
+
+/* ---------------- live events ---------------- */
+
+function formatEventTime(ev) {
+  if (ev.status === "ACTIVE") return "LIVE NOW";
+  if (!ev.start) return "";
+  const d = new Date(ev.start);
+  const diffMs = d - Date.now();
+  const when = d.toLocaleString(undefined, {
+    weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  });
+  if (diffMs > 0 && diffMs < 36e5) return `${when} — in ${Math.max(1, Math.round(diffMs / 6e4))} min`;
+  if (diffMs > 0 && diffMs < 864e5) return `${when} — in ${Math.round(diffMs / 36e5)} h`;
+  return when;
+}
+
+async function refreshEvents() {
+  let events;
+  try {
+    const r = await invoke("get_events");
+    events = r.events;
+  } catch {
+    /* sidecar without events support / unreachable */
+  }
+  const head = $("events-head");
+  const wrap = $("event-cards");
+  if (!Array.isArray(events) || events.length === 0) {
+    head.hidden = true;
+    wrap.hidden = true;
+    return;
+  }
+  head.hidden = false;
+  wrap.hidden = false;
+  wrap.innerHTML = "";
+  for (const ev of events.slice(0, 4)) {
+    const card = document.createElement("div");
+    card.className = "card event-card";
+    const h = document.createElement("h4");
+    h.textContent = ev.name ?? "";
+    const time = document.createElement("span");
+    time.className = "event-time" + (ev.status === "ACTIVE" ? " live" : "");
+    time.textContent = formatEventTime(ev);
+    const p = document.createElement("p");
+    p.textContent = ev.description ?? "";
+    const meta = document.createElement("span");
+    meta.className = "date";
+    meta.textContent = [ev.location, ev.interested ? `${ev.interested} interested` : ""]
+      .filter(Boolean)
+      .join("  ·  ");
+    card.append(h, time, p, meta);
+    if (ev.url) card.addEventListener("click", () => openLink(ev.url));
+    wrap.appendChild(card);
+  }
+}
+
+/* ---------------- mods view ---------------- */
+
+async function refreshFiles() {
+  let files;
+  try {
+    files = await invoke("verify_install");
+  } catch (e) {
+    toast(String(e), true);
+    return;
+  }
+  const list = $("file-list");
+  list.innerHTML = "";
+  let missing = 0;
+  for (const f of files) {
+    if (!f.present) missing++;
+    const li = document.createElement("li");
+    const badge = document.createElement("span");
+    badge.className = "badge " + (f.present ? "ok" : "missing");
+    badge.textContent = f.present ? "OK" : "MISSING";
+    const label = document.createElement("span");
+    label.textContent = f.label;
+    const path = document.createElement("span");
+    path.className = "path";
+    path.textContent = f.path;
+    li.append(badge, label, path);
+    list.appendChild(li);
+  }
+  $("install-summary").textContent = status?.game_path
+    ? missing === 0
+      ? "All files present. You are good to go."
+      : `${missing} file(s) missing — run Install / Update.`
+    : "Set the game folder first (Home → Locate, or Settings).";
+}
+
+async function refreshVersions() {
+  try {
+    const v = await invoke("get_versions");
+    const line = [];
+    if (v.local) line.push(`Installed: v${v.local}`);
+    if (v.remote) line.push(`Latest: v${v.remote}`);
+    $("version-line").textContent = line.join("   ·   ");
+    const outdated = v.local && v.remote && v.local !== v.remote;
+    $("btn-update").hidden = !outdated;
+    if (outdated) toastOnce(`Update available: v${v.remote}`);
+  } catch {
+    $("version-line").textContent = "";
+  }
+}
+
+function toastOnce(msg) {
+  if (toastOnce._done) return;
+  toastOnce._done = true;
+  toast(msg);
+}
+
+$("btn-verify").addEventListener("click", refreshFiles);
+
+$("btn-update").addEventListener("click", async () => {
+  const btn = $("btn-update");
+  btn.disabled = true;
+  btn.textContent = "Updating…";
+  try {
+    const v = await invoke("update_patch");
+    toast(v && v !== "unknown" ? `Updated to v${v}` : "Patch updated");
+  } catch (e) {
+    toast(String(e), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Update game";
+    refreshVersions();
+    refreshStatus();
+  }
+});
+
+$("btn-install").addEventListener("click", async () => {
+  const btn = $("btn-install");
+  btn.disabled = true;
+  btn.textContent = "Installing…";
+  const log = $("install-log");
+  try {
+    const lines = await invoke("install_mods");
+    log.hidden = false;
+    log.textContent = lines.join("\n");
+    toast("Mods installed");
+  } catch (e) {
+    log.hidden = false;
+    log.textContent = String(e);
+    toast("Install failed", true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Install / Update mods";
+    refreshFiles();
+  }
+});
+
+$("btn-token").addEventListener("click", async () => {
+  const btn = $("btn-token");
+  btn.disabled = true;
+  try {
+    const res = await invoke("apply_token", { token: $("token-input").value });
+    $("token-input").value = "";
+    settings = await invoke("get_settings");
+    renderAccount();
+    if (res.verified && res.username) {
+      const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
+      toast(`Welcome, ${res.username}${badge}! Token saved.`);
+    } else {
+      toast(res.warning ?? "Token saved.", true);
+    }
+    refreshFiles();
+  } catch (e) {
+    toast(String(e), true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------- first-boot wizard ---------------- */
+
+const GUIDE_URL = "https://docs.elefrac.com/docs/intro"; // TODO: swap when the proper domain is up
+
+function wizardShow(step) {
+  document.querySelectorAll(".wizard-step").forEach((s) => (s.hidden = s.dataset.step !== step));
+}
+
+function startWizard() {
+  $("wizard").hidden = false;
+  wizardShow("welcome");
+}
+
+async function finishWizard() {
+  settings.onboarded = true;
+  try {
+    await invoke("save_settings", { settings });
+  } catch {}
+  $("wizard").hidden = true;
+  fillSettingsForm();
+  renderAccount();
+  refreshStatus();
+}
+
+$("wz-next-welcome").addEventListener("click", () => wizardShow("game"));
+
+$("wz-game-yes").addEventListener("click", async () => {
+  const result = $("wz-game-result");
+  result.textContent = "Looking for an existing install…";
+  let dir = await invoke("auto_find_game");
+  if (!dir) {
+    dir = await invoke("pick_game_dir", { title: "Select your Spellbreak folder (contains g3 and Engine)" });
+  }
+  if (!dir) {
+    result.textContent = "No folder selected — you can set it any time in Settings.";
+    return;
+  }
+  settings.game_path = dir;
+  try {
+    await invoke("save_settings", { settings });
+    result.textContent = "Hooked: " + dir;
+    setTimeout(() => wizardShow("done"), 900);
+  } catch (e) {
+    result.textContent = String(e);
+  }
+});
+
+$("wz-game-no").addEventListener("click", () => wizardShow("token"));
+
+$("wz-link-discord").addEventListener("click", () => openLink(LINKS.discord));
+$("wz-link-guide").addEventListener("click", () => openLink(GUIDE_URL));
+
+$("wz-token-save").addEventListener("click", async () => {
+  const token = $("wz-token").value.trim();
+  if (!token) {
+    wizardShow("done");
+    return;
+  }
+  const btn = $("wz-token-save");
+  btn.disabled = true;
+  try {
+    const res = await invoke("apply_token", { token });
+    settings = await invoke("get_settings");
+    if (res.verified && res.username) {
+      $("wz-done-title").textContent = `You're all set, ${res.username}!`;
+    } else if (res.warning) {
+      toast(res.warning, true);
+    }
+    $("wz-token").value = "";
+    wizardShow("done");
+  } catch (e) {
+    toast(String(e), true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("wz-token-skip").addEventListener("click", () => wizardShow("done"));
+
+$("wz-finish").addEventListener("click", finishWizard);
+
+/* ---------------- settings view ---------------- */
+
+function fillSettingsForm() {
+  $("set-game-path").value = settings.game_path ?? "";
+  $("set-launch-cmd").value = settings.launch_command ?? "";
+  $("set-cdn-base").value = settings.cdn_base ?? "";
+  $("set-auth-url").value = settings.auth_url ?? "";
+  $("set-players-url").value = settings.players_url ?? "";
+}
+
+$("btn-browse").addEventListener("click", async () => {
+  const dir = await invoke("pick_game_dir", { title: null });
+  if (dir) $("set-game-path").value = dir;
+});
+
+$("btn-save-settings").addEventListener("click", async () => {
+  settings = {
+    ...settings,
+    game_path: $("set-game-path").value.trim(),
+    launch_command: $("set-launch-cmd").value.trim(),
+    cdn_base: $("set-cdn-base").value.trim(),
+    auth_url: $("set-auth-url").value.trim(),
+    players_url: $("set-players-url").value.trim(),
+  };
+  try {
+    await invoke("save_settings", { settings });
+    toast("Settings saved");
+    refreshStatus();
+    refreshPlayers();
+  } catch (e) {
+    toast(String(e), true);
+  }
+});
+
+/* ---------------- init ---------------- */
+
+(async function init() {
+  settings = await invoke("get_settings");
+  if (navigator.platform.startsWith("Win")) $("field-launch-cmd").style.display = "none";
+  fillSettingsForm();
+  renderAccount();
+  await refreshStatus();
+  if (!settings.onboarded) startWizard();
+  refreshNews();
+  refreshPlayers();
+  refreshEvents();
+  autoUpdate();
+  setInterval(refreshPlayers, 60_000);
+  setInterval(refreshEvents, 300_000);
+  setInterval(refreshStatus, 15_000);
+})();
