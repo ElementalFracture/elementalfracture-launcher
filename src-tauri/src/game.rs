@@ -67,7 +67,9 @@ pub fn detect_variant(root: &Path) -> String {
     let paks = paks_dir(root);
     if paks.join(PAK).exists() {
         "ef".into()
-    } else if paks.join(format!("{PAK}.1")).exists() {
+    } else if paks.is_dir() {
+        // No active balance pak — whether it's parked as .pak.1 or simply
+        // not installed, the game plays vanilla.
         "classic".into()
     } else {
         "unknown".into()
@@ -150,27 +152,185 @@ pub fn set_variant(app: tauri::AppHandle, variant: String) -> Result<String, Str
         return Err(format!("Paks folder not found: {}", paks.display()));
     }
 
-    let rename = |from: String, to: String| -> Result<(), String> {
-        let (f, t) = (paks.join(&from), paks.join(&to));
-        if f.exists() {
-            fs::rename(&f, &t).map_err(|e| format!("{from}: {e}"))
-        } else {
-            Ok(())
-        }
-    };
+    apply_variant(&paks, &variant)?;
+    Ok(detect_variant(Path::new(&s.game_path)))
+}
 
-    match variant.as_str() {
+/// Rename the balance pak (and its .sig) in or out of the way. Robust
+/// against the states the simple rename tripped over: a stale copy on the
+/// destination side (updates re-deliver the pak while Classic is parked as
+/// .pak.1 — Windows fs::rename refuses to overwrite) and a pak that was
+/// never installed at all.
+fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
+    match variant {
         "ef" => {
-            rename(format!("{PAK}.1"), PAK.into())?;
-            rename(format!("{SIG}.1"), SIG.into())?;
+            for name in [PAK, SIG] {
+                let active = paks.join(name);
+                let parked = paks.join(format!("{name}.1"));
+                if active.exists() {
+                    // A fresh update already put the real file back — the
+                    // parked copy is stale, drop it.
+                    let _ = fs::remove_file(&parked);
+                } else if parked.exists() {
+                    fs::rename(&parked, &active).map_err(|e| format!("{name}.1: {e}"))?;
+                }
+            }
+            if !paks.join(PAK).exists() {
+                return Err(format!(
+                    "{PAK} isn't in the Paks folder: run Install / Update mods first."
+                ));
+            }
         }
         "classic" => {
-            rename(PAK.into(), format!("{PAK}.1"))?;
-            rename(SIG.into(), format!("{SIG}.1"))?;
+            for name in [PAK, SIG] {
+                let active = paks.join(name);
+                let parked = paks.join(format!("{name}.1"));
+                if active.exists() {
+                    let _ = fs::remove_file(&parked);
+                    fs::rename(&active, &parked).map_err(|e| format!("{name}: {e}"))?;
+                }
+                // Neither file present: nothing to park, vanilla already.
+            }
         }
         other => return Err(format!("unknown variant: {other}")),
     }
-    Ok(detect_variant(Path::new(&s.game_path)))
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn paks(files: &[&str]) -> (tempfile::TempDir, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let paks = paks_dir(tmp.path());
+        fs::create_dir_all(&paks).unwrap();
+        for f in files {
+            fs::write(paks.join(f), b"x").unwrap();
+        }
+        (tmp, paks)
+    }
+
+    fn names(paks: &Path) -> Vec<String> {
+        let mut v: Vec<String> = fs::read_dir(paks)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn parked_to_ef_and_back() {
+        let (tmp, p) = paks(&["ElefracBalance_P.pak.1", "ElefracBalance_P.sig.1"]);
+        assert_eq!(detect_variant(tmp.path()), "classic");
+        apply_variant(&p, "ef").unwrap();
+        assert_eq!(names(&p), ["ElefracBalance_P.pak", "ElefracBalance_P.sig"]);
+        assert_eq!(detect_variant(tmp.path()), "ef");
+        apply_variant(&p, "classic").unwrap();
+        assert_eq!(names(&p), ["ElefracBalance_P.pak.1", "ElefracBalance_P.sig.1"]);
+    }
+
+    #[test]
+    fn both_copies_present_after_update() {
+        let (tmp, p) = paks(&[
+            "ElefracBalance_P.pak",
+            "ElefracBalance_P.pak.1",
+            "ElefracBalance_P.sig",
+            "ElefracBalance_P.sig.1",
+        ]);
+        assert_eq!(detect_variant(tmp.path()), "ef");
+        apply_variant(&p, "classic").unwrap();
+        assert_eq!(names(&p), ["ElefracBalance_P.pak.1", "ElefracBalance_P.sig.1"]);
+        apply_variant(&p, "ef").unwrap();
+        assert_eq!(names(&p), ["ElefracBalance_P.pak", "ElefracBalance_P.sig"]);
+    }
+
+    #[test]
+    fn pak_never_installed() {
+        let (tmp, p) = paks(&[]);
+        // Vanilla paks folder: classic is simply the truth.
+        assert_eq!(detect_variant(tmp.path()), "classic");
+        apply_variant(&p, "classic").unwrap();
+        // EF without the pak anywhere must fail loudly, not pretend.
+        let err = apply_variant(&p, "ef").unwrap_err();
+        assert!(err.contains("Install / Update mods"), "{err}");
+    }
+
+    #[test]
+    fn no_paks_dir_is_unknown() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert_eq!(detect_variant(tmp.path()), "unknown");
+    }
+}
+
+#[derive(Serialize)]
+pub struct WrapperOption {
+    pub command: String,
+    pub label: String,
+}
+
+/// Run a command (on the host when the launcher lives in a container) and
+/// return its stdout on success.
+fn host_cmd_output(args: &[&str]) -> Option<String> {
+    let mut argv: Vec<&str> = Vec::new();
+    if settings::in_container() {
+        argv.push("distrobox-host-exec");
+    }
+    argv.extend(args);
+    let out = std::process::Command::new(argv[0])
+        .args(&argv[1..])
+        .output()
+        .ok()?;
+    out.status
+        .success()
+        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// Find the Wine-like wrappers actually present on this system, so the
+/// Settings field can offer a pick list instead of a guess-the-name input.
+/// Checks PATH, then the usual bin dirs directly (an AppImage started from
+/// the desktop can see a thin PATH), then Flatpak.
+#[tauri::command]
+pub fn detect_wrappers() -> Vec<WrapperOption> {
+    let mut found: Vec<WrapperOption> = Vec::new();
+    if cfg!(windows) {
+        return found;
+    }
+    let mut push = |command: String, label: String| {
+        if !found.iter().any(|w| w.command == command) {
+            found.push(WrapperOption { command, label });
+        }
+    };
+
+    let home_bin = std::env::var("HOME").map(|h| format!("{h}/.local/bin"));
+    for cand in ["umu-run", "wine", "wine64", "wine-stable"] {
+        if let Some(path) = host_cmd_output(&["sh", "-c", &format!("command -v {cand}")]) {
+            let path = path.trim().to_string();
+            if !path.is_empty() {
+                push(cand.into(), format!("{cand} ({path})"));
+                continue;
+            }
+        }
+        let mut dirs = vec!["/usr/bin".to_string(), "/usr/local/bin".to_string()];
+        if let Ok(hb) = &home_bin {
+            dirs.push(hb.clone());
+        }
+        for dir in dirs {
+            let p = format!("{dir}/{cand}");
+            if Path::new(&p).exists() {
+                push(p.clone(), format!("{cand} ({p})"));
+                break;
+            }
+        }
+    }
+
+    if let Some(list) = host_cmd_output(&["flatpak", "list", "--app", "--columns=application"]) {
+        if list.lines().any(|l| l.trim() == "org.winehq.Wine") {
+            push("flatpak run org.winehq.Wine".into(), "Wine (Flatpak)".into());
+        }
+    }
+    found
 }
 
 /// Check the launch wrapper exists where the game will actually run
@@ -191,6 +351,39 @@ fn wrapper_available(prog: &str) -> bool {
         .status()
         .map(|st| st.success())
         .unwrap_or(true) // if the check itself fails, don't block the launch
+}
+
+/// Locate an installed Proton to pin via PROTONPATH — GE-Proton preferred and
+/// newest-by-name, falling back to any Proton build. Lets umu run on a
+/// known-good runtime (DXVK/vkd3d) instead of whatever it defaults to.
+fn detect_proton_path() -> Option<String> {
+    let home = std::env::var_os("HOME").map(PathBuf::from)?;
+    let roots = [
+        ".steam/steam/compatibilitytools.d",
+        ".steam/root/compatibilitytools.d",
+        ".local/share/Steam/compatibilitytools.d",
+        ".local/share/Steam/steamapps/common",
+    ];
+    let (mut ge, mut other): (Vec<PathBuf>, Vec<PathBuf>) = (Vec::new(), Vec::new());
+    for r in roots {
+        let Ok(rd) = fs::read_dir(home.join(r)) else { continue };
+        for e in rd.flatten() {
+            let p = e.path();
+            // A real Proton dir has a `proton` launcher script.
+            if !p.join("proton").exists() {
+                continue;
+            }
+            let name = e.file_name().to_string_lossy().into_owned();
+            if name.starts_with("GE-Proton") {
+                ge.push(p);
+            } else if name.contains("Proton") {
+                other.push(p);
+            }
+        }
+    }
+    ge.sort();
+    other.sort();
+    ge.pop().or_else(|| other.pop()).map(|p| p.to_string_lossy().into_owned())
 }
 
 #[tauri::command]
@@ -216,21 +409,97 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
         argv.push("distrobox-host-exec".into());
     }
     if !cfg!(windows) && !s.launch_command.trim().is_empty() {
-        let wrapper = s.launch_command.split_whitespace().next().unwrap().to_string();
+        // Resolve the wrapper we'll actually use. If the configured one is
+        // missing (e.g. the default "wine" on a box that only has Proton),
+        // fall back to umu-run instead of dead-ending on an error.
+        let mut launch_command = s.launch_command.trim().to_string();
+        let wrapper = launch_command.split_whitespace().next().unwrap().to_string();
         if !wrapper_available(&wrapper) {
-            return Err(format!(
-                "'{wrapper}' isn't installed{}. Set a different Launch wrapper in Settings \
-                 (e.g. wine or umu-run).",
-                if settings::in_container() { " on the host" } else { "" }
-            ));
+            if wrapper != "umu-run" && wrapper_available("umu-run") {
+                launch_command = "umu-run".into();
+            } else {
+                return Err(format!(
+                    "'{wrapper}' isn't installed{}. Set a different Launch wrapper in Settings \
+                     (e.g. wine or umu-run).",
+                    if settings::in_container() { " on the host" } else { "" }
+                ));
+            }
         }
-        argv.extend(s.launch_command.split_whitespace().map(str::to_string));
+        let is_proton = launch_command.contains("umu") || launch_command.contains("proton");
+
+        // Everything Wine/Proton needs rides in via `env` so it survives even
+        // when the command is relayed through distrobox-host-exec (which does
+        // not forward plain process env vars).
+        let mut envs: Vec<String> = Vec::new();
+
+        // Prefix. With none chosen the launcher supplies its own dedicated one
+        // (umu/wine create it on first launch), so the game never shares or
+        // converts anyone else's prefix.
+        let managed_prefix;
+        let mut prefix = s.wine_prefix.trim();
+        if prefix.is_empty() {
+            use tauri::Manager;
+            if let Ok(dir) = app.path().app_data_dir() {
+                let p = dir.join("prefix");
+                let _ = fs::create_dir_all(&p);
+                managed_prefix = p.to_string_lossy().into_owned();
+                prefix = &managed_prefix;
+            }
+        }
+        if !prefix.is_empty() {
+            // Proton-based wrappers ADOPT an existing plain-Wine prefix by
+            // rewriting its registry and layout, which can break the app
+            // that owns it (e.g. an XIVLauncher prefix). Refuse rather
+            // than convert someone else's prefix behind their back.
+            let p = Path::new(prefix);
+            let foreign_wine = p.join("system.reg").exists()
+                && !p.join("tracked_files").exists()
+                && !p.join("pfx").exists();
+            if is_proton && foreign_wine {
+                return Err(format!(
+                    "The prefix at {prefix} was made by a different Wine, and \
+                     {} would permanently convert it (possibly breaking the app \
+                     that owns it). Pick an empty folder to get a fresh prefix, \
+                     or clear the field to use the default.",
+                    launch_command
+                ));
+            }
+            envs.push(format!("WINEPREFIX={prefix}"));
+        }
+
+        // umu/Proton needs a game id, and we pin an installed GE-Proton (or any
+        // Proton) so rendering runs on a known-good runtime with DXVK rather
+        // than whatever umu would pick by default.
+        if is_proton {
+            envs.push("GAMEID=umu-0".into());
+            if let Some(proton) = detect_proton_path() {
+                envs.push(format!("PROTONPATH={proton}"));
+            }
+        }
+
+        // Force the app-local xinput1_3.dll — the EF mod loader — to load.
+        // Wine and Proton default xinput1_3 to their own builtin, which
+        // silently ignores the loader sitting next to the exe (on Windows the
+        // app-dir DLL wins for free, which is why mods only vanish under Wine).
+        // Merge with any inherited overrides instead of clobbering them.
+        let inherited = std::env::var("WINEDLLOVERRIDES").unwrap_or_default();
+        let overrides = if inherited.trim().is_empty() {
+            "xinput1_3=n,b".to_string()
+        } else {
+            format!("{};xinput1_3=n,b", inherited.trim())
+        };
+        envs.push(format!("WINEDLLOVERRIDES={overrides}"));
+
+        argv.push("env".into());
+        argv.extend(envs);
+        argv.extend(launch_command.split_whitespace().map(str::to_string));
     }
     argv.push(exe.to_string_lossy().into_owned());
 
     let mut cmd = std::process::Command::new(&argv[0]);
     cmd.args(&argv[1..]);
     cmd.current_dir(exe.parent().unwrap());
+    sanitize_appimage_env(&mut cmd);
 
     // Auth handoff. Env vars first (free, works if the game doesn't relaunch),
     // but the reliable channel is a hidden .ef_auth file in the game root —
@@ -253,6 +522,44 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
     cmd.spawn()
         .map_err(|e| format!("failed to launch ({}): {e}", argv.join(" ")))?;
     Ok(())
+}
+
+/// Children must not inherit the AppImage runtime's environment: it points
+/// PYTHONHOME / PYTHONPATH / LD_LIBRARY_PATH / PATH into the mounted image,
+/// which instantly kills python-based wrappers like umu-run ("Fatal Python
+/// error: Failed to import encodings module") and can break any host binary
+/// the game chain execs. Colon-list vars get the mount entries filtered
+/// out; everything else referencing the mount is dropped.
+fn sanitize_appimage_env(cmd: &mut std::process::Command) {
+    #[cfg(target_os = "linux")]
+    {
+        let Some(appdir) = std::env::var_os("APPDIR") else { return };
+        let appdir = appdir.to_string_lossy().into_owned();
+        if appdir.is_empty() {
+            return;
+        }
+        for (k, v) in std::env::vars() {
+            if !v.contains(&appdir) {
+                continue;
+            }
+            if matches!(k.as_str(), "PATH" | "LD_LIBRARY_PATH" | "XDG_DATA_DIRS") {
+                let cleaned: Vec<&str> = v
+                    .split(':')
+                    .filter(|p| !p.is_empty() && !p.contains(&appdir))
+                    .collect();
+                cmd.env(&k, cleaned.join(":"));
+            } else {
+                cmd.env_remove(&k);
+            }
+        }
+        for k in ["PYTHONHOME", "PYTHONPATH", "PYTHONDONTWRITEBYTECODE", "APPDIR", "APPIMAGE", "OWD"] {
+            cmd.env_remove(k);
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = cmd;
+    }
 }
 
 /// Write (or clear) the hidden `.ef_auth` file the injector reads: line 0 the

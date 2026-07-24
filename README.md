@@ -93,7 +93,9 @@ The launcher is a client of a few services (their code lives in the
 | `https://docs.elefrac.com/patchnotes/rss.xml` | "What's new" cards. |
 | `GET  {cdn}/game/elefracbase.zip` | Base game (range-request friendly). |
 | `GET  {cdn}/patch/latest.zip` | Balance paks → `g3/Content/Paks`. |
-| `GET  {cdn}/launcher/version.txt` | Latest version string. |
+| `GET  {cdn}/patch/mod/mod.zip` | Mod loader + DLL package. |
+| `GET  {cdn}/launcher/config.ini` | Single remote config: `GameVersion`, `LauncherVersion`, plus any future settings (`key=value`, `[sections]` and `;`/`#` comments allowed, UTF-8 or UTF-16LE). |
+| `GET  {cdn}/launcher/ef-launcher.exe` | Launcher self-update binary (`ef-launcher` on Linux). |
 
 "Online" is server-side **presence** — the game's pre-auth server tracks every
 authenticated client (menu included) via a launch-time ping and a 60 s
@@ -131,6 +133,35 @@ WebView2 runtime, so nothing else is required.
 
 CI (`.github/workflows/build.yml`) builds native installers for both platforms
 on `workflow_dispatch` and version tags.
+
+### Packaging (from Linux)
+
+Release version comes from `src-tauri/Cargo.toml` + `tauri.conf.json` (keep
+them identical); a release means uploading the matching binary AND setting the
+same number in the CDN `config.ini`.
+
+**MSI** (needs `msitools`): bundles the exe + `WebView2Loader.dll`, installs
+per-user to `%LocalAppData%\Programs\Elemental Fracture` (no elevation, so
+self-update can swap the binary), Start Menu shortcut included.
+
+```sh
+wixl -a x64 -D Version=1.0.0 \
+  -D ExeSource=path/to/ef-launcher.exe \
+  -D DllSource=dist/windows/WebView2Loader.dll \
+  -o ElementalFractureInstall.msi packaging/ElementalFractureInstall.wxs
+```
+
+**AppImage** (needs `cargo-tauri`; bundles webkit/gtk via linuxdeploy):
+
+```sh
+cd src-tauri
+APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=true cargo tauri build --bundles appimage
+# output: src-tauri/target/release/bundle/appimage/Elemental Fracture_<ver>_amd64.AppImage
+```
+
+Self-update on Linux replaces the `.AppImage` file itself (`$APPIMAGE`),
+pulling `{cdn}/launcher/ef-launcher.AppImage`; plain binaries and Windows
+pull `ef-launcher`/`ef-launcher.exe` and swap in place.
 
 ---
 

@@ -1,6 +1,6 @@
 [package]
 name = "ef-launcher"
-version = "7.0.0"
+version = "3.0.1"
 description = "Elemental Fracture Launcher"
 authors = ["Elemental Fracture"]
 edition = "2021"
@@ -22,3 +22,6 @@ open = "5"
 strip = true
 lto = true
 codegen-units = 1
+
+[dev-dependencies]
+tempfile = "3.27.0"

@@ -53,34 +53,38 @@ pub fn verify_install(app: tauri::AppHandle) -> Vec<FileCheck> {
 
 /// Download mod.zip from the CDN and install it into the game folder.
 /// Port of install.bat: purge old Mods/dlls/*.dll, drop the loader into
-/// g3/Binaries/Win64, copy the mod DLLs and ef_server.txt.
+/// g3/Binaries/Win64, copy the mod DLLs. Shared by the Mods-view button
+/// and the install/update pipeline (patch → mods → version bump).
+pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> Result<Vec<String>, String> {
+    if !win64_dir(&root).is_dir() {
+        return Err("That folder doesn't look like a Spellbreak install (missing g3/Binaries/Win64).".into());
+    }
+
+    let url = format!("{}/patch/mod/mod.zip", cdn_base.trim_end_matches('/'));
+    let resp = reqwest::get(&url)
+        .await
+        .and_then(|r| r.error_for_status())
+        .map_err(|e| format!("mod download failed: {e}"))?;
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("mod download failed: {e}"))?;
+    if bytes.len() < 1024 {
+        return Err("Downloaded mod.zip is suspiciously small: the CDN may have returned an error page.".into());
+    }
+
+    tauri::async_runtime::spawn_blocking(move || install_from_zip(&root, &bytes))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 pub async fn install_mods(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
         return Err("Set the game folder first (Settings).".into());
     }
-    let root = PathBuf::from(&s.game_path);
-    if !win64_dir(&root).is_dir() {
-        return Err("That folder doesn't look like a Spellbreak install (missing g3/Binaries/Win64).".into());
-    }
-
-    let url = format!("{}/patch/mod/mod.zip", s.cdn_base.trim_end_matches('/'));
-    let resp = reqwest::get(&url)
-        .await
-        .and_then(|r| r.error_for_status())
-        .map_err(|e| format!("download failed: {e}"))?;
-    let bytes = resp
-        .bytes()
-        .await
-        .map_err(|e| format!("download failed: {e}"))?;
-    if bytes.len() < 1024 {
-        return Err("Downloaded file is suspiciously small — the CDN may have returned an error page.".into());
-    }
-
-    tauri::async_runtime::spawn_blocking(move || install_from_zip(&root, &bytes))
-        .await
-        .map_err(|e| e.to_string())?
+    fetch_and_install(&s.cdn_base, PathBuf::from(&s.game_path)).await
 }
 
 fn extract_one(

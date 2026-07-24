@@ -10,6 +10,9 @@ pub struct Settings {
     /// Prefix command used to run the game on non-Windows hosts,
     /// e.g. "wine" or "umu-run". Ignored on Windows / when empty.
     pub launch_command: String,
+    /// Optional WINEPREFIX handed to the launch wrapper (Linux only).
+    /// Empty = the wrapper's default prefix.
+    pub wine_prefix: String,
     /// Base URL of the account portal (serves web/api.php).
     pub play_base: String,
     pub cdn_base: String,
@@ -32,6 +35,7 @@ impl Default for Settings {
         Self {
             game_path: String::new(),
             launch_command: if cfg!(windows) { String::new() } else { "wine".into() },
+            wine_prefix: String::new(),
             play_base: "https://play.elefrac.com".into(),
             cdn_base: "https://cdn.elefrac.com".into(),
             auth_url: "https://play.elefrac.com/auth".into(),
@@ -43,13 +47,17 @@ impl Default for Settings {
     }
 }
 
-fn settings_path(app: &tauri::AppHandle) -> PathBuf {
+pub fn config_dir(app: &tauri::AppHandle) -> PathBuf {
     let dir = app
         .path()
         .app_config_dir()
         .expect("no app config dir available");
     let _ = fs::create_dir_all(&dir);
-    dir.join("settings.json")
+    dir
+}
+
+fn settings_path(app: &tauri::AppHandle) -> PathBuf {
+    config_dir(app).join("settings.json")
 }
 
 pub fn load(app: &tauri::AppHandle) -> Settings {
@@ -80,6 +88,15 @@ pub fn get_settings(app: tauri::AppHandle) -> Settings {
 #[tauri::command]
 pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     store(&app, &settings)
+}
+
+/// Wipe the stored configuration back to defaults. Returns the fresh
+/// settings so the frontend can re-run first-boot onboarding.
+#[tauri::command]
+pub fn reset_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+    let s = Settings::default();
+    store(&app, &s)?;
+    Ok(s)
 }
 
 #[tauri::command]
