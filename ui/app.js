@@ -57,7 +57,80 @@ function showView(name) {
   }
 }
 
-$("pill-account").addEventListener("click", () => showView("mods"));
+/* ---------------- account (name click) ---------------- */
+
+function accountRegistered() {
+  return !!settings.auth_token?.trim();
+}
+
+/* Friend list: a dropdown anchored under the account pill (mirrors the
+   in-game breakdown popover), not a modal. */
+function renderAccountPopover() {
+  $("friend-name").textContent = settings.username?.trim() || "You";
+  $("friend-avatar").textContent = (settings.username?.trim() || "EF").slice(0, 2).toUpperCase();
+}
+
+/* Token entry stays a focused modal (it's a form). */
+function openTokenModal() {
+  $("account-popover").hidden = true;
+  $("account-token-input").value = "";
+  $("account-modal").hidden = false;
+  $("account-token-input").focus();
+}
+
+function closeTokenModal() {
+  $("account-modal").hidden = true;
+}
+
+$("pill-account").addEventListener("click", (e) => {
+  e.stopPropagation();
+  // No token yet → straight to token entry; otherwise toggle the friend list.
+  if (!accountRegistered()) {
+    openTokenModal();
+    return;
+  }
+  const pop = $("account-popover");
+  if (pop.hidden) {
+    renderAccountPopover();
+    pop.hidden = false;
+  } else {
+    pop.hidden = true;
+  }
+});
+
+$("account-change-token").addEventListener("click", openTokenModal);
+$("account-token-cancel").addEventListener("click", closeTokenModal);
+$("account-link-discord").addEventListener("click", () => openLink(LINKS.discord));
+
+$("account-modal").addEventListener("click", (e) => {
+  if (e.target === $("account-modal")) closeTokenModal();
+});
+
+$("account-token-save").addEventListener("click", async () => {
+  const token = $("account-token-input").value.trim();
+  if (!token) {
+    toast("Paste your token first.", true);
+    return;
+  }
+  const btn = $("account-token-save");
+  btn.disabled = true;
+  try {
+    const res = await invoke("apply_token", { token });
+    settings = await invoke("get_settings");
+    renderAccount();
+    if (res.verified && res.username) {
+      const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
+      toast(`Welcome, ${res.username}${badge}! Token saved.`);
+    } else {
+      toast(res.warning ?? "Token saved.", true);
+    }
+    closeTokenModal();
+  } catch (e) {
+    toast(String(e), true);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 /* ---------------- external links ---------------- */
 
@@ -136,10 +209,21 @@ function greeting() {
   return lines[greeting._pick % lines.length];
 }
 
+function accountRole() {
+  if (settings.is_dev) return "Developer";
+  if (settings.is_staff) return "Staff";
+  return "";
+}
+
 function renderAccount() {
   const name = settings.username?.trim();
   $("account-name").textContent = name || "Guest";
-  $("account-sub").textContent = name ? "Breaker" : "No token set";
+  // Only staff/developers carry a subheading — everyone else (Guest included)
+  // shows just their name.
+  const role = accountRole();
+  const sub = $("account-sub");
+  sub.textContent = role;
+  sub.hidden = !role;
   $("avatar").textContent = (name || "EF").slice(0, 2).toUpperCase();
   $("greet").textContent = greeting();
 }
@@ -396,6 +480,8 @@ $("pill-ingame").addEventListener("click", (e) => {
 document.addEventListener("click", (e) => {
   const pop = $("ingame-popover");
   if (!pop.hidden && !pop.contains(e.target)) pop.hidden = true;
+  const apop = $("account-popover");
+  if (!apop.hidden && !apop.contains(e.target)) apop.hidden = true;
 });
 
 async function refreshNews() {
@@ -482,6 +568,8 @@ async function refreshEvents() {
 
 /* ---------------- mods view ---------------- */
 
+/* Mods ship pre-installed, so the per-DLL list is just noise: collapse the
+   verify result to a single installed / not-installed status. */
 async function refreshFiles() {
   let files;
   try {
@@ -490,28 +578,30 @@ async function refreshFiles() {
     toast(String(e), true);
     return;
   }
-  const list = $("file-list");
-  list.innerHTML = "";
-  let missing = 0;
-  for (const f of files) {
-    if (!f.present) missing++;
-    const li = document.createElement("li");
-    const badge = document.createElement("span");
-    badge.className = "badge " + (f.present ? "ok" : "missing");
-    badge.textContent = f.present ? "OK" : "MISSING";
-    const label = document.createElement("span");
-    label.textContent = f.label;
-    const path = document.createElement("span");
-    path.className = "path";
-    path.textContent = f.path;
-    li.append(badge, label, path);
-    list.appendChild(li);
+  const total = files.length;
+  const missing = files.filter((f) => !f.present).length;
+  const statusEl = $("mods-status");
+  const badge = $("mods-status-badge");
+  const text = $("mods-status-text");
+  const summary = $("install-summary");
+
+  if (!status?.game_path) {
+    statusEl.hidden = true;
+    summary.textContent = "Set the game folder first (Home → Locate, or Settings).";
+    return;
   }
-  $("install-summary").textContent = status?.game_path
-    ? missing === 0
-      ? "All files present. You are good to go."
-      : `${missing} file(s) missing: run Install / Update.`
-    : "Set the game folder first (Home → Locate, or Settings).";
+  statusEl.hidden = false;
+  if (missing === 0) {
+    badge.className = "badge ok";
+    badge.textContent = "INSTALLED";
+    text.textContent = "Mods are installed and ready.";
+    summary.textContent = "";
+  } else {
+    badge.className = "badge missing";
+    badge.textContent = "MISSING";
+    text.textContent = missing === total ? "Mods are not installed." : "Some mod files are missing.";
+    summary.textContent = `${missing} of ${total} file(s) missing — run Install / Update mods.`;
+  }
 }
 
 async function refreshVersions() {
@@ -573,28 +663,6 @@ $("btn-install").addEventListener("click", async () => {
     btn.disabled = false;
     btn.textContent = "Install / Update mods";
     refreshFiles();
-  }
-});
-
-$("btn-token").addEventListener("click", async () => {
-  const btn = $("btn-token");
-  btn.disabled = true;
-  try {
-    const res = await invoke("apply_token", { token: $("token-input").value });
-    $("token-input").value = "";
-    settings = await invoke("get_settings");
-    renderAccount();
-    if (res.verified && res.username) {
-      const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
-      toast(`Welcome, ${res.username}${badge}! Token saved.`);
-    } else {
-      toast(res.warning ?? "Token saved.", true);
-    }
-    refreshFiles();
-  } catch (e) {
-    toast(String(e), true);
-  } finally {
-    btn.disabled = false;
   }
 });
 
@@ -691,6 +759,9 @@ function fillSettingsForm() {
   $("set-cdn-base").value = settings.cdn_base ?? "";
   $("set-auth-url").value = settings.auth_url ?? "";
   $("set-players-url").value = settings.players_url ?? "";
+  // Advanced is always collapsed on (re)load — it's opt-in per session.
+  $("toggle-advanced").checked = false;
+  $("advanced-panel").hidden = true;
   syncWrapperUI();
 }
 
@@ -745,6 +816,28 @@ $("set-launch-select").addEventListener("change", () => {
   const custom = $("set-launch-select").value === "__custom__";
   $("set-launch-cmd").hidden = !custom;
   if (custom) $("set-launch-cmd").focus();
+});
+
+/* ---- advanced options: gated behind a warning (Continue / Back) ---- */
+
+$("toggle-advanced").addEventListener("change", () => {
+  if ($("toggle-advanced").checked) {
+    // Keep the switch visually on while the warning is up; Back reverts it.
+    $("advanced-warn-modal").hidden = false;
+  } else {
+    $("advanced-panel").hidden = true;
+  }
+});
+
+$("advanced-warn-continue").addEventListener("click", () => {
+  $("advanced-panel").hidden = false;
+  $("advanced-warn-modal").hidden = true;
+});
+
+$("advanced-warn-back").addEventListener("click", () => {
+  $("toggle-advanced").checked = false;
+  $("advanced-panel").hidden = true;
+  $("advanced-warn-modal").hidden = true;
 });
 
 function selectedWrapper() {

@@ -386,6 +386,59 @@ fn detect_proton_path() -> Option<String> {
     ge.pop().or_else(|| other.pop()).map(|p| p.to_string_lossy().into_owned())
 }
 
+/// Persist the xinput1_3 override (native,builtin — load the app-local EF mod
+/// loader) into the Wine/Proton prefix registry so it survives game relaunches
+/// that don't inherit our WINEDLLOVERRIDES env var. Best-effort and idempotent
+/// (guarded by a marker), and only after the prefix is initialized so we never
+/// block or corrupt first-run prefix creation.
+fn ensure_prefix_override(wrapper: &str, prefix: &str, is_proton: bool, proton_path: Option<&str>) {
+    if prefix.is_empty() {
+        return;
+    }
+    let p = Path::new(prefix);
+    let marker = p.join(".ef_dlloverride");
+    if marker.exists() {
+        return;
+    }
+    // Wine keeps user.reg at the prefix root; Proton nests it under pfx/. If
+    // neither exists yet the prefix hasn't been built — let the env var cover
+    // the first run and bake it in on the next launch.
+    if !p.join("user.reg").exists() && !p.join("pfx").join("user.reg").exists() {
+        return;
+    }
+
+    let mut argv: Vec<String> = Vec::new();
+    if settings::in_container() {
+        argv.push("distrobox-host-exec".into());
+    }
+    // Env rides in via `env` (survives the distrobox relay), same as launch.
+    argv.push("env".into());
+    argv.push(format!("WINEPREFIX={prefix}"));
+    if is_proton {
+        argv.push("GAMEID=umu-0".into());
+        if let Some(proton) = proton_path {
+            argv.push(format!("PROTONPATH={proton}"));
+        }
+    }
+    argv.extend(wrapper.split_whitespace().map(str::to_string));
+    for a in [
+        "reg", "add", r"HKEY_CURRENT_USER\Software\Wine\DllOverrides",
+        "/v", "xinput1_3", "/d", "native,builtin", "/f",
+    ] {
+        argv.push(a.into());
+    }
+
+    let mut cmd = std::process::Command::new(&argv[0]);
+    cmd.args(&argv[1..]);
+    cmd.stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    sanitize_appimage_env(&mut cmd); // umu-run is python — the AppImage env kills it
+    let ok = cmd.status().map(|st| st.success()).unwrap_or(false);
+    if ok {
+        let _ = fs::write(&marker, b"native,builtin\n");
+    }
+}
+
 #[tauri::command]
 pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
     let s = settings::load(&app);
@@ -470,12 +523,21 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
         // umu/Proton needs a game id, and we pin an installed GE-Proton (or any
         // Proton) so rendering runs on a known-good runtime with DXVK rather
         // than whatever umu would pick by default.
+        let proton_path = if is_proton { detect_proton_path() } else { None };
         if is_proton {
             envs.push("GAMEID=umu-0".into());
-            if let Some(proton) = detect_proton_path() {
+            if let Some(proton) = &proton_path {
                 envs.push(format!("PROTONPATH={proton}"));
             }
         }
+
+        // Also bake the xinput1_3 override into the prefix registry. The env
+        // var below only reaches the process we spawn; a self-relaunch (or a
+        // manual Steam run of the same prefix) loses it, and Proton then falls
+        // back to its builtin xinput1_3, silently dropping the mod loader.
+        // Once it's in the registry the override sticks regardless. Best-effort
+        // and once per prefix.
+        ensure_prefix_override(&launch_command, prefix, is_proton, proton_path.as_deref());
 
         // Force the app-local xinput1_3.dll — the EF mod loader — to load.
         // Wine and Proton default xinput1_3 to their own builtin, which

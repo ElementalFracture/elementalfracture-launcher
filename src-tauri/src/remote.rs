@@ -62,6 +62,10 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
 
     let mut s = settings::load(&app);
     s.auth_token = token.clone();
+    // A new token means an as-yet-unverified identity — clear any stale role
+    // flags so a failed lookup can't leave an old staff/dev badge showing.
+    s.is_staff = false;
+    s.is_dev = false;
     settings::store(&app, &s)?;
 
     let unverified = |warning: String| TokenResult {
@@ -85,13 +89,17 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
     let body: serde_json::Value = resp.json().await.unwrap_or_default();
     if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
         if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
+            let is_staff = body.get("is_staff").and_then(|v| v.as_bool()).unwrap_or(false);
+            let is_dev = body.get("is_dev").and_then(|v| v.as_bool()).unwrap_or(false);
             let mut s = settings::load(&app);
             s.username = username.to_string();
+            s.is_staff = is_staff;
+            s.is_dev = is_dev;
             settings::store(&app, &s)?;
             return Ok(TokenResult {
                 username: Some(username.to_string()),
-                is_staff: body.get("is_staff").and_then(|v| v.as_bool()).unwrap_or(false),
-                is_dev: body.get("is_dev").and_then(|v| v.as_bool()).unwrap_or(false),
+                is_staff,
+                is_dev,
                 verified: true,
                 warning: None,
             });
