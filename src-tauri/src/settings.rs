@@ -23,6 +23,10 @@ pub struct Settings {
     pub players_url: String,
     /// Registered username resolved from the auth token via the portal.
     pub username: String,
+    /// Role flags resolved alongside the username at token validation.
+    /// Drive the account subheading (only staff/dev get one).
+    pub is_staff: bool,
+    pub is_dev: bool,
     /// The auth token itself — kept here so it survives before a game
     /// folder exists and gets written into Mods/commands when one does.
     pub auth_token: String,
@@ -34,13 +38,18 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             game_path: String::new(),
-            launch_command: if cfg!(windows) { String::new() } else { "wine".into() },
+            // Proton-GE (via umu-run) is the default runtime — it mirrors the
+            // Steam build and handles the mod loader / DXVK far better than
+            // plain Wine. Falls back to Wine automatically if umu is absent.
+            launch_command: if cfg!(windows) { String::new() } else { "umu-run".into() },
             wine_prefix: String::new(),
             play_base: "https://play.elefrac.com".into(),
             cdn_base: "https://cdn.elefrac.com".into(),
             auth_url: "https://play.elefrac.com/auth".into(),
             players_url: "https://play.elefrac.com/players".into(),
             username: String::new(),
+            is_staff: false,
+            is_dev: false,
             auth_token: String::new(),
             onboarded: false,
         }

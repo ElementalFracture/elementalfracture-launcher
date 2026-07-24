@@ -41,13 +41,8 @@ pub fn verify_install(app: tauri::AppHandle) -> Vec<FileCheck> {
             check(dll, root.join("Mods").join("dlls").join(dll));
         }
     }
-    // Auth lives in the launcher and is handed to the game in memory at
-    // launch — never written into the game folder.
-    out.push(FileCheck {
-        label: "Auth token (stored in launcher)".into(),
-        present: !s.auth_token.trim().is_empty(),
-        path: "passed via environment at launch".into(),
-    });
+    // Auth is no longer verified here — it lives in the launcher and is handed
+    // to the game in memory at launch, never written into the game folder.
     out
 }
 

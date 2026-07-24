@@ -61,6 +61,18 @@
               <small id="account-sub">No token set</small>
             </div>
           </button>
+          <div id="account-popover" hidden>
+            <div class="acct-head">Friend List</div>
+            <div class="friend-self">
+              <span class="avatar" id="friend-avatar">EF</span>
+              <div class="friend-meta">
+                <strong id="friend-name">You</strong>
+                <small><span class="status-dot"></span> Online</small>
+              </div>
+            </div>
+            <p class="acct-soon">Friends are coming soon — you'll be able to see who's online and party up right here.</p>
+            <button class="acct-link" id="account-change-token">Change token</button>
+          </div>
         </div>
       </header>
 
@@ -142,18 +154,12 @@
             </div>
           </div>
           <div id="version-line" class="muted"></div>
-          <div id="install-summary" class="muted"></div>
-          <ul class="file-list" id="file-list"></ul>
-          <pre id="install-log" class="log" hidden></pre>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head"><h3>Auth token</h3></div>
-          <p class="muted">Issued by a server admin or via the portal. Kept by the launcher and written to a hidden <code>.ef_auth</code> file in your game folder at launch. Setting a token signs you in.</p>
-          <div class="form-row">
-            <input type="password" id="token-input" placeholder="Paste your token…" />
-            <button class="btn primary" id="btn-token">Save token</button>
+          <div class="mods-status" id="mods-status" hidden>
+            <span class="badge" id="mods-status-badge"></span>
+            <span id="mods-status-text"></span>
           </div>
+          <div id="install-summary" class="muted"></div>
+          <pre id="install-log" class="log" hidden></pre>
         </div>
       </section>
 
@@ -166,20 +172,6 @@
             <div class="form-row">
               <input type="text" id="set-game-path" placeholder="e.g. C:\Games\Spellbreak or /home/you/Games/Spellbreak" />
               <button class="btn subtle" id="btn-browse">Browse…</button>
-            </div>
-          </label>
-          <label class="field" id="field-launch-cmd">
-            <span>Launch wrapper <small>(Linux only; runs the game exe)</small></span>
-            <div class="form-row">
-              <select id="set-launch-select"></select>
-              <input type="text" id="set-launch-cmd" placeholder="e.g. wine" hidden />
-            </div>
-          </label>
-          <label class="field" id="field-wine-prefix">
-            <span>Wine prefix <small>(optional; passed as <code>WINEPREFIX</code>, empty = the launcher makes its own)</small></span>
-            <div class="form-row">
-              <input type="text" id="set-wine-prefix" placeholder="e.g. /home/you/.wineprefixes/spellbreak" />
-              <button class="btn subtle" id="btn-browse-prefix">Browse…</button>
             </div>
           </label>
         </div>
@@ -204,7 +196,31 @@
         </div>
 
         <div class="panel">
+          <label class="switch-row">
+            <span>Show advanced options</span>
+            <span class="switch">
+              <input type="checkbox" id="toggle-advanced" />
+              <span class="slider"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="panel" id="advanced-panel" hidden>
           <div class="panel-head"><h3>Advanced</h3></div>
+          <label class="field" id="field-launch-cmd">
+            <span>Launch wrapper <small>(Linux only; runs the game exe — Proton-GE recommended)</small></span>
+            <div class="form-row">
+              <select id="set-launch-select"></select>
+              <input type="text" id="set-launch-cmd" placeholder="e.g. umu-run" hidden />
+            </div>
+          </label>
+          <label class="field" id="field-wine-prefix">
+            <span>Wine prefix <small>(optional; passed as <code>WINEPREFIX</code>, empty = the launcher makes its own)</small></span>
+            <div class="form-row">
+              <input type="text" id="set-wine-prefix" placeholder="e.g. /home/you/.wineprefixes/spellbreak" />
+              <button class="btn subtle" id="btn-browse-prefix">Browse…</button>
+            </div>
+          </label>
           <label class="field">
             <span>CDN base</span>
             <input type="text" id="set-cdn-base" />
@@ -280,6 +296,37 @@
         <div class="wizard-actions">
           <button class="btn primary" id="btn-update-install">Install</button>
           <button class="btn subtle" id="btn-update-later">Not now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ACCOUNT TOKEN (name click, unregistered / change) ============= -->
+  <div id="account-modal" hidden>
+    <div class="wizard-panel">
+      <div class="wizard-step" id="account-token-view">
+        <h2>Please enter your auth token</h2>
+        <p class="muted">Your token identifies you on Elemental Fracture servers. It's kept by the launcher and handed to the game in memory at launch.</p>
+        <input type="password" id="account-token-input" placeholder="Paste your token…" />
+        <p class="wizard-tooltip">Don't have a token?
+          <a id="account-link-discord">Join the Discord</a> to get one.</p>
+        <div class="wizard-actions">
+          <button class="btn primary" id="account-token-save">Save</button>
+          <button class="btn subtle" id="account-token-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADVANCED OPTIONS WARNING ================= -->
+  <div id="advanced-warn-modal" hidden>
+    <div class="wizard-panel">
+      <div class="wizard-step">
+        <h2>Advanced options</h2>
+        <p class="muted">Warning — advanced options are meant for debugging or for custom configurations. Adjusting these settings may prevent you from playing the game without a full reset. Please only adjust these if you know what you're doing!</p>
+        <div class="wizard-actions">
+          <button class="btn primary" id="advanced-warn-continue">Continue</button>
+          <button class="btn subtle" id="advanced-warn-back">Back</button>
         </div>
       </div>
     </div>
