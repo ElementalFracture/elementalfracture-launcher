@@ -14,8 +14,8 @@ const LINKS = {
 /* Shown when the patchnotes feed isn't reachable. */
 const FALLBACK_NEWS = [
   {
-    title: "Launcher 7.0",
-    body: "The launcher has been rewritten from scratch: one app now handles installing, patching, tokens and launching — on Windows and Linux.",
+    title: "Launcher 1.0",
+    body: "The launcher has been rewritten from scratch: one app now handles installing, patching, tokens and launching, on Windows and Linux.",
     date: "18 Jul 2026",
     url: "https://docs.elefrac.com/patchnotes",
   },
@@ -205,10 +205,35 @@ $("btn-launch").addEventListener("click", async () => {
 
 /* ---------------- game install / download ---------------- */
 
+/* Bring a freshly-pointed-at install current: balance patch + mods, then
+   the version bump (all in update_patch). Skipped when the install already
+   matches the CDN version — such installs were provisioned by this same
+   pipeline, mods included. */
+async function provisionInstall(report = toast) {
+  try {
+    const v = await invoke("get_versions");
+    if (v?.local && v?.remote && v.local === v.remote) {
+      report(`Already up to date (v${v.local})`);
+      return true;
+    }
+  } catch {}
+  report("Installing updates & mods…");
+  try {
+    const ver = await invoke("update_patch");
+    report(ver && ver !== "unknown" ? `Install ready (v${ver})` : "Install ready");
+    return true;
+  } catch (e) {
+    report("Couldn't update the install: " + e, true);
+    return false;
+  } finally {
+    refreshStatus();
+  }
+}
+
 $("btn-locate").addEventListener("click", async () => {
   let dir = await invoke("auto_find_game");
   if (!dir) {
-    toast("Nothing found in the usual places — pick the folder yourself.");
+    toast("Nothing found in the usual places, pick the folder yourself.");
     dir = await invoke("pick_game_dir", { title: "Select your Spellbreak folder" });
   }
   if (!dir) return;
@@ -216,7 +241,8 @@ $("btn-locate").addEventListener("click", async () => {
   await invoke("save_settings", { settings });
   fillSettingsForm();
   toast("Game folder set: " + dir);
-  refreshStatus();
+  await refreshStatus();
+  await provisionInstall();
 });
 
 listen("install-progress", (ev) => {
@@ -226,6 +252,7 @@ listen("install-progress", (ev) => {
     "extract-base": "Extracting game",
     "download-patch": "Downloading update",
     "extract-patch": "Installing update",
+    "install-mods": "Installing mods",
     "done": "Done",
   };
   $("progress").hidden = false;
@@ -248,7 +275,7 @@ async function autoUpdate() {
     return;
   }
   if (!v?.remote || !status?.exe_present || v.local === v.remote) return;
-  toast(`Update available — updating to v${v.remote}…`);
+  toast(`Update available, updating to v${v.remote}…`);
   $("btn-launch").disabled = true;
   try {
     const version = await invoke("update_patch");
@@ -270,7 +297,7 @@ $("btn-download-game").addEventListener("click", async () => {
   const btn = $("btn-download-game");
   btn.disabled = true;
   $("btn-locate").disabled = true;
-  $("install-msg").textContent = "Installing — this is a big download, leave the launcher open.";
+  $("install-msg").textContent = "Installing: this is a big download, leave the launcher open.";
   try {
     const root = await invoke("download_game", { dest });
     toast("Game installed to " + root);
@@ -409,8 +436,8 @@ function formatEventTime(ev) {
     weekday: "short", month: "short", day: "numeric",
     hour: "numeric", minute: "2-digit",
   });
-  if (diffMs > 0 && diffMs < 36e5) return `${when} — in ${Math.max(1, Math.round(diffMs / 6e4))} min`;
-  if (diffMs > 0 && diffMs < 864e5) return `${when} — in ${Math.round(diffMs / 36e5)} h`;
+  if (diffMs > 0 && diffMs < 36e5) return `${when} (in ${Math.max(1, Math.round(diffMs / 6e4))} min)`;
+  if (diffMs > 0 && diffMs < 864e5) return `${when} (in ${Math.round(diffMs / 36e5)} h)`;
   return when;
 }
 
@@ -483,7 +510,7 @@ async function refreshFiles() {
   $("install-summary").textContent = status?.game_path
     ? missing === 0
       ? "All files present. You are good to go."
-      : `${missing} file(s) missing — run Install / Update.`
+      : `${missing} file(s) missing: run Install / Update.`
     : "Set the game folder first (Home → Locate, or Settings).";
 }
 
@@ -491,8 +518,9 @@ async function refreshVersions() {
   try {
     const v = await invoke("get_versions");
     const line = [];
-    if (v.local) line.push(`Installed: v${v.local}`);
+    if (v.local) line.push(`Game: v${v.local}`);
     if (v.remote) line.push(`Latest: v${v.remote}`);
+    if (launcherInfo?.current) line.push(`Launcher: v${launcherInfo.current}`);
     $("version-line").textContent = line.join("   ·   ");
     const outdated = v.local && v.remote && v.local !== v.remote;
     $("btn-update").hidden = !outdated;
@@ -604,13 +632,16 @@ $("wz-game-yes").addEventListener("click", async () => {
     dir = await invoke("pick_game_dir", { title: "Select your Spellbreak folder (contains g3 and Engine)" });
   }
   if (!dir) {
-    result.textContent = "No folder selected — you can set it any time in Settings.";
+    result.textContent = "No folder selected, you can set it any time in Settings.";
     return;
   }
   settings.game_path = dir;
   try {
     await invoke("save_settings", { settings });
-    result.textContent = "Hooked: " + dir;
+    result.textContent = "Hooked: " + dir + ", installing updates & mods…";
+    await provisionInstall((msg, isError) => {
+      result.textContent = isError ? msg : "Hooked: " + dir + ", " + msg.toLowerCase();
+    });
     setTimeout(() => wizardShow("done"), 900);
   } catch (e) {
     result.textContent = String(e);
@@ -656,9 +687,71 @@ $("wz-finish").addEventListener("click", finishWizard);
 function fillSettingsForm() {
   $("set-game-path").value = settings.game_path ?? "";
   $("set-launch-cmd").value = settings.launch_command ?? "";
+  $("set-wine-prefix").value = settings.wine_prefix ?? "";
   $("set-cdn-base").value = settings.cdn_base ?? "";
   $("set-auth-url").value = settings.auth_url ?? "";
   $("set-players-url").value = settings.players_url ?? "";
+  syncWrapperUI();
+}
+
+/* ---- launch wrapper picker (Linux): offer what's installed ---- */
+
+let wrappers = [];
+
+async function loadWrappers() {
+  try {
+    wrappers = await invoke("detect_wrappers");
+  } catch {
+    wrappers = [];
+  }
+  const sel = $("set-launch-select");
+  sel.innerHTML = "";
+  for (const w of wrappers) {
+    const o = document.createElement("option");
+    o.value = w.command;
+    o.textContent = w.label;
+    sel.append(o);
+  }
+  const custom = document.createElement("option");
+  custom.value = "__custom__";
+  custom.textContent = wrappers.length
+    ? "Custom…"
+    : "Custom… (no wrapper detected; install Wine or umu)";
+  sel.append(custom);
+  syncWrapperUI();
+}
+
+function syncWrapperUI() {
+  const sel = $("set-launch-select");
+  if (!sel.options.length) return; // wrappers not loaded yet
+  const input = $("set-launch-cmd");
+  const cur = (settings?.launch_command ?? "").trim();
+  if (cur && wrappers.some((w) => w.command === cur)) {
+    sel.value = cur;
+    input.hidden = true;
+  } else if (wrappers.length) {
+    // Nothing saved, or the saved wrapper isn't installed here (e.g. the
+    // old "wine" default on a umu-only system): suggest what exists.
+    sel.value = wrappers[0].command;
+    input.hidden = true;
+  } else {
+    sel.value = "__custom__";
+    input.hidden = false;
+    input.value = cur;
+  }
+}
+
+$("set-launch-select").addEventListener("change", () => {
+  const custom = $("set-launch-select").value === "__custom__";
+  $("set-launch-cmd").hidden = !custom;
+  if (custom) $("set-launch-cmd").focus();
+});
+
+function selectedWrapper() {
+  if (navigator.platform.startsWith("Win")) return settings?.launch_command ?? "";
+  const sel = $("set-launch-select");
+  if (!sel.options.length) return $("set-launch-cmd").value.trim();
+  return sel.value === "__custom__" ? $("set-launch-cmd").value.trim() : sel.value;
 }
 
 $("btn-browse").addEventListener("click", async () => {
@@ -666,11 +759,18 @@ $("btn-browse").addEventListener("click", async () => {
   if (dir) $("set-game-path").value = dir;
 });
 
+$("btn-browse-prefix").addEventListener("click", async () => {
+  const dir = await invoke("pick_game_dir", { title: "Select a Wine prefix folder" });
+  if (dir) $("set-wine-prefix").value = dir;
+});
+
 $("btn-save-settings").addEventListener("click", async () => {
+  const prevGamePath = settings?.game_path ?? "";
   settings = {
     ...settings,
     game_path: $("set-game-path").value.trim(),
-    launch_command: $("set-launch-cmd").value.trim(),
+    launch_command: selectedWrapper(),
+    wine_prefix: $("set-wine-prefix").value.trim(),
     cdn_base: $("set-cdn-base").value.trim(),
     auth_url: $("set-auth-url").value.trim(),
     players_url: $("set-players-url").value.trim(),
@@ -678,18 +778,153 @@ $("btn-save-settings").addEventListener("click", async () => {
   try {
     await invoke("save_settings", { settings });
     toast("Settings saved");
-    refreshStatus();
+    await refreshStatus();
     refreshPlayers();
   } catch (e) {
     toast(String(e), true);
+    return;
   }
+  // A new game folder gets brought current like any fresh install.
+  if (settings.game_path && settings.game_path !== prevGamePath && status?.exe_present) {
+    await provisionInstall();
+  }
+});
+
+/* ---------------- launcher self-update ---------------- */
+
+let launcherInfo = null;
+
+function showLauncherUpdateModal() {
+  $("update-modal-line").textContent =
+    `Version ${launcherInfo.remote} is ready to install (you have v${launcherInfo.current}).`;
+  $("update-modal").hidden = false;
+}
+
+/* Startup check. Honors the backend's `update` flag, which stays quiet
+   when the last self-update already pulled this CDN version (guards
+   against a re-prompt loop if the shipped binary reports an older
+   compiled-in version). */
+async function checkLauncherUpdate() {
+  try {
+    launcherInfo = await invoke("get_launcher_update");
+  } catch {
+    return;
+  }
+  if (launcherInfo?.update) showLauncherUpdateModal();
+}
+
+/* The Settings "Versions" fields mirror the CDN config.ini version tracks,
+   falling back to what's installed when the CDN is unreachable. */
+async function refreshVersionFields() {
+  try {
+    const v = await invoke("get_versions");
+    $("set-game-version").value =
+      v.remote ? `v${v.remote}` : v.local ? `v${v.local} (installed)` : "";
+  } catch {}
+  if (launcherInfo?.remote) {
+    const cur = launcherInfo.current;
+    $("set-launcher-version").value =
+      `v${launcherInfo.remote}` +
+      (cur && cur !== launcherInfo.remote ? ` (installed: v${cur})` : "");
+  } else if (launcherInfo?.current) {
+    $("set-launcher-version").value = `v${launcherInfo.current} (installed)`;
+  }
+}
+
+/* Manual check from Settings: covers both tracks. Unlike the startup
+   check this compares versions directly (no marker guard): if the CDN
+   says a different launcher version, the install dialog opens; a game
+   update is applied on the spot. */
+$("btn-check-updates").addEventListener("click", async () => {
+  const btn = $("btn-check-updates");
+  btn.disabled = true;
+  btn.textContent = "Checking…";
+  try {
+    try {
+      launcherInfo = await invoke("get_launcher_update");
+    } catch {}
+    const launcherOutdated =
+      !!(launcherInfo?.remote && launcherInfo.remote !== launcherInfo.current);
+    if (launcherOutdated) showLauncherUpdateModal();
+
+    let v = null;
+    try {
+      v = await invoke("get_versions");
+    } catch {}
+    const gameOutdated = !!(v?.remote && status?.exe_present && v.local !== v.remote);
+    if (gameOutdated) await autoUpdate();
+
+    await refreshVersionFields();
+    if (!launcherInfo?.remote && !v?.remote) {
+      toast("Couldn't reach the update server, check the CDN base in Advanced.", true);
+    } else if (!gameOutdated && !launcherOutdated) {
+      toast("Everything is up to date");
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Check for updates";
+  }
+});
+
+$("btn-update-later").addEventListener("click", () => {
+  $("update-modal").hidden = true;
+});
+
+$("btn-update-install").addEventListener("click", async () => {
+  const btn = $("btn-update-install");
+  btn.disabled = true;
+  btn.textContent = "Installing…";
+  try {
+    // On success the backend restarts the launcher; this call never resolves.
+    await invoke("update_launcher");
+  } catch (e) {
+    toast(String(e), true);
+    btn.disabled = false;
+    btn.textContent = "Install";
+  }
+});
+
+/* Reset configuration: two-step confirm, then wipe settings and re-run
+   the first-boot wizard as if the launcher were freshly installed. */
+$("btn-reset-settings").addEventListener("click", async () => {
+  const btn = $("btn-reset-settings");
+  if (!btn.classList.contains("armed")) {
+    btn.classList.add("armed");
+    btn.textContent = "Click again to confirm reset";
+    btn._disarm = setTimeout(() => {
+      btn.classList.remove("armed");
+      btn.textContent = "Reset configuration";
+    }, 4000);
+    return;
+  }
+  clearTimeout(btn._disarm);
+  btn.classList.remove("armed");
+  btn.textContent = "Reset configuration";
+  try {
+    settings = await invoke("reset_settings");
+  } catch (e) {
+    toast(String(e), true);
+    return;
+  }
+  toast("Configuration reset");
+  fillSettingsForm();
+  renderAccount();
+  refreshStatus();
+  refreshPlayers();
+  showView("home");
+  startWizard();
 });
 
 /* ---------------- init ---------------- */
 
 (async function init() {
   settings = await invoke("get_settings");
-  if (navigator.platform.startsWith("Win")) $("field-launch-cmd").style.display = "none";
+  if (navigator.platform.startsWith("Win")) {
+    $("field-launch-cmd").style.display = "none";
+    $("field-wine-prefix").style.display = "none";
+  } else {
+    loadWrappers();
+  }
   fillSettingsForm();
   renderAccount();
   await refreshStatus();
@@ -698,6 +933,7 @@ $("btn-save-settings").addEventListener("click", async () => {
   refreshPlayers();
   refreshEvents();
   autoUpdate();
+  checkLauncherUpdate().then(refreshVersionFields);
   setInterval(refreshPlayers, 60_000);
   setInterval(refreshEvents, 300_000);
   setInterval(refreshStatus, 15_000);

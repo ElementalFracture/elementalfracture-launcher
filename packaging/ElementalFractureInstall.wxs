@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows installer for the Elemental Fracture launcher, built on Linux
+  with msitools:  wixl -a x64 -D Version=... -D ExeSource=... -D DllSource=...
+                       -o ElementalFractureInstall.msi ElementalFractureInstall.wxs
+
+  Per-user install (LocalAppData\Programs\Elemental Fracture) so the
+  launcher's self-updater can replace its own binary without elevation.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="Elemental Fracture Launcher"
+           Manufacturer="Elemental Fracture"
+           Version="$(var.Version)"
+           Language="1033"
+           UpgradeCode="f1265ac0-9fa0-423b-99e1-dea78f9c30eb">
+
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" />
+    <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsDir" Name="Programs">
+          <Directory Id="INSTALLDIR" Name="Elemental Fracture">
+            <Component Id="MainExecutable" Guid="c4728a91-12e6-4bf8-96d2-5abd84c089f2" Win64="yes">
+              <File Id="LauncherExe" Name="Elemental Fracture.exe" Source="$(var.ExeSource)" KeyPath="yes" />
+              <File Id="WebView2Loader" Name="WebView2Loader.dll" Source="$(var.DllSource)" />
+              <RemoveFolder Id="RemoveInstallDir" On="uninstall" />
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="AppMenuDir" Name="Elemental Fracture">
+          <Component Id="StartMenuShortcut" Guid="7077f9c5-29c7-43d9-8768-a0f889b4c084">
+            <Shortcut Id="AppShortcut"
+                      Name="Elemental Fracture"
+                      Description="Elemental Fracture launcher"
+                      Target="[INSTALLDIR]Elemental Fracture.exe"
+                      WorkingDirectory="INSTALLDIR" />
+            <RemoveFolder Id="RemoveMenuDir" On="uninstall" />
+            <RegistryValue Root="HKCU" Key="Software\ElementalFracture\Launcher"
+                           Name="installed" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="Complete" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+  </Product>
+</Wix>

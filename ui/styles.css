@@ -1,5 +1,19 @@
 /* ============ Elemental Fracture launcher theme ============ */
 
+@font-face {
+  font-family: "Friz Quadrata";
+  src: url("assets/fonts/FrizQuadrata-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("assets/fonts/Montserrat-VariableFont_wght.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+}
+
 :root {
   --bg: #0d0716;
   --bg-2: #150c24;
@@ -10,6 +24,7 @@
   --muted: #9c90b8;
   --gold: #d9b45b;
   --gold-bright: #f0d48a;
+  --cream: #fbe9dc; /* pale peach of the social banner buttons */
   --good: #4cd97b;
   --bad: #e05c6e;
   --radius: 12px;
@@ -48,9 +63,6 @@ body {
   background: linear-gradient(180deg, #120a20 0%, #0d0716 100%);
   border-right: 1px solid var(--line);
 }
-
-.logo { padding: 2px 0 12px; }
-.logo img { width: 40px; height: 40px; object-fit: contain; }
 
 #sidebar nav { display: flex; flex-direction: column; gap: 6px; }
 
@@ -431,6 +443,20 @@ code { background: #ffffff12; padding: 1px 5px; border-radius: 4px; font-size: 1
 }
 .field small { color: var(--muted); font-weight: 400; }
 
+select {
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color .15s;
+  cursor: pointer;
+}
+select:focus { border-color: var(--gold); }
+.form-row select { flex: 1; }
+
 input[type="text"], input[type="password"] {
   width: 100%;
   padding: 9px 12px;
@@ -445,6 +471,11 @@ input[type="text"], input[type="password"] {
   -webkit-user-select: text;
 }
 input:focus { border-color: var(--gold); }
+input[readonly] { color: var(--muted); cursor: default; }
+input[readonly]:focus { border-color: var(--line); }
+
+.version-fields { display: flex; gap: 14px; }
+.version-fields .field { flex: 1; margin-bottom: 0; }
 
 .form-row { display: flex; gap: 8px; }
 .form-row input { flex: 1; }
@@ -466,18 +497,22 @@ input:focus { border-color: var(--gold); }
   color: #16102a;
 }
 .btn.subtle { background: #ffffff0d; color: var(--text); }
+.btn.danger { background: #e05c6e14; border-color: #e05c6e55; color: var(--bad); }
+.btn.danger.armed { background: var(--bad); border-color: var(--bad); color: #fff; }
 .btn:disabled { opacity: .5; cursor: wait; }
 
-.save-row { display: flex; justify-content: flex-end; }
+/* Destructive action on the left, primary save on the right. */
+.save-row { display: flex; justify-content: space-between; gap: 8px; }
 
 /* ============ First-boot wizard ============ */
 
-#wizard {
+#wizard, #update-modal {
   position: fixed; inset: 0;
   z-index: 50;
   display: grid; place-items: center;
   background: #0d0716ee;
 }
+#update-modal { z-index: 60; }
 
 .wizard-panel {
   width: min(480px, 90vw);
@@ -489,17 +524,19 @@ input:focus { border-color: var(--gold); }
   text-align: center;
 }
 
-.wizard-mark { width: 84px; height: 84px; object-fit: contain; margin-bottom: 6px; }
-
 .wizard-step h2 {
-  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-family: "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   font-size: 24px;
   letter-spacing: .03em;
   color: var(--gold-bright);
   margin-bottom: 8px;
 }
-.wizard-step p { font-size: 14px; margin-bottom: 6px; }
-.wizard-step input { margin-top: 10px; }
+.wizard-step p {
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.wizard-step input { margin-top: 10px; font-family: "Montserrat", "Segoe UI", sans-serif; }
 
 .wizard-actions {
   display: flex; gap: 10px; justify-content: center;
@@ -507,7 +544,28 @@ input:focus { border-color: var(--gold); }
   flex-wrap: wrap;
 }
 
+/* Wizard buttons follow the social-banner scheme: flat cream text that
+   turns gold on hover (primary starts gold, brightens on hover). */
+.wizard-actions .btn {
+  background: none;
+  border: none;
+  border-radius: 0;
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  padding: 8px 14px;
+  transition: color .15s, transform .1s;
+}
+.wizard-actions .btn:hover { filter: none; }
+.wizard-actions .btn:active { transform: scale(.97); }
+.wizard-actions .btn.subtle { background: none; color: var(--cream); opacity: .85; }
+.wizard-actions .btn.subtle:hover { color: var(--gold); opacity: 1; }
+.wizard-actions .btn.primary { background: none; color: var(--gold); }
+.wizard-actions .btn.primary:hover { color: var(--gold-bright); }
+
 .wizard-tooltip {
+  font-family: "Montserrat", "Segoe UI", sans-serif;
   font-size: 12px;
   color: var(--muted);
   margin-top: 10px;

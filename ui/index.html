@@ -9,10 +9,6 @@
 <body>
   <div id="app">
     <aside id="sidebar">
-      <div class="logo" title="Elemental Fracture">
-        <img src="assets/mark.png" alt="Elemental Fracture" />
-      </div>
-
       <nav>
         <button class="nav-btn active" data-view="home" title="Home">
           <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>
@@ -50,7 +46,7 @@
               <small>online</small>
             </div>
           </div>
-          <button class="pill clickable" id="pill-ingame" title="Players in game — click for a breakdown">
+          <button class="pill clickable" id="pill-ingame" title="Players in game: click for a breakdown">
             <svg viewBox="0 0 24 24" class="pill-icon"><path d="M6.9 3 3 6.9l6.3 6.3-2.1 2.1-1.4-1.4-1.4 1.4 1.7 1.8-2.8 2.8 1.4 1.4 2.8-2.8 1.8 1.7 1.4-1.4-1.4-1.4 2.1-2.1zM17.1 3 21 6.9l-6.3 6.3 2.1 2.1 1.4-1.4 1.4 1.4-1.7 1.8 2.8 2.8-1.4 1.4-2.8-2.8-1.8 1.7-1.4-1.4 1.4-1.4-2.1-2.1z"/></svg>
             <div class="pill-text">
               <strong id="ingame-count">–</strong>
@@ -79,7 +75,7 @@
           <div class="hero-text">
             <span class="eyebrow">Elemental Fracture</span>
             <h3>The Hollow Lands still beckon, breaker</h3>
-            <p>Community servers, restored battles, new balance — Spellbreak lives on.</p>
+            <p>Community servers, restored battles, new balance. Spellbreak lives on.</p>
 
             <!-- shown when a game install is configured -->
             <div id="play-block">
@@ -173,9 +169,38 @@
             </div>
           </label>
           <label class="field" id="field-launch-cmd">
-            <span>Launch wrapper <small>(Linux only — e.g. <code>wine</code> or <code>umu-run</code>; the exe path is appended)</small></span>
-            <input type="text" id="set-launch-cmd" placeholder="wine" />
+            <span>Launch wrapper <small>(Linux only; runs the game exe)</small></span>
+            <div class="form-row">
+              <select id="set-launch-select"></select>
+              <input type="text" id="set-launch-cmd" placeholder="e.g. wine" hidden />
+            </div>
           </label>
+          <label class="field" id="field-wine-prefix">
+            <span>Wine prefix <small>(optional; passed as <code>WINEPREFIX</code>, empty = the launcher makes its own)</small></span>
+            <div class="form-row">
+              <input type="text" id="set-wine-prefix" placeholder="e.g. /home/you/.wineprefixes/spellbreak" />
+              <button class="btn subtle" id="btn-browse-prefix">Browse…</button>
+            </div>
+          </label>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Versions</h3>
+            <div class="panel-actions">
+              <button class="btn subtle" id="btn-check-updates">Check for updates</button>
+            </div>
+          </div>
+          <div class="version-fields">
+            <label class="field">
+              <span>Game version</span>
+              <input type="text" id="set-game-version" readonly placeholder="unavailable" />
+            </label>
+            <label class="field">
+              <span>Launcher version</span>
+              <input type="text" id="set-launcher-version" readonly placeholder="unavailable" />
+            </label>
+          </div>
         </div>
 
         <div class="panel">
@@ -195,6 +220,7 @@
         </div>
 
         <div class="save-row">
+          <button class="btn danger" id="btn-reset-settings" title="Clear all launcher settings and run first-time setup again">Reset configuration</button>
           <button class="btn primary" id="btn-save-settings">Save settings</button>
         </div>
       </section>
@@ -204,8 +230,6 @@
   <!-- ================= FIRST-BOOT WIZARD ================= -->
   <div id="wizard" hidden>
     <div class="wizard-panel">
-      <img src="assets/mark.png" class="wizard-mark" alt="" />
-
       <div class="wizard-step" data-step="welcome">
         <h2>Welcome to Elemental Fracture</h2>
         <p>We're so glad you're here.</p>
@@ -218,7 +242,7 @@
         <h2>Have you set up the game before?</h2>
         <p class="muted">If Spellbreak is already on this machine, point the launcher at its folder and you're done.</p>
         <div class="wizard-actions">
-          <button class="btn primary" id="wz-game-yes">Yes — locate my install</button>
+          <button class="btn primary" id="wz-game-yes">Yes, locate my install</button>
           <button class="btn subtle" id="wz-game-no">No, not yet</button>
         </div>
         <p class="muted wizard-result" id="wz-game-result"></p>
@@ -229,8 +253,8 @@
         <p class="muted">Your token identifies you on Elemental Fracture servers.</p>
         <input type="password" id="wz-token" placeholder="Paste your token…" />
         <p class="wizard-tooltip">Don't have an authentication token?
-          <a id="wz-link-discord">Join the Discord</a> and set up a token —
-          <a id="wz-link-guide">here's the guide</a>.</p>
+          <a id="wz-link-discord">Join the Discord</a> and set up a token.
+          <a id="wz-link-guide">Here's the guide</a>.</p>
         <div class="wizard-actions">
           <button class="btn primary" id="wz-token-save">Save &amp; continue</button>
           <button class="btn subtle" id="wz-token-skip">Skip for now</button>
@@ -242,6 +266,20 @@
         <p class="muted">The Hollow Lands still beckon, breaker.</p>
         <div class="wizard-actions">
           <button class="btn primary" id="wz-finish">Enter the launcher</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LAUNCHER SELF-UPDATE ================= -->
+  <div id="update-modal" hidden>
+    <div class="wizard-panel">
+      <div class="wizard-step">
+        <h2>New update available for launcher</h2>
+        <p class="muted" id="update-modal-line">A new launcher version is ready to install.</p>
+        <div class="wizard-actions">
+          <button class="btn primary" id="btn-update-install">Install</button>
+          <button class="btn subtle" id="btn-update-later">Not now</button>
         </div>
       </div>
     </div>

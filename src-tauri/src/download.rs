@@ -313,34 +313,84 @@ fn extract_flat(zip_path: &Path, dest: &Path) -> Result<Vec<String>, String> {
     Ok(names)
 }
 
-/// Latest version string from {cdn}/launcher/version.txt. Handles the old
-/// UTF-16LE+BOM format and rejects S3/XML error pages served with a 200.
-async fn fetch_remote_version(client: &reqwest::Client, cdn: &str) -> Option<String> {
+/// All remote launcher configuration lives in one ini file on the CDN:
+/// {cdn}/launcher/config.ini. It carries both version tracks
+/// (GameVersion / LauncherVersion) and has room for any future settings.
+/// Parsed leniently: `key=value` lines, `[sections]` skipped, `;`/`#`
+/// comments, UTF-8 or the old UTF-16LE+BOM. Keys are matched
+/// case-insensitively.
+pub fn parse_ini(text: &str) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with(';') || line.starts_with('#') || line.starts_with('[') {
+            continue;
+        }
+        if let Some((k, v)) = line.split_once('=') {
+            map.insert(k.trim().to_ascii_lowercase(), v.trim().to_string());
+        }
+    }
+    map
+}
+
+async fn fetch_remote_config(
+    client: &reqwest::Client,
+    cdn: &str,
+) -> std::collections::HashMap<String, String> {
     let resp = client
-        .get(format!("{cdn}/launcher/version.txt"))
+        .get(format!("{cdn}/launcher/config.ini"))
         .timeout(Duration::from_secs(8))
         .send()
-        .await
-        .ok()?;
+        .await;
+    let Ok(resp) = resp else { return Default::default() };
     if !resp.status().is_success() {
-        return None;
+        return Default::default();
     }
-    let bytes = resp.bytes().await.ok()?;
-    let v = game::decode_version_bytes(&bytes);
-    (!v.is_empty() && v.len() <= 32 && !v.contains('<')).then_some(v)
+    let Ok(bytes) = resp.bytes().await else { return Default::default() };
+    parse_ini(&game::decode_version_bytes(&bytes))
+}
+
+/// Version values must look like versions, not S3 error pages served as 200.
+fn valid_version(v: &str) -> bool {
+    !v.is_empty() && v.len() <= 32 && !v.contains('<')
+}
+
+fn config_version(cfg: &std::collections::HashMap<String, String>, key: &str) -> Option<String> {
+    cfg.get(key).filter(|v| valid_version(v)).cloned()
+}
+
+async fn fetch_remote_game_version(client: &reqwest::Client, cdn: &str) -> Option<String> {
+    config_version(&fetch_remote_config(client, cdn).await, "gameversion")
+}
+
+async fn fetch_remote_launcher_version(client: &reqwest::Client, cdn: &str) -> Option<String> {
+    config_version(&fetch_remote_config(client, cdn).await, "launcherversion")
+}
+
+/// The whole remote config, for anything the frontend wants from it.
+#[tauri::command]
+pub async fn get_remote_config(app: tauri::AppHandle) -> std::collections::HashMap<String, String> {
+    let s = settings::load(&app);
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    match http() {
+        Ok(client) => fetch_remote_config(&client, &cdn).await,
+        Err(_) => Default::default(),
+    }
 }
 
 /// Bring an install in agreement with the CDN: fetch the latest version,
-/// pull the balance patch into g3/Content/Paks, and only once the patch has
-/// landed bump the local version.txt to match. Shared by fresh installs,
-/// manual updates, and the automatic startup update check.
+/// pull the balance patch into g3/Content/Paks, install the mod package,
+/// and only once BOTH have landed bump the local version.txt to match —
+/// a half-provisioned install keeps looking outdated and gets retried.
+/// Shared by fresh installs, manual updates, newly-pointed-at game folders,
+/// and the automatic startup update check.
 async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<String, String> {
     let paks = game::paks_dir(root);
     if !paks.is_dir() {
         return Err(format!("Paks folder not found: {}", paks.display()));
     }
 
-    let remote_version = fetch_remote_version(&http()?, cdn).await;
+    let remote_version = fetch_remote_game_version(&http()?, cdn).await;
 
     let tmp = root.join("_efpatch.zip");
     download_to_file(app, "download-patch", &format!("{cdn}/patch/latest.zip"), &tmp).await?;
@@ -352,6 +402,11 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
         .map_err(|e| e.to_string())??;
     let _ = fs::remove_file(&tmp);
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
+
+    emit(app, "install-mods", "Downloading mod package…".into(), 0.0, 0, 0);
+    let mod_log = crate::mods::fetch_and_install(cdn, root.to_path_buf()).await?;
+    let installed = mod_log.iter().filter(|l| l.starts_with("Installed")).count();
+    emit(app, "install-mods", format!("Mods installed ({installed} files)"), 100.0, 0, 0);
 
     // The install now matches the CDN — bump version.txt to say so.
     match remote_version {
@@ -391,7 +446,7 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String
             .flatten()
             .map(|e| e.path())
             .find(|p| p.join("g3").is_dir())
-            .ok_or("Extracted files don't contain a g3 folder — unexpected archive layout.")?
+            .ok_or("Extracted files don't contain a g3 folder: unexpected archive layout.")?
     };
 
     apply_patch(&app, &cdn, &root).await?;
@@ -427,8 +482,124 @@ pub async fn get_versions(app: tauri::AppHandle) -> serde_json::Value {
 
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
     let remote = match http() {
-        Ok(client) => fetch_remote_version(&client, &cdn).await,
+        Ok(client) => fetch_remote_game_version(&client, &cdn).await,
         Err(_) => None,
     };
     serde_json::json!({ "local": local, "remote": remote })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ini_versions_and_extras() {
+        let cfg = parse_ini(
+            "; Elemental Fracture launcher configuration\n\
+             [Versions]\n\
+             LauncherVersion = 1.0.0\n\
+             GameVersion=6.0.2\n\
+             # future settings ride along\n\
+             DiscordUrl = https://dsc.gg/elefrac\n",
+        );
+        assert_eq!(config_version(&cfg, "launcherversion").as_deref(), Some("1.0.0"));
+        assert_eq!(config_version(&cfg, "gameversion").as_deref(), Some("6.0.2"));
+        assert_eq!(cfg.get("discordurl").unwrap(), "https://dsc.gg/elefrac");
+    }
+
+    #[test]
+    fn ini_rejects_error_pages() {
+        let cfg = parse_ini("<?xml version=\"1.0\"?><Error><Code>NoSuchKey</Code></Error>");
+        assert_eq!(config_version(&cfg, "gameversion"), None);
+        assert_eq!(config_version(&cfg, "launcherversion"), None);
+    }
+}
+
+/// The version marker written after a successful self-update. Guards
+/// against a re-prompt loop when the downloaded binary still reports an
+/// older compiled-in version.
+fn launcher_version_marker(app: &tauri::AppHandle) -> PathBuf {
+    settings::config_dir(app).join("launcher_version.txt")
+}
+
+/// Compare this launcher against {cdn}/launcher/version.txt. Also cleans up
+/// the .old binary a previous self-update left behind.
+/// What a self-update actually replaces, and the CDN file it pulls.
+/// A plain binary swaps itself; an AppImage's mount is read-only, so we
+/// swap the .AppImage file it was launched from ($APPIMAGE, set by the
+/// AppImage runtime).
+fn update_target() -> Result<(PathBuf, &'static str), String> {
+    if let Some(appimage) = std::env::var_os("APPIMAGE") {
+        return Ok((PathBuf::from(appimage), "ef-launcher.AppImage"));
+    }
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    Ok((exe, if cfg!(windows) { "ef-launcher.exe" } else { "ef-launcher" }))
+}
+
+#[tauri::command]
+pub async fn get_launcher_update(app: tauri::AppHandle) -> serde_json::Value {
+    if let Ok((target, _)) = update_target() {
+        let _ = fs::remove_file(target.with_extension("old"));
+    }
+
+    let s = settings::load(&app);
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    let current = env!("CARGO_PKG_VERSION").to_string();
+    let remote = match http() {
+        Ok(client) => fetch_remote_launcher_version(&client, &cdn).await,
+        Err(_) => None,
+    };
+    let installed = fs::read_to_string(launcher_version_marker(&app))
+        .ok()
+        .map(|v| v.trim().to_string());
+
+    let update = matches!(
+        &remote,
+        Some(r) if *r != current && installed.as_deref() != Some(r.as_str())
+    );
+    serde_json::json!({ "current": current, "remote": remote, "update": update })
+}
+
+/// Self-update: pull the new binary from the CDN, swap it in place of the
+/// running one (rename the live exe aside first, Windows allows that but
+/// not overwriting), bump the local version marker, restart.
+#[tauri::command]
+pub async fn update_launcher(app: tauri::AppHandle) -> Result<(), String> {
+    let s = settings::load(&app);
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    let remote = fetch_remote_launcher_version(&http()?, &cdn)
+        .await
+        .ok_or("Couldn't read the launcher version from the CDN.")?;
+
+    let (exe, binary) = update_target()?;
+    let staged = exe.with_extension("new");
+    download_to_file(&app, "download-launcher", &format!("{cdn}/launcher/{binary}"), &staged).await?;
+
+    let size = fs::metadata(&staged).map(|m| m.len()).unwrap_or(0);
+    if size < 1024 * 1024 {
+        let _ = fs::remove_file(&staged);
+        return Err("Downloaded launcher is suspiciously small: the CDN may have returned an error page.".into());
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&staged, fs::Permissions::from_mode(0o755));
+    }
+
+    let parked = exe.with_extension("old");
+    let _ = fs::remove_file(&parked);
+    fs::rename(&exe, &parked).map_err(|e| format!("couldn't stage the running binary: {e}"))?;
+    if let Err(e) = fs::rename(&staged, &exe) {
+        let _ = fs::rename(&parked, &exe); // roll back so the install stays runnable
+        return Err(format!("couldn't install the new binary: {e}"));
+    }
+
+    let _ = fs::write(launcher_version_marker(&app), &remote);
+
+    std::process::Command::new(&exe)
+        .spawn()
+        .map_err(|e| format!("updated, but couldn't restart the launcher: {e}"))?;
+    app.exit(0);
+    Ok(())
 }
