@@ -4,3 +4,4 @@ src-tauri/gen/
 
 # Packaged binaries (built by CI / release, not tracked)
 dist/
+node_modules/
