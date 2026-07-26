@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, specta::Type, Clone, Debug)]
 #[serde(default)]
 pub struct Settings {
     pub game_path: String,
@@ -90,11 +90,13 @@ pub fn game_host(auth_url: &str) -> String {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_settings(app: tauri::AppHandle) -> Settings {
     load(&app)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     store(&app, &settings)
 }
@@ -102,6 +104,7 @@ pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), St
 /// Wipe the stored configuration back to defaults. Returns the fresh
 /// settings so the frontend can re-run first-boot onboarding.
 #[tauri::command]
+#[specta::specta]
 pub fn reset_settings(app: tauri::AppHandle) -> Result<Settings, String> {
     let s = Settings::default();
     store(&app, &s)?;
@@ -109,6 +112,7 @@ pub fn reset_settings(app: tauri::AppHandle) -> Result<Settings, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn pick_game_dir(app: tauri::AppHandle, title: Option<String>) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
     app.dialog()
@@ -162,6 +166,7 @@ fn host_open(_url: &str) -> bool {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn open_url(url: String) -> Result<(), String> {
     if !url.starts_with("https://") && !url.starts_with("http://") {
         return Err("only http(s) links can be opened".into());
