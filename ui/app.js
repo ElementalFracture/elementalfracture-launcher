@@ -811,7 +811,7 @@ $("wz-finish").addEventListener("click", finishWizard);
 /* ---------------- settings view ---------------- */
 
 function fillSettingsForm() {
-  $("set-game-path").value = settings.game_path ?? "";
+  // Game folder is managed in Mods & Install (Locate / Download), not Settings.
   $("set-launch-cmd").value = settings.launch_command ?? "";
   $("set-wine-prefix").value = settings.wine_prefix ?? "";
   $("set-cdn-base").value = settings.cdn_base ?? "";
@@ -905,11 +905,6 @@ function selectedWrapper() {
   return sel.value === "__custom__" ? $("set-launch-cmd").value.trim() : sel.value;
 }
 
-$("btn-browse").addEventListener("click", async () => {
-  const dir = await invoke("pick_game_dir", { title: null });
-  if (dir) $("set-game-path").value = dir;
-});
-
 $("btn-browse-prefix").addEventListener("click", async () => {
   const dir = await invoke("pick_game_dir", { title: "Select a Wine prefix folder" });
   if (dir) $("set-wine-prefix").value = dir;
@@ -919,7 +914,7 @@ $("btn-save-settings").addEventListener("click", async () => {
   const prevGamePath = settings?.game_path ?? "";
   settings = {
     ...settings,
-    game_path: $("set-game-path").value.trim(),
+    // game_path is set via Mods & Install (Locate/Download); keep the current value.
     launch_command: selectedWrapper(),
     wine_prefix: $("set-wine-prefix").value.trim(),
     cdn_base: $("set-cdn-base").value.trim(),

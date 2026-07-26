@@ -159,7 +159,7 @@
         <!-- Auth token (two-step) -->
         <div class="panel">
           <div class="panel-head"><h3>Auth token</h3></div>
-          <p class="muted">Identifies you on Elemental Fracture servers. Kept by the launcher and handed to the game in memory at launch. Enter it twice to confirm.</p>
+          <p class="muted">Identifies you on Elemental Fracture. Only change this token when rotated by either yourself on Discord or by a mod.</p>
           <label class="field">
             <span>Token</span>
             <input type="password" id="mods-token" placeholder="Paste your token…" autocomplete="off" spellcheck="false" />
@@ -196,17 +196,6 @@
 
       <!-- ================= SETTINGS ================= -->
       <section class="view" id="view-settings">
-        <div class="panel">
-          <div class="panel-head"><h3>Game</h3></div>
-          <label class="field">
-            <span>Spellbreak folder <small>(contains g3 and Engine)</small></span>
-            <div class="form-row">
-              <input type="text" id="set-game-path" placeholder="e.g. C:\Games\Spellbreak or /home/you/Games/Spellbreak" />
-              <button class="btn subtle" id="btn-browse">Browse…</button>
-            </div>
-          </label>
-        </div>
-
         <div class="panel">
           <div class="panel-head">
             <h3>Versions</h3>
@@ -337,7 +326,7 @@
     <div class="wizard-panel">
       <div class="wizard-step" id="account-token-view">
         <h2>Please enter your auth token</h2>
-        <p class="muted">Your token identifies you on Elemental Fracture servers. It's kept by the launcher and handed to the game in memory at launch.</p>
+        <p class="muted">Identifies you on Elemental Fracture. Only change this token when rotated by either yourself on Discord or by a mod.</p>
         <input type="password" id="account-token-input" placeholder="Paste your token…" />
         <p class="wizard-tooltip">Don't have a token?
           <a id="account-link-discord">Join the Discord</a> to get one.</p>
