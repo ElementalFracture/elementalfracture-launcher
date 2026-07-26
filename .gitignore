@@ -5,3 +5,6 @@ src-tauri/gen/
 # Packaged binaries (built by CI / release, not tracked)
 dist/
 node_modules/
+
+# tauri-specta TypeScript bindings, regenerated on every debug run
+ui/generated/

@@ -369,6 +369,7 @@ async fn fetch_remote_launcher_version(client: &reqwest::Client, cdn: &str) -> O
 
 /// The whole remote config, for anything the frontend wants from it.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_remote_config(app: tauri::AppHandle) -> std::collections::HashMap<String, String> {
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
@@ -421,6 +422,7 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
 
 /// Fresh install: base game zip → dest, then patch + version bump.
 #[tauri::command]
+#[specta::specta]
 pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String, String> {
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
@@ -461,6 +463,7 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String
 
 /// Re-apply the latest balance patch to an existing install.
 #[tauri::command]
+#[specta::specta]
 pub async fn update_patch(app: tauri::AppHandle) -> Result<String, String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
@@ -472,9 +475,16 @@ pub async fn update_patch(app: tauri::AppHandle) -> Result<String, String> {
     Ok(version)
 }
 
+#[derive(Serialize, specta::Type)]
+pub struct VersionInfo {
+    pub local: Option<String>,
+    pub remote: Option<String>,
+}
+
 /// Installed vs latest version, for the update badge.
 #[tauri::command]
-pub async fn get_versions(app: tauri::AppHandle) -> serde_json::Value {
+#[specta::specta]
+pub async fn get_versions(app: tauri::AppHandle) -> VersionInfo {
     let s = settings::load(&app);
     let local = (!s.game_path.is_empty())
         .then(|| game::read_local_version(Path::new(&s.game_path)))
@@ -485,7 +495,7 @@ pub async fn get_versions(app: tauri::AppHandle) -> serde_json::Value {
         Ok(client) => fetch_remote_game_version(&client, &cdn).await,
         Err(_) => None,
     };
-    serde_json::json!({ "local": local, "remote": remote })
+    VersionInfo { local, remote }
 }
 
 #[cfg(test)]
@@ -536,8 +546,16 @@ fn update_target() -> Result<(PathBuf, &'static str), String> {
     Ok((exe, if cfg!(windows) { "ef-launcher.exe" } else { "ef-launcher" }))
 }
 
+#[derive(Serialize, specta::Type)]
+pub struct LauncherUpdateInfo {
+    pub current: String,
+    pub remote: Option<String>,
+    pub update: bool,
+}
+
 #[tauri::command]
-pub async fn get_launcher_update(app: tauri::AppHandle) -> serde_json::Value {
+#[specta::specta]
+pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
     if let Ok((target, _)) = update_target() {
         let _ = fs::remove_file(target.with_extension("old"));
     }
@@ -557,13 +575,14 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> serde_json::Value {
         &remote,
         Some(r) if *r != current && installed.as_deref() != Some(r.as_str())
     );
-    serde_json::json!({ "current": current, "remote": remote, "update": update })
+    LauncherUpdateInfo { current, remote, update }
 }
 
 /// Self-update: pull the new binary from the CDN, swap it in place of the
 /// running one (rename the live exe aside first, Windows allows that but
 /// not overwriting), bump the local version marker, restart.
 #[tauri::command]
+#[specta::specta]
 pub async fn update_launcher(app: tauri::AppHandle) -> Result<(), String> {
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();

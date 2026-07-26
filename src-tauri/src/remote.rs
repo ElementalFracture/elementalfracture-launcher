@@ -16,6 +16,7 @@ fn client() -> Result<reqwest::Client, String> {
 /// which follows the servers' broadcast JSON streams — the same feed the
 /// Discord bot's match tracker consumes. Falls back to the portal HTTP API.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_players(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let s = settings::load(&app);
 
@@ -41,7 +42,7 @@ pub async fn get_players(app: tauri::AppHandle) -> Result<serde_json::Value, Str
         .map_err(|e| e.to_string())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct TokenResult {
     pub username: Option<String>,
     pub is_staff: bool,
@@ -54,6 +55,7 @@ pub struct TokenResult {
 /// which returns {"ok", "username", "is_staff", "is_dev"}. The token is
 /// stored even when the lookup fails, so play still works offline.
 #[tauri::command]
+#[specta::specta]
 pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenResult, String> {
     let token = token.trim().to_string();
     if token.is_empty() {
@@ -111,6 +113,7 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
 /// Live Discord events, served by the players sidecar (pushed there by the
 /// Discord bot). The endpoint lives next to /players on the same service.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_events(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let s = settings::load(&app);
     let base = s.players_url.trim();
@@ -132,7 +135,7 @@ pub async fn get_events(app: tauri::AppHandle) -> Result<serde_json::Value, Stri
         .map_err(|e| e.to_string())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct NewsItem {
     pub title: String,
     pub body: String,
@@ -142,6 +145,7 @@ pub struct NewsItem {
 
 /// "What's new" straight from the patchnotes RSS feed on docs.elefrac.com.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_news() -> Result<Vec<NewsItem>, String> {
     let xml = client()?
         .get(FEED_URL)

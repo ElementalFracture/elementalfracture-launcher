@@ -12,7 +12,7 @@ pub const MOD_DLLS: &[&str] = &[
     "crouch_mod.dll",
 ];
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct FileCheck {
     pub label: String,
     pub path: String,
@@ -24,6 +24,7 @@ fn win64_dir(root: &Path) -> PathBuf {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn verify_install(app: tauri::AppHandle) -> Vec<FileCheck> {
     let s = settings::load(&app);
     let root = PathBuf::from(&s.game_path);
@@ -74,6 +75,7 @@ pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> Result<Vec<Stri
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn install_mods(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {

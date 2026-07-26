@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 const PAK: &str = "ElefracBalance_P.pak";
 const SIG: &str = "ElefracBalance_P.sig";
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct GameStatus {
     pub game_path: String,
     pub valid: bool,
@@ -77,6 +77,7 @@ pub fn detect_variant(root: &Path) -> String {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_status(app: tauri::AppHandle) -> GameStatus {
     let s = settings::load(&app);
     let root = PathBuf::from(&s.game_path);
@@ -91,6 +92,7 @@ pub fn get_status(app: tauri::AppHandle) -> GameStatus {
 
 /// Look for an existing Spellbreak install in the usual places.
 #[tauri::command]
+#[specta::specta]
 pub fn auto_find_game() -> Option<String> {
     let mut candidates: Vec<PathBuf> = Vec::new();
 
@@ -142,6 +144,7 @@ pub fn auto_find_game() -> Option<String> {
 /// ("classic") by renaming the balance pak in and out of the way,
 /// exactly like the old rename.bat / restore.bat did.
 #[tauri::command]
+#[specta::specta]
 pub fn set_variant(app: tauri::AppHandle, variant: String) -> Result<String, String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
@@ -264,7 +267,7 @@ mod tests {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 pub struct WrapperOption {
     pub command: String,
     pub label: String,
@@ -292,6 +295,7 @@ fn host_cmd_output(args: &[&str]) -> Option<String> {
 /// Checks PATH, then the usual bin dirs directly (an AppImage started from
 /// the desktop can see a thin PATH), then Flatpak.
 #[tauri::command]
+#[specta::specta]
 pub fn detect_wrappers() -> Vec<WrapperOption> {
     let mut found: Vec<WrapperOption> = Vec::new();
     if cfg!(windows) {
@@ -440,6 +444,7 @@ fn ensure_prefix_override(wrapper: &str, prefix: &str, is_proton: bool, proton_p
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
