@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
@@ -17,6 +17,17 @@ export default defineConfig(async () => ({
   build: {
     outDir: path.resolve(__dirname, "./dist"),
     emptyOutDir: true,
+  },
+
+  test: {
+    environment: "jsdom",
+    // root is ./ui, so specs live alongside what they cover.
+    include: ["**/*.test.{ts,tsx}"],
+    setupFiles: [path.resolve(__dirname, "./ui/test/setup.ts")],
+    // restoreMocks only reaches vi.spyOn; clearMocks is what drops call
+    // history on the plain vi.fn()s the binding mocks are built from.
+    clearMocks: true,
+    restoreMocks: true,
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

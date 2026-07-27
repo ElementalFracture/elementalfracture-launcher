@@ -8,9 +8,13 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "test": "vitest run",
+    "test-watch": "vitest",
     "lint-js": "eslint ui",
     "lint-tauri": "cargo clippy --manifest-path src-tauri/Cargo.toml",
     "lint": "npm run lint-js && npm run lint-tauri",
+    "format": "eslint ui --fix && prettier --write \"ui/**/*.{ts,tsx,css}\" \"*.{js,ts,json}\"",
+    "format-check": "prettier --check \"ui/**/*.{ts,tsx,css}\" \"*.{js,ts,json}\"",
     "tauri-dev": "tauri dev",
     "build-release": "npm run tauri build"
   },
@@ -40,6 +44,8 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@tauri-apps/cli": "^2",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.6.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
@@ -49,8 +55,10 @@
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^4.1.10"
   }
 }

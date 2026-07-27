@@ -1,0 +1,105 @@
+/* ============ Dialog shell ============ */
+/* Overlay + centering are handled by the Dialog primitive; .wizard-panel is
+   just the ornate card look, reused for every modal (wizard, account token,
+   launcher update, advanced-options warning). */
+
+.wizard-panel {
+  width: min(480px, 90vw);
+  /* DialogContent carries a sm:max-w-sm of its own; width alone can't beat a
+     max-width, so restate it here or the panel caps at 384px. */
+  max-width: min(480px, 90vw);
+  color: var(--text);
+  font-size: 15px;
+  background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 70px #000d,
+    0 0 40px #d9b45b22;
+  padding: 34px 38px 30px;
+  text-align: center;
+}
+
+.wizard-step h2 {
+  font-family: "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 24px;
+  letter-spacing: 0.03em;
+  color: var(--gold-bright);
+  margin-bottom: 8px;
+}
+.wizard-step p {
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.wizard-step input {
+  margin-top: 10px;
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+/* Wizard buttons follow the social-banner scheme: flat cream text that
+   turns gold on hover (primary starts gold, brightens on hover). */
+.wizard-actions .btn {
+  background: none;
+  border: none;
+  border-radius: 0;
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
+  transition:
+    color 0.15s,
+    transform 0.1s;
+}
+.wizard-actions .btn:hover {
+  filter: none;
+}
+.wizard-actions .btn:active {
+  transform: scale(0.97);
+}
+.wizard-actions .btn.subtle {
+  background: none;
+  color: var(--cream);
+  opacity: 0.85;
+}
+.wizard-actions .btn.subtle:hover {
+  color: var(--gold);
+  opacity: 1;
+}
+.wizard-actions .btn.primary {
+  background: none;
+  color: var(--gold);
+}
+.wizard-actions .btn.primary:hover {
+  color: var(--gold-bright);
+}
+
+.wizard-tooltip {
+  font-family: "Montserrat", "Segoe UI", sans-serif;
+  font-size: 12px;
+  color: var(--ef-muted);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+.wizard-tooltip a {
+  color: var(--gold);
+  cursor: pointer;
+}
+.wizard-tooltip a:hover {
+  text-decoration: underline;
+}
+
+.wizard-result {
+  margin-top: 12px;
+  font-size: 12px;
+  word-break: break-all;
+}
