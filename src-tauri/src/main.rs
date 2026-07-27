@@ -6,6 +6,15 @@ mod mods;
 mod remote;
 mod settings;
 
+use tauri::Manager;
+
+/// Fully exit the launcher. Used on game start (the window's X only minimizes,
+/// so this is the real quit path) and bypasses the close-to-minimize handler.
+#[tauri::command]
+fn quit_launcher(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 fn main() {
     // The webkit bundled into the AppImage trips webkit's DMA-BUF renderer
     // bug on many GPU/driver combos (blank white window). Native Linux
@@ -17,7 +26,18 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Opt-in (Settings → Launcher): when "minimize on close" is enabled, the X
+        // minimizes to the taskbar instead of quitting. Off by default = normal close.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if settings::load(window.app_handle()).minimize_on_close {
+                    api.prevent_close();
+                    let _ = window.minimize();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
+            quit_launcher,
             settings::get_settings,
             settings::save_settings,
             settings::reset_settings,
