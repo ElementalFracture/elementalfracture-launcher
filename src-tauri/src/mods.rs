@@ -4,13 +4,10 @@ use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
+// The loader is the one DLL that goes into the game's Win64 binary folder (the
+// game imports it at startup); every OTHER *.dll in mod.zip goes into Mods/dlls.
+// Nothing is hardcoded beyond this rule, so a new mod ships just by being in the zip.
 pub const LOADER_DLL: &str = "xinput1_3.dll";
-pub const MOD_DLLS: &[&str] = &[
-    "auth_injector.dll",
-    "ef_controller.dll",
-    "server_router.dll",
-    "crouch_mod.dll",
-];
 
 #[derive(Serialize, specta::Type)]
 pub struct FileCheck {
@@ -38,8 +35,19 @@ pub fn verify_install(app: tauri::AppHandle) -> Vec<FileCheck> {
             })
         };
         check("Mod loader", win64_dir(&root).join(LOADER_DLL));
-        for dll in MOD_DLLS {
-            check(dll, root.join("Mods").join("dlls").join(dll));
+        // List whatever mod DLLs are actually installed — no fixed roster, so this
+        // stays correct as mods are added/removed from mod.zip.
+        let dlls_dir = root.join("Mods").join("dlls");
+        let mut names: Vec<String> = fs::read_dir(&dlls_dir)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter(|e| e.path().extension().is_some_and(|x| x.eq_ignore_ascii_case("dll")))
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort_unstable();
+        for name in names {
+            check(&name, dlls_dir.join(&name));
         }
     }
     // Auth is no longer verified here — it lives in the launcher and is handed
@@ -131,19 +139,38 @@ fn install_from_zip(root: &Path, bytes: &[u8]) -> Result<Vec<String>, String> {
         }
     }
 
-    if extract_one(&mut zip, LOADER_DLL, &win64_dir(root).join(LOADER_DLL))? {
-        log.push(format!("Installed {LOADER_DLL} (loader)"));
-    } else {
-        log.push(format!("MISSING in package: {LOADER_DLL}"));
-    }
-
-    for dll in MOD_DLLS {
-        if extract_one(&mut zip, dll, &dlls_dir.join(dll))? {
-            log.push(format!("Installed {dll}"));
-        } else {
-            log.push(format!("MISSING in package: {dll}"));
+    // Place every .dll in the package: the loader → g3/Binaries/Win64, all other
+    // DLLs → Mods/dlls. Collect entry names first (extract_one takes a fresh
+    // mutable borrow per file).
+    let win64 = win64_dir(root);
+    let names: Vec<String> = {
+        let mut v = Vec::new();
+        for i in 0..zip.len() {
+            if let Ok(f) = zip.by_index(i) {
+                v.push(f.name().to_string());
+            }
+        }
+        v
+    };
+    let mut count = 0usize;
+    let mut loader_ok = false;
+    for name in &names {
+        let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+        if !base.to_ascii_lowercase().ends_with(".dll") {
+            continue; // skip dirs / non-DLL payload
+        }
+        let is_loader = base.eq_ignore_ascii_case(LOADER_DLL);
+        let dest = if is_loader { win64.join(base) } else { dlls_dir.join(base) };
+        if extract_one(&mut zip, name, &dest)? {
+            log.push(format!("Installed {base}{}", if is_loader { " (loader → Win64)" } else { "" }));
+            count += 1;
+            loader_ok |= is_loader;
         }
     }
+    if !loader_ok {
+        log.push(format!("WARNING: {LOADER_DLL} (loader) not found in package"));
+    }
+    log.push(format!("{count} DLL(s) installed"));
 
     // ef_server.txt from the package is deliberately NOT installed anymore —
     // the launcher provides the server via the environment.
