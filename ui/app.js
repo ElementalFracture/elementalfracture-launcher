@@ -54,6 +54,24 @@ function showView(name) {
   if (name === "mods") {
     refreshFiles();
     refreshVersions();
+    renderModsView();
+  }
+}
+
+/* Mods & Install view: reflect the current game folder + token status. */
+function renderModsGame() {
+  const line = $("mods-game-line");
+  if (!line) return;
+  const p = settings.game_path?.trim();
+  line.textContent = p ? "Game folder: " + p : "No game folder set — Locate or Download the game.";
+}
+function renderModsView() {
+  renderModsGame();
+  const line = $("mods-token-line");
+  if (line) {
+    line.textContent = accountRegistered()
+      ? `Signed in as ${settings.username?.trim() || "you"}.`
+      : "No token set yet.";
   }
 }
 
@@ -314,7 +332,7 @@ async function provisionInstall(report = toast) {
   }
 }
 
-$("btn-locate").addEventListener("click", async () => {
+async function locateGame() {
   let dir = await invoke("auto_find_game");
   if (!dir) {
     toast("Nothing found in the usual places, pick the folder yourself.");
@@ -327,7 +345,10 @@ $("btn-locate").addEventListener("click", async () => {
   toast("Game folder set: " + dir);
   await refreshStatus();
   await provisionInstall();
-});
+  renderModsGame();
+}
+$("btn-locate").addEventListener("click", locateGame);
+$("btn-mods-locate")?.addEventListener("click", locateGame);
 
 listen("install-progress", (ev) => {
   const p = ev.payload;
@@ -373,15 +394,15 @@ async function autoUpdate() {
   }
 }
 
-$("btn-download-game").addEventListener("click", async () => {
+async function downloadGame() {
   const dest = await invoke("pick_game_dir", {
     title: "Choose where to install Spellbreak (approx. 25 GB needed)",
   });
   if (!dest) return;
-  const btn = $("btn-download-game");
-  btn.disabled = true;
-  $("btn-locate").disabled = true;
-  $("install-msg").textContent = "Installing: this is a big download, leave the launcher open.";
+  const setMsg = (t) => { for (const id of ["install-msg", "mods-game-line"]) { const el = $(id); if (el) el.textContent = t; } };
+  const dis = (v) => { for (const id of ["btn-download-game", "btn-locate", "btn-mods-download", "btn-mods-locate"]) { const el = $(id); if (el) el.disabled = v; } };
+  dis(true);
+  setMsg("Installing: this is a big download, leave the launcher open.");
   try {
     const root = await invoke("download_game", { dest });
     toast("Game installed to " + root);
@@ -389,11 +410,48 @@ $("btn-download-game").addEventListener("click", async () => {
     fillSettingsForm();
   } catch (e) {
     toast(String(e), true);
-    $("install-msg").textContent = "Install failed: " + e;
+    setMsg("Install failed: " + e);
+  } finally {
+    dis(false);
+    refreshStatus();
+    renderModsGame();
+  }
+}
+$("btn-download-game").addEventListener("click", downloadGame);
+$("btn-mods-download")?.addEventListener("click", downloadGame);
+
+/* Auth token in the Mods & Install view — two-step (enter twice to confirm). */
+$("btn-mods-token-save")?.addEventListener("click", async () => {
+  const token = $("mods-token").value.trim();
+  const confirm = $("mods-token-confirm").value.trim();
+  const line = $("mods-token-line");
+  if (!token) { toast("Enter your token.", true); return; }
+  if (token !== confirm) {
+    toast("Tokens don't match.", true);
+    if (line) line.textContent = "The two tokens don't match — re-enter to confirm.";
+    return;
+  }
+  const btn = $("btn-mods-token-save");
+  btn.disabled = true;
+  try {
+    const res = await invoke("apply_token", { token });
+    settings = await invoke("get_settings");
+    renderAccount();
+    if (res.verified && res.username) {
+      const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
+      toast(`Welcome, ${res.username}${badge}! Token saved.`);
+      if (line) line.textContent = `Signed in as ${res.username}${badge}.`;
+    } else {
+      toast(res.warning ?? "Token saved.", true);
+      if (line) line.textContent = res.warning ?? "Token saved (could not verify).";
+    }
+    $("mods-token").value = "";
+    $("mods-token-confirm").value = "";
+  } catch (e) {
+    toast(String(e), true);
+    if (line) line.textContent = String(e);
   } finally {
     btn.disabled = false;
-    $("btn-locate").disabled = false;
-    refreshStatus();
   }
 });
 
@@ -753,7 +811,7 @@ $("wz-finish").addEventListener("click", finishWizard);
 /* ---------------- settings view ---------------- */
 
 function fillSettingsForm() {
-  $("set-game-path").value = settings.game_path ?? "";
+  // Game folder is managed in Mods & Install (Locate / Download), not Settings.
   $("set-launch-cmd").value = settings.launch_command ?? "";
   $("set-wine-prefix").value = settings.wine_prefix ?? "";
   $("set-cdn-base").value = settings.cdn_base ?? "";
@@ -848,11 +906,6 @@ function selectedWrapper() {
   return sel.value === "__custom__" ? $("set-launch-cmd").value.trim() : sel.value;
 }
 
-$("btn-browse").addEventListener("click", async () => {
-  const dir = await invoke("pick_game_dir", { title: null });
-  if (dir) $("set-game-path").value = dir;
-});
-
 $("btn-browse-prefix").addEventListener("click", async () => {
   const dir = await invoke("pick_game_dir", { title: "Select a Wine prefix folder" });
   if (dir) $("set-wine-prefix").value = dir;
@@ -862,7 +915,7 @@ $("btn-save-settings").addEventListener("click", async () => {
   const prevGamePath = settings?.game_path ?? "";
   settings = {
     ...settings,
-    game_path: $("set-game-path").value.trim(),
+    // game_path is set via Mods & Install (Locate/Download); keep the current value.
     launch_command: selectedWrapper(),
     wine_prefix: $("set-wine-prefix").value.trim(),
     cdn_base: $("set-cdn-base").value.trim(),
