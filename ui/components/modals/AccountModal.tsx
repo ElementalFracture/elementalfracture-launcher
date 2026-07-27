@@ -56,8 +56,8 @@ export function AccountModal({
         <div className="wizard-step">
           <h2>Please enter your auth token</h2>
           <p className="muted">
-            Your token identifies you on Elemental Fracture servers. It’s kept by the launcher and
-            handed to the game in memory at launch.
+            Identifies you on Elemental Fracture. Only change this token when rotated by either
+            yourself on Discord or by a mod.
           </p>
           <input
             type="password"

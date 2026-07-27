@@ -6,6 +6,9 @@ mod mods;
 mod remote;
 mod settings;
 
+// Only used by the debug-only bindings export below, so it has to carry the
+// same cfg or release builds warn about an unused import.
+#[cfg(debug_assertions)]
 use specta_typescript::Typescript;
 use tauri_specta::{collect_commands, Builder};
 

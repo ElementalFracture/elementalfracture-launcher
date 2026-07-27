@@ -18,6 +18,10 @@ interface GameContextValue {
   launcherInfo: LauncherUpdateInfo | null;
   /** True while a game patch is being pulled — Launch stays disabled. */
   updating: boolean;
+  /** True while locating or downloading — both entry points disable together. */
+  installBusy: boolean;
+  /** Progress/failure line for the install, shown by Home and Mods alike. */
+  installNotice: string | null;
   showUpdateModal: boolean;
   setShowUpdateModal: (v: boolean) => void;
   refreshStatus: () => Promise<GameStatus | null>;
@@ -26,17 +30,20 @@ interface GameContextValue {
   autoUpdate: () => Promise<void>;
   provisionInstall: (report?: (msg: string, isError?: boolean) => void) => Promise<boolean>;
   locateGame: () => Promise<void>;
+  downloadGame: () => Promise<void>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const { settings, saveSettings } = useSettings();
+  const { settings, saveSettings, refreshSettings } = useSettings();
 
   const [status, setStatus] = useState<GameStatus | null>(null);
   const [versions, setVersions] = useState<VersionInfo | null>(null);
   const [launcherInfo, setLauncherInfo] = useState<LauncherUpdateInfo | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [installBusy, setInstallBusy] = useState(false);
+  const [installNotice, setInstallNotice] = useState<string | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Latest-value ref so autoUpdate can read the status without depending on
@@ -113,20 +120,52 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [refreshStatus]
   );
 
+  /* Both entry points below are reachable from Home's install block and from
+     the Mods & Install "Game" panel, so the busy flag and notice live here
+     rather than in either view. */
+
   const locateGame = useCallback(async () => {
-    let dir = await rust.autoFindGame();
-    if (!dir) {
-      toast("Nothing found in the usual places, pick the folder yourself.");
-      dir = await rust.pickGameDir("Select your Spellbreak folder");
+    setInstallBusy(true);
+    try {
+      let dir = await rust.autoFindGame();
+      if (!dir) {
+        toast("Nothing found in the usual places, pick the folder yourself.");
+        dir = await rust.pickGameDir("Select your Spellbreak folder");
+      }
+      if (!dir || !settings) {
+        return;
+      }
+      await saveSettings({ ...settings, game_path: dir });
+      toast("Game folder set: " + dir);
+      await refreshStatus();
+      await provisionInstall();
+    } finally {
+      setInstallBusy(false);
     }
-    if (!dir || !settings) {
+  }, [settings, saveSettings, refreshStatus, provisionInstall]);
+
+  const downloadGame = useCallback(async () => {
+    const dest = await rust.pickGameDir("Choose where to install Spellbreak (approx. 25 GB needed)");
+    if (!dest) {
       return;
     }
-    await saveSettings({ ...settings, game_path: dir });
-    toast("Game folder set: " + dir);
-    await refreshStatus();
-    await provisionInstall();
-  }, [settings, saveSettings, refreshStatus, provisionInstall]);
+    setInstallBusy(true);
+    setInstallNotice("Installing: this is a big download, leave the launcher open.");
+    try {
+      const root = await rust.downloadGame(dest);
+      toast("Game installed to " + root);
+      setInstallNotice(null);
+      // download_game writes game_path itself, so re-read or the settings the
+      // UI holds stay stale and get saved back over the new install.
+      await refreshSettings();
+    } catch (e) {
+      toast(String(e), true);
+      setInstallNotice("Install failed: " + e);
+    } finally {
+      setInstallBusy(false);
+      refreshStatus();
+    }
+  }, [refreshSettings, refreshStatus]);
 
   /* If the install disagrees with the CDN version, pull the patch. Used both
      by the startup check and by Settings → Check for updates. */
@@ -173,6 +212,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     versions,
     launcherInfo,
     updating,
+    installBusy,
+    installNotice,
     showUpdateModal,
     setShowUpdateModal,
     refreshStatus,
@@ -181,6 +222,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     autoUpdate,
     provisionInstall,
     locateGame,
+    downloadGame,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

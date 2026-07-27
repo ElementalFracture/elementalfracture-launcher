@@ -46,14 +46,14 @@ beforeEach(() => {
   commands.getNews.mockResolvedValue({ status: "ok", data: [] });
 });
 
-/** Advanced is opt-in behind a warning dialog; click through to reveal it. */
+/** Advanced is opt-in behind a warning dialog; click through to reveal it.
+ *  Nothing settings-backed renders outside Advanced any more (the Game panel
+ *  moved to Mods & Install), so the individual assertions do the waiting. */
 async function openAdvanced() {
   render(<SettingsView />, { wrapper: Providers });
-  await waitFor(() => expect(screen.getByDisplayValue("/games/spellbreak")).toBeTruthy());
-  screen.getByRole("switch").click();
-  await waitFor(() => expect(screen.getByText("Continue")).toBeTruthy());
-  screen.getByText("Continue").click();
-  await waitFor(() => expect(screen.getByText("Advanced")).toBeTruthy());
+  (await screen.findByRole("switch")).click();
+  (await screen.findByText("Continue")).click();
+  await screen.findByText("Advanced");
 }
 
 describe("launch wrapper picker", () => {
@@ -66,8 +66,8 @@ describe("launch wrapper picker", () => {
     );
 
     await openAdvanced();
-    expect(screen.getByRole("combobox")).toBeTruthy();
-    expect(screen.getByDisplayValue("steam steam://rungameid/1815016993")).toBeTruthy();
+    expect(await screen.findByRole("combobox")).toBeTruthy();
+    expect(await screen.findByDisplayValue("steam steam://rungameid/1815016993")).toBeTruthy();
   });
 
   it("shows only the picker when the saved command is one that was detected", async () => {
@@ -75,7 +75,7 @@ describe("launch wrapper picker", () => {
     commands.getSettings.mockResolvedValue(makeSettings({ launch_command: "umu-run" }));
 
     await openAdvanced();
-    expect(screen.getByRole("combobox")).toBeTruthy();
+    expect(await screen.findByRole("combobox")).toBeTruthy();
     expect(screen.queryByPlaceholderText(/umu-run/)).toBeNull();
   });
 
@@ -84,18 +84,17 @@ describe("launch wrapper picker", () => {
     commands.getSettings.mockResolvedValue(makeSettings({ launch_command: "" }));
 
     await openAdvanced();
+    expect(await screen.findByPlaceholderText(/none detected/)).toBeTruthy();
     expect(screen.queryByRole("combobox")).toBeNull();
-    expect(screen.getByPlaceholderText(/none detected/)).toBeTruthy();
   });
 });
 
 describe("advanced options gate", () => {
   it("stays hidden until the warning is accepted", async () => {
     render(<SettingsView />, { wrapper: Providers });
-    await waitFor(() => expect(screen.getByDisplayValue("/games/spellbreak")).toBeTruthy());
     expect(screen.queryByText("Advanced")).toBeNull();
 
-    screen.getByRole("switch").click();
+    (await screen.findByRole("switch")).click();
     await waitFor(() => expect(screen.getByText("Continue")).toBeTruthy());
     // The switch reads as on while the warning is up, so it doesn't flick
     // back. The open dialog aria-hides the rest of the tree, hence hidden.
@@ -105,9 +104,8 @@ describe("advanced options gate", () => {
 
   it("backing out of the warning leaves the panel closed and the switch off", async () => {
     render(<SettingsView />, { wrapper: Providers });
-    await waitFor(() => expect(screen.getByDisplayValue("/games/spellbreak")).toBeTruthy());
 
-    screen.getByRole("switch").click();
+    (await screen.findByRole("switch")).click();
     await waitFor(() => expect(screen.getByText("Back")).toBeTruthy());
     screen.getByText("Back").click();
 
