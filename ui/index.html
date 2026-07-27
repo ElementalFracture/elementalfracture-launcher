@@ -22,6 +22,9 @@
       </nav>
 
       <div class="sidebar-foot">
+        <button class="nav-btn" id="btn-about" title="About">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.2a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8zM13.4 17h-2.8v-1c.5 0 .9-.1.9-.6v-3.3c0-.5-.4-.6-.9-.6v-1h2.4a.4.4 0 0 1 .4.4v4.5c0 .5.4.6.9.6z"/></svg>
+        </button>
         <button class="nav-btn" id="btn-discord" title="Join the Discord">
           <svg viewBox="0 0 24 24"><path d="M19.6 5.6A17 17 0 0 0 15.4 4l-.5 1a15.6 15.6 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.6C1.7 9.6 1 13.5 1.4 17.3A17.2 17.2 0 0 0 6.6 20l1.1-1.8c-.6-.2-1.2-.5-1.8-.9l.4-.3a12.2 12.2 0 0 0 10.4 0l.4.3c-.6.4-1.2.7-1.8.9L16.4 20a17.2 17.2 0 0 0 5.2-2.7c.5-4.4-.7-8.2-2-11.7zM8.5 14.9c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm7 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>
         </button>
@@ -216,6 +219,31 @@
         </div>
 
         <div class="panel">
+          <div class="panel-head"><h3>Launcher</h3></div>
+          <label class="field">
+            <span>Game folder</span>
+            <div class="form-row">
+              <input type="text" id="set-game-path" readonly placeholder="Not set" />
+              <button class="btn subtle" id="btn-browse-game">Browse…</button>
+            </div>
+          </label>
+          <label class="switch-row">
+            <span>Minimize to taskbar when closing (X)</span>
+            <span class="switch">
+              <input type="checkbox" id="toggle-minimize-close" />
+              <span class="slider"></span>
+            </span>
+          </label>
+          <label class="switch-row">
+            <span>Close launcher when the game starts</span>
+            <span class="switch">
+              <input type="checkbox" id="toggle-close-on-launch" />
+              <span class="slider"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="panel">
           <label class="switch-row">
             <span>Show advanced options</span>
             <span class="switch">
@@ -317,6 +345,22 @@
           <button class="btn primary" id="btn-update-install">Install</button>
           <button class="btn subtle" id="btn-update-later">Not now</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ABOUT ================= -->
+  <div id="about-modal" hidden>
+    <div class="wizard-panel">
+      <div class="wizard-step about-step">
+        <h2>Elemental Fracture Launcher</h2>
+        <p class="about-version" id="about-version"></p>
+        <p class="about-legal">Elemental Fracture is a community-driven preservation project operating under the principles of Fair Use to keep the online services of Spellbreak&reg; alive — originally developed by Proletariat, Inc., now a subsidiary of Blizzard Entertainment.</p>
+        <p class="about-legal">Not affiliated with or endorsed by Proletariat, Inc. Everyone involved is a volunteer and receives no financial compensation; donations only cover the website, game servers and CDN.</p>
+        <div class="wizard-actions">
+          <button class="btn primary" id="btn-about-close">Close</button>
+        </div>
+        <p class="about-made">Made with &lt;3 by Doobs</p>
       </div>
     </div>
   </div>

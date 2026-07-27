@@ -300,10 +300,26 @@ $("btn-launch").addEventListener("click", async () => {
   try {
     await invoke("launch_game");
     toast("Launching Spellbreak…");
+    // Opt-in (Settings → Launcher): close the launcher once the game is starting.
+    // Small delay so the toast shows and the process is spawned first.
+    if (settings.close_on_launch) {
+      setTimeout(() => invoke("quit_launcher").catch(() => {}), 1200);
+    }
   } catch (e) {
     toast(String(e), true);
   }
 });
+
+/* ---------------- About ---------------- */
+$("btn-about").addEventListener("click", async () => {
+  let ver = launcherInfo?.current;
+  if (!ver) {
+    try { ver = (await invoke("get_launcher_update"))?.current; } catch {}
+  }
+  $("about-version").textContent = ver ? `v${ver}` : "";
+  $("about-modal").hidden = false;
+});
+$("btn-about-close").addEventListener("click", () => { $("about-modal").hidden = true; });
 
 /* ---------------- game install / download ---------------- */
 
@@ -811,7 +827,9 @@ $("wz-finish").addEventListener("click", finishWizard);
 /* ---------------- settings view ---------------- */
 
 function fillSettingsForm() {
-  // Game folder is managed in Mods & Install (Locate / Download), not Settings.
+  $("set-game-path").value = settings.game_path ?? "";
+  $("toggle-minimize-close").checked = !!settings.minimize_on_close;
+  $("toggle-close-on-launch").checked = !!settings.close_on_launch;
   $("set-launch-cmd").value = settings.launch_command ?? "";
   $("set-wine-prefix").value = settings.wine_prefix ?? "";
   $("set-cdn-base").value = settings.cdn_base ?? "";
@@ -914,7 +932,9 @@ $("btn-save-settings").addEventListener("click", async () => {
   const prevGamePath = settings?.game_path ?? "";
   settings = {
     ...settings,
-    // game_path is set via Mods & Install (Locate/Download); keep the current value.
+    // game_path is set via the Game folder Browse button (and Mods & Install).
+    minimize_on_close: $("toggle-minimize-close").checked,
+    close_on_launch: $("toggle-close-on-launch").checked,
     launch_command: selectedWrapper(),
     wine_prefix: $("set-wine-prefix").value.trim(),
     cdn_base: $("set-cdn-base").value.trim(),
@@ -933,6 +953,22 @@ $("btn-save-settings").addEventListener("click", async () => {
   // A new game folder gets brought current like any fresh install.
   if (settings.game_path && settings.game_path !== prevGamePath && status?.exe_present) {
     await provisionInstall();
+  }
+});
+
+/* Change the game folder from Settings → Launcher. */
+$("btn-browse-game").addEventListener("click", async () => {
+  try {
+    const dir = await invoke("pick_game_dir", { title: "Select your Spellbreak folder" });
+    if (!dir) return;
+    settings.game_path = dir;
+    $("set-game-path").value = dir;
+    await invoke("save_settings", { settings });
+    await refreshStatus();
+    if (status?.exe_present) await provisionInstall();
+    toast("Game folder updated");
+  } catch (e) {
+    toast(String(e), true);
   }
 });
 
@@ -1065,6 +1101,10 @@ $("btn-reset-settings").addEventListener("click", async () => {
 
 (async function init() {
   settings = await invoke("get_settings");
+  // Update-first: before loading the rest of the launcher (on every version), check
+  // for a newer launcher. If one is available the install modal comes up straight
+  // away, so a stale build gets replaced before its UI even matters.
+  await checkLauncherUpdate();
   if (navigator.platform.startsWith("Win")) {
     $("field-launch-cmd").style.display = "none";
     $("field-wine-prefix").style.display = "none";
@@ -1079,7 +1119,7 @@ $("btn-reset-settings").addEventListener("click", async () => {
   refreshPlayers();
   refreshEvents();
   autoUpdate();
-  checkLauncherUpdate().then(refreshVersionFields);
+  refreshVersionFields();
   setInterval(refreshPlayers, 60_000);
   setInterval(refreshEvents, 300_000);
   setInterval(refreshStatus, 15_000);
