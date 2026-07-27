@@ -41,11 +41,9 @@ export function SettingsView() {
     refreshVersions,
     autoUpdate,
     setShowUpdateModal,
-    provisionInstall,
   } = useGame();
   const { refreshPlayers } = useLiveData();
 
-  const [gamePath, setGamePath] = useState("");
   const [winePrefix, setWinePrefix] = useState("");
   const [cdnBase, setCdnBase] = useState("");
   const [authUrl, setAuthUrl] = useState("");
@@ -65,7 +63,6 @@ export function SettingsView() {
   // from Home). Keyed on the values rather than the settings object so that
   // something touching an unrelated field — applying a token, say — doesn't
   // throw away edits in progress here.
-  const srcGamePath = settings?.game_path ?? "";
   const srcWinePrefix = settings?.wine_prefix ?? "";
   const srcCdnBase = settings?.cdn_base ?? "";
   const srcAuthUrl = settings?.auth_url ?? "";
@@ -74,12 +71,11 @@ export function SettingsView() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setGamePath(srcGamePath);
     setWinePrefix(srcWinePrefix);
     setCdnBase(srcCdnBase);
     setAuthUrl(srcAuthUrl);
     setPlayersUrl(srcPlayersUrl);
-  }, [srcGamePath, srcWinePrefix, srcCdnBase, srcAuthUrl, srcPlayersUrl]);
+  }, [srcWinePrefix, srcCdnBase, srcAuthUrl, srcPlayersUrl]);
 
   // Separate pass: the detected wrapper list arrives after settings do, and
   // the saved command can only be classified as known-vs-custom once it's in.
@@ -110,13 +106,6 @@ export function SettingsView() {
     return "";
   })();
 
-  const onBrowseGamePath = async () => {
-    const dir = await rust.pickGameDir(null);
-    if (dir) {
-      setGamePath(dir);
-    }
-  };
-
   const onBrowsePrefix = async () => {
     const dir = await rust.pickGameDir("Select a Wine prefix folder");
     if (dir) {
@@ -138,10 +127,10 @@ export function SettingsView() {
     if (!settings) {
       return;
     }
-    const prevGamePath = settings.game_path ?? "";
+    // game_path is owned by Mods & Install (Locate / Download); spreading the
+    // current settings keeps whatever it set rather than writing a stale copy.
     const next = {
       ...settings,
-      game_path: gamePath.trim(),
       launch_command: selectedWrapper(),
       wine_prefix: winePrefix.trim(),
       cdn_base: cdnBase.trim(),
@@ -152,11 +141,8 @@ export function SettingsView() {
     try {
       await saveSettings(next);
       toast("Settings saved");
-      const status = await refreshStatus();
+      await refreshStatus();
       refreshPlayers();
-      if (next.game_path && next.game_path !== prevGamePath && status?.exe_present) {
-        await provisionInstall();
-      }
     } catch (e) {
       toast(String(e), true);
     } finally {
@@ -223,28 +209,6 @@ export function SettingsView() {
 
   return (
     <section className={"view" + (view === "settings" ? " active" : "")}>
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Game</h3>
-        </div>
-        <label className="field">
-          <span>
-            Spellbreak folder <small>(contains g3 and Engine)</small>
-          </span>
-          <div className="form-row">
-            <input
-              type="text"
-              placeholder="e.g. C:\Games\Spellbreak or /home/you/Games/Spellbreak"
-              value={gamePath}
-              onChange={(e) => setGamePath(e.target.value)}
-            />
-            <button className="btn subtle" onClick={onBrowseGamePath}>
-              Browse…
-            </button>
-          </div>
-        </label>
-      </div>
-
       <div className="panel">
         <div className="panel-head">
           <h3>Versions</h3>

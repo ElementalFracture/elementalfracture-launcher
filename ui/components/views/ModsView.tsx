@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useUI } from "@/context/UIContext";
 import { useGame } from "@/context/GameContext";
+import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import type { FileCheck } from "@/lib/rust";
@@ -8,12 +9,28 @@ import "./ModsView.css";
 
 export function ModsView() {
   const { view } = useUI();
-  const { status, versions, launcherInfo, refreshVersions, refreshStatus } = useGame();
+  const {
+    status,
+    versions,
+    launcherInfo,
+    installBusy,
+    installNotice,
+    refreshVersions,
+    refreshStatus,
+    locateGame,
+    downloadGame,
+  } = useGame();
+  const { settings, applyToken } = useSettings();
 
   const [files, setFiles] = useState<FileCheck[] | null>(null);
   const [updateBusy, setUpdateBusy] = useState(false);
-  const [installBusy, setInstallBusy] = useState(false);
+  const [modsBusy, setModsBusy] = useState(false);
   const [log, setLog] = useState<string | null>(null);
+
+  const [token, setToken] = useState("");
+  const [tokenConfirm, setTokenConfirm] = useState("");
+  const [tokenBusy, setTokenBusy] = useState(false);
+  const [tokenLine, setTokenLine] = useState<string | null>(null);
 
   const refreshFiles = useCallback(async () => {
     try {
@@ -53,7 +70,7 @@ export function ModsView() {
     setUpdateBusy(true);
     try {
       const version = await rust.updatePatch();
-      toast(version && version !== "unknown" ? `Updated to v{version}` : "Patch updated");
+      toast(version && version !== "unknown" ? `Updated to v${version}` : "Patch updated");
     } catch (e) {
       toast(String(e), true);
     } finally {
@@ -64,7 +81,7 @@ export function ModsView() {
   };
 
   const onInstall = async () => {
-    setInstallBusy(true);
+    setModsBusy(true);
     try {
       const lines = await rust.installMods();
       setLog(lines.join("\n"));
@@ -73,8 +90,52 @@ export function ModsView() {
       setLog(String(e));
       toast("Install failed", true);
     } finally {
-      setInstallBusy(false);
+      setModsBusy(false);
       refreshFiles();
+    }
+  };
+
+  const gameLine =
+    installNotice ??
+    (settings?.game_path?.trim()
+      ? "Game folder: " + settings.game_path.trim()
+      : "No game folder set — Locate or Download the game.");
+
+  const signedInLine = settings?.auth_token?.trim()
+    ? `Signed in as ${settings.username?.trim() || "you"}.`
+    : "No token set yet.";
+
+  /* Two-step entry: the token is write-only once saved, so a typo would
+     otherwise only surface as a failed launch. */
+  const onSaveToken = async () => {
+    const trimmed = token.trim();
+    if (!trimmed) {
+      toast("Enter your token.", true);
+      return;
+    }
+    if (trimmed !== tokenConfirm.trim()) {
+      toast("Tokens don’t match.", true);
+      setTokenLine("The two tokens don’t match — re-enter to confirm.");
+      return;
+    }
+    setTokenBusy(true);
+    try {
+      const res = await applyToken(trimmed);
+      if (res.verified && res.username) {
+        const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
+        toast(`Welcome, ${res.username}${badge}! Token saved.`);
+        setTokenLine(`Signed in as ${res.username}${badge}.`);
+      } else {
+        toast(res.warning ?? "Token saved.", true);
+        setTokenLine(res.warning ?? "Token saved (could not verify).");
+      }
+      setToken("");
+      setTokenConfirm("");
+    } catch (e) {
+      toast(String(e), true);
+      setTokenLine(String(e));
+    } finally {
+      setTokenBusy(false);
     }
   };
 
@@ -82,7 +143,60 @@ export function ModsView() {
     <section className={"view" + (view === "mods" ? " active" : "")}>
       <div className="panel">
         <div className="panel-head">
-          <h3>Installation</h3>
+          <h3>Game</h3>
+          <div className="panel-actions">
+            <button className="btn subtle" disabled={installBusy} onClick={locateGame}>
+              Locate install
+            </button>
+            <button className="btn primary" disabled={installBusy} onClick={downloadGame}>
+              Download game…
+            </button>
+          </div>
+        </div>
+        <div className="muted">{gameLine}</div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h3>Auth token</h3>
+        </div>
+        <p className="muted">
+          Identifies you on Elemental Fracture. Only change this token when rotated by either
+          yourself on Discord or by a mod.
+        </p>
+        <label className="field">
+          <span>Token</span>
+          <input
+            type="password"
+            placeholder="Paste your token…"
+            autoComplete="off"
+            spellCheck={false}
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Confirm token</span>
+          <input
+            type="password"
+            placeholder="Re-enter your token…"
+            autoComplete="off"
+            spellCheck={false}
+            value={tokenConfirm}
+            onChange={(e) => setTokenConfirm(e.target.value)}
+          />
+        </label>
+        <div className="panel-actions">
+          <button className="btn primary" disabled={tokenBusy} onClick={onSaveToken}>
+            {tokenBusy ? "Saving…" : "Save token"}
+          </button>
+        </div>
+        <div className="muted">{tokenLine ?? signedInLine}</div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h3>Mods</h3>
           <div className="panel-actions">
             <button className="btn subtle" onClick={refreshFiles}>
               Verify
@@ -92,8 +206,8 @@ export function ModsView() {
                 {updateBusy ? "Updating…" : "Update game"}
               </button>
             )}
-            <button className="btn primary" disabled={installBusy} onClick={onInstall}>
-              {installBusy ? "Installing…" : "Install / Update mods"}
+            <button className="btn primary" disabled={modsBusy} onClick={onInstall}>
+              {modsBusy ? "Installing…" : "Install / Update mods"}
             </button>
           </div>
         </div>
@@ -117,7 +231,7 @@ export function ModsView() {
 
         <div className="muted">
           {!status?.game_path
-            ? "Set the game folder first (Home → Locate, or Settings)."
+            ? "Set the game folder first — use Locate or Download above."
             : missing > 0
               ? `${missing} of ${total} file(s) missing — run Install / Update mods.`
               : ""}

@@ -112,18 +112,14 @@ function HeroArt() {
 
 export function HomeView() {
   const { view } = useUI();
-  const { settings, refreshSettings } = useSettings();
-  const { status, updating, refreshStatus, locateGame } = useGame();
+  const { settings } = useSettings();
+  const { status, updating, installBusy, installNotice, refreshStatus, locateGame, downloadGame } =
+    useGame();
   const { news, events } = useLiveData();
   const progress = useProgress();
 
   const [greetPick] = useState(() => Math.floor(Math.random() * 2));
-  const [installBusy, setInstallBusy] = useState(false);
-  const [locateBusy, setLocateBusy] = useState(false);
   const [launchBusy, setLaunchBusy] = useState(false);
-  // Overrides the status-derived message while a download is running or just
-  // failed; cleared so the derived message takes back over once resolved.
-  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
 
   const name = settings?.username?.trim() || "breaker";
   const installed = Boolean(status?.exe_present);
@@ -131,43 +127,8 @@ export function HomeView() {
   const defaultInstallMsg = !status?.game_path
     ? "No Spellbreak install configured. Locate an existing install or download the game."
     : "Spellbreak.exe was not found in the configured folder. Locate the right folder or re-download.";
-  const installMsg = downloadNotice ?? defaultInstallMsg;
-
-  const onLocate = async () => {
-    setLocateBusy(true);
-    try {
-      await locateGame();
-    } finally {
-      setLocateBusy(false);
-    }
-  };
-
-  const onDownload = async () => {
-    const dest = await rust.pickGameDir(
-      "Choose where to install Spellbreak (approx. 25 GB needed)"
-    );
-    if (!dest) {
-      return;
-    }
-    setInstallBusy(true);
-    setLocateBusy(true);
-    setDownloadNotice("Installing: this is a big download, leave the launcher open.");
-    try {
-      const gamePath = await rust.downloadGame(dest);
-      toast("Game installed to " + gamePath);
-      setDownloadNotice(null);
-      // download_game writes game_path itself, so re-read or the Settings
-      // form keeps the old value and saves it back over the new install.
-      await refreshSettings();
-    } catch (e) {
-      toast(String(e), true);
-      setDownloadNotice("Install failed: " + e);
-    } finally {
-      setInstallBusy(false);
-      setLocateBusy(false);
-      refreshStatus();
-    }
-  };
+  // The install notice takes over while a download runs or has just failed.
+  const installMsg = installNotice ?? defaultInstallMsg;
 
   const onLaunch = async () => {
     setLaunchBusy(true);
@@ -237,10 +198,10 @@ export function HomeView() {
             <div>
               <p className="muted">{installMsg}</p>
               <div className="install-actions">
-                <button className="btn subtle" disabled={locateBusy} onClick={onLocate}>
+                <button className="btn subtle" disabled={installBusy} onClick={locateGame}>
                   Locate existing install
                 </button>
-                <button className="btn primary" disabled={installBusy} onClick={onDownload}>
+                <button className="btn primary" disabled={installBusy} onClick={downloadGame}>
                   Download game…
                 </button>
               </div>

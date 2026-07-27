@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ModsView } from "../ModsView";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
@@ -10,6 +10,7 @@ import { makeSettings, makeStatus, makeVersions } from "@/test/fixtures";
 const commands = vi.hoisted(() => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
+  applyToken: vi.fn(),
   detectWrappers: vi.fn(),
   getStatus: vi.fn(),
   getVersions: vi.fn(),
@@ -116,5 +117,93 @@ describe("mod status", () => {
     renderMods();
     await waitFor(() => expect(screen.getByText(/Set the game folder first/)).toBeTruthy());
     expect(screen.queryByText("INSTALLED")).toBeNull();
+  });
+});
+
+describe("game panel", () => {
+  it("shows the configured folder", async () => {
+    renderMods();
+    await waitFor(() => expect(screen.getByText(/Game folder: \/games\/spellbreak/)).toBeTruthy());
+  });
+
+  it("prompts to locate or download when no folder is set", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ game_path: "" }));
+    renderMods();
+    await waitFor(() => expect(screen.getByText(/No game folder set/)).toBeTruthy());
+  });
+
+  it("offers both entry points", async () => {
+    renderMods();
+    await waitFor(() => expect(screen.getByText("Locate install")).toBeTruthy());
+    expect(screen.getByText("Download game…")).toBeTruthy();
+  });
+});
+
+describe("auth token panel", () => {
+  const typeToken = (token: string, confirm: string) => {
+    const [tokenField, confirmField] = screen.getAllByPlaceholderText(/token…/i);
+    fireEvent.change(tokenField, { target: { value: token } });
+    fireEvent.change(confirmField, { target: { value: confirm } });
+  };
+
+  it("reports who is signed in", async () => {
+    renderMods();
+    await waitFor(() => expect(screen.getByText("Signed in as Lytion.")).toBeTruthy());
+  });
+
+  it("says so when no token has been set", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ auth_token: "" }));
+    renderMods();
+    await waitFor(() => expect(screen.getByText("No token set yet.")).toBeTruthy());
+  });
+
+  it("refuses to save when the two entries differ", async () => {
+    renderMods();
+    await waitFor(() => expect(screen.getByText("Save token")).toBeTruthy());
+    typeToken("abc123", "abc124");
+    screen.getByText("Save token").click();
+
+    await waitFor(() => expect(screen.getByText(/two tokens don’t match/i)).toBeTruthy());
+    expect(commands.applyToken).not.toHaveBeenCalled();
+  });
+
+  it("refuses to save an empty token", async () => {
+    renderMods();
+    await waitFor(() => expect(screen.getByText("Save token")).toBeTruthy());
+    screen.getByText("Save token").click();
+    await waitFor(() => expect(commands.applyToken).not.toHaveBeenCalled());
+  });
+
+  it("applies a matching pair and reports the resolved user", async () => {
+    commands.applyToken.mockResolvedValue({
+      status: "ok",
+      data: { username: "Breaker", is_staff: true, is_dev: false, verified: true, warning: null },
+    });
+    renderMods();
+    await waitFor(() => expect(screen.getByText("Save token")).toBeTruthy());
+    typeToken("tok-abc", "tok-abc");
+    screen.getByText("Save token").click();
+
+    await waitFor(() => expect(commands.applyToken).toHaveBeenCalledWith("tok-abc"));
+    await waitFor(() => expect(screen.getByText("Signed in as Breaker (staff).")).toBeTruthy());
+  });
+
+  it("surfaces the backend warning when the token cannot be verified", async () => {
+    commands.applyToken.mockResolvedValue({
+      status: "ok",
+      data: {
+        username: null,
+        is_staff: false,
+        is_dev: false,
+        verified: false,
+        warning: "Portal unreachable",
+      },
+    });
+    renderMods();
+    await waitFor(() => expect(screen.getByText("Save token")).toBeTruthy());
+    typeToken("tok-abc", "tok-abc");
+    screen.getByText("Save token").click();
+
+    await waitFor(() => expect(screen.getByText("Portal unreachable")).toBeTruthy());
   });
 });
