@@ -60,38 +60,15 @@
   font-weight: 600;
   cursor: pointer;
 }
-/* The Switch primitive is generated against a newer API than the installed
-   Radix emits — its data-checked:/data-unchecked: variants never match
-   data-state, so it has no on/off styling of its own. Drive it off data-state
-   here, which also restores the gold pill the rest of the UI expects. */
 [data-slot="switch"] {
-  width: 42px;
-  height: 24px;
-  flex: none;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
+  background-color: var(--bg);
 }
 [data-slot="switch"][data-state="checked"] {
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
-  border-color: var(--gold);
+  background-color: var(--gold-bright);
 }
 [data-slot="switch"] [data-slot="switch-thumb"] {
-  width: 16px;
-  height: 16px;
-  margin-left: 3px;
-  background: var(--ef-muted);
-  border-radius: 50%;
-  transform: translateX(0);
-  transition:
-    transform 0.15s,
-    background 0.15s;
+  background-color: var(--ef-muted);
 }
 [data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
-  transform: translateX(18px);
-  background: #16102a;
+  background-color: var(--bg);
 }

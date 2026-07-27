@@ -37,11 +37,12 @@
 .nav-btn svg {
   width: 21px;
   height: 21px;
-  fill: var(--ef-muted);
+  fill: none;
   color: var(--ef-muted);
-  transition:
-    fill 0.15s,
-    color 0.15s;
+  transition: color 0.15s;
+}
+.nav-btn svg.discord-icon {
+  fill: var(--ef-muted);
 }
 .nav-btn .nav-img {
   width: 21px;
@@ -56,7 +57,6 @@
   background: #ffffff0d;
 }
 .nav-btn:hover svg {
-  fill: var(--text);
   color: var(--text);
 }
 .nav-btn:hover .nav-img {
@@ -67,7 +67,6 @@
   border-color: #d9b45b40;
 }
 .nav-btn.active svg {
-  fill: var(--gold);
   color: var(--gold);
 }
 .nav-btn.active .nav-img {
