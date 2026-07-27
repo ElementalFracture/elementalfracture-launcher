@@ -1,4 +1,4 @@
-import { Home, Boxes, Settings as SettingsIcon } from "lucide-react";
+import { Home, Box, Settings as SettingsIcon } from "lucide-react";
 import { useUI, type ViewName } from "@/context/UIContext";
 import { openLink } from "@/lib/links";
 import { DiscordIcon } from "@/assets/icons/DiscordIcon";
@@ -10,7 +10,7 @@ const LINKS = {
 
 const NAV_ITEMS: { view: ViewName; title: string; icon: typeof Home }[] = [
   { view: "home", title: "Home", icon: Home },
-  { view: "mods", title: "Mods & Install", icon: Boxes },
+  { view: "mods", title: "Mods & Install", icon: Box },
   { view: "settings", title: "Settings", icon: SettingsIcon },
 ];
 
