@@ -1,4 +1,6 @@
-/* ============ Elemental Fracture launcher theme ============ */
+/* Global base: tokens, reset, app shell, and the primitives shared by
+   more than one component (panels, fields, inputs, buttons, badges).
+   Component-scoped rules live in a .css beside their .tsx. */
 
 @font-face {
   font-family: "Friz Quadrata";
@@ -21,75 +23,74 @@
   --panel-2: #221540;
   --line: #2e1f52;
   --text: #ece6f6;
-  --muted: #9c90b8;
+  --ef-muted: #9c90b8;
   --gold: #d9b45b;
   --gold-bright: #f0d48a;
   --cream: #fbe9dc; /* pale peach of the social banner buttons */
   --good: #4cd97b;
   --bad: #e05c6e;
-  --radius: 12px;
+  --ef-radius: 12px;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* The shadcn primitives in components/ui are driven by the token set App.css
+   declares, which ships as a light palette (its .dark block is never applied —
+   this app has no light mode to switch away from). Point those tokens at the
+   EF palette instead so anything rendered by a primitive lands in-theme
+   without having to be restyled rule by rule. Loaded after App.css and
+   unlayered, so these win. */
+:root {
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--panel);
+  --card-foreground: var(--text);
+  --popover: var(--panel-2);
+  --popover-foreground: var(--text);
+  --primary: var(--gold);
+  --primary-foreground: #16102a;
+  --secondary: var(--panel);
+  --secondary-foreground: var(--text);
+  --muted: var(--bg-2);
+  --muted-foreground: var(--ef-muted);
+  --accent: #d9b45b1a;
+  --accent-foreground: var(--gold-bright);
+  --destructive: var(--bad);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--gold);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 /* The hidden attribute must always win, even over display:grid/flex rules. */
-[hidden] { display: none !important; }
+[hidden] {
+  display: none !important;
+}
 
-html, body { height: 100%; }
+html,
+body {
+  height: 100%;
+}
 
 body {
   font-family: "Segoe UI", "Inter", "Noto Sans", system-ui, sans-serif;
   background:
     radial-gradient(1100px 500px at 85% -10%, #2b1a52cc 0%, transparent 60%),
-    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%),
-    var(--bg);
+    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%), var(--bg);
   color: var(--text);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
 }
 
-#app { display: flex; height: 100vh; }
-
-/* ============ Sidebar ============ */
-
-#sidebar {
-  width: 66px;
+#app {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 14px 0;
-  gap: 6px;
-  background: linear-gradient(180deg, #120a20 0%, #0d0716 100%);
-  border-right: 1px solid var(--line);
+  height: 100vh;
 }
-
-#sidebar nav { display: flex; flex-direction: column; gap: 6px; }
-
-.sidebar-foot { margin-top: auto; }
-
-.nav-btn {
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background .15s, border-color .15s;
-}
-.nav-btn svg { width: 21px; height: 21px; fill: var(--muted); transition: fill .15s; }
-.nav-btn .nav-img { width: 21px; height: 21px; object-fit: contain; opacity: .55; transition: opacity .15s, filter .15s; }
-.nav-btn:hover { background: #ffffff0d; }
-.nav-btn:hover svg { fill: var(--text); }
-.nav-btn:hover .nav-img { opacity: .9; }
-.nav-btn.active { background: #d9b45b1a; border-color: #d9b45b40; }
-.nav-btn.active svg { fill: var(--gold); }
-.nav-btn.active .nav-img {
-  opacity: 1;
-  filter: sepia(1) saturate(3) hue-rotate(-15deg) brightness(1.05);
-}
-
-/* ============ Main / topbar ============ */
+/* ============ App shell ============ */
 
 main {
   flex: 1;
@@ -98,375 +99,88 @@ main {
   min-width: 0;
 }
 
-#topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 28px 10px;
-  gap: 16px;
-}
-
-#topbar-logo { height: 58px; object-fit: contain; }
-
-.top-pills { display: flex; gap: 10px; align-items: stretch; position: relative; }
-
-.pill {
-  display: flex; align-items: center; gap: 9px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 7px 13px;
-  font-size: 13px;
-  color: var(--text);
-}
-.pill-text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
-.pill-text small { color: var(--muted); font-size: 11px; }
-.pill-icon { width: 17px; height: 17px; fill: var(--muted); }
-
-.dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: var(--bad);
-  box-shadow: 0 0 6px var(--bad);
-}
-.dot.ok { background: var(--good); box-shadow: 0 0 6px var(--good); }
-.dot.warn { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-
-.pill.account { cursor: pointer; transition: border-color .15s; }
-.pill.account:hover { border-color: #d9b45b66; }
-
-.pill.clickable { cursor: pointer; transition: border-color .15s; }
-.pill.clickable:hover { border-color: #d9b45b66; }
-
-/* In-game breakdown popover (anchored under the topbar pills) */
-#ingame-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 300px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 14px 40px #000c;
-  padding: 12px 14px;
-  z-index: 40;
-  text-align: left;
-}
-.mode-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 2px 2px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.mode-row .mode-count { color: var(--gold); font-size: 12px; }
-.mode-names {
-  font-size: 12px;
-  color: var(--muted);
-  padding: 0 2px 7px;
-  border-bottom: 1px solid #ffffff0d;
-  line-height: 1.5;
-  word-break: break-word;
-}
-.mode-names:last-child { border-bottom: none; padding-bottom: 2px; }
-
-.avatar {
-  width: 28px; height: 28px;
-  display: grid; place-items: center;
-  border-radius: 50%;
-  font-size: 11px; font-weight: 700;
-  color: #16102a;
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
-}
-
-/* ============ Views ============ */
-
 .view {
   display: none;
   flex: 1;
   overflow-y: auto;
   padding: 6px 28px 28px;
 }
-.view.active { display: block; }
-
-.view::-webkit-scrollbar { width: 10px; }
-.view::-webkit-scrollbar-thumb { background: #2e1f52; border-radius: 5px; }
-
-.greet {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 6px 0 14px;
-}
-.greet span { color: var(--gold); }
-
-/* ============ Hero ============ */
-
-.hero {
-  position: relative;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: #12092a;
-  overflow: hidden;
-  padding: 30px 34px;
-  min-height: 285px;
-  display: flex;
-  align-items: center;
-}
-
-/* Rotating promo art: two plain layers crossfade (the EF purple grade is
-   baked into the images — no live blending, so the fade stays cheap even
-   on software rendering). */
-.hero-bg {
-  position: absolute; inset: 0;
-  background: right center / cover no-repeat;
-  opacity: 0;
-  transition: opacity 2.6s cubic-bezier(.4, 0, .2, 1);
-  will-change: opacity;
-  transform: translateZ(0);
-}
-.hero-bg.visible { opacity: 1; }
-
-.hero-shade {
-  position: absolute; inset: 0;
-  background: linear-gradient(90deg,
-    #0d0716f2 0%, #0d0716d9 34%, #0d071680 55%, #0d071612 80%, transparent 100%);
-  pointer-events: none;
-}
-
-.hero-text { position: relative; max-width: 560px; }
-
-.eyebrow {
-  font-size: 12px;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  color: var(--gold);
-  font-weight: 600;
-}
-
-.hero-text h3 {
-  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: 30px;
-  letter-spacing: .03em;
-  margin: 8px 0 6px;
-  color: var(--gold-bright);
-}
-
-.hero-text p { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
-
-.variant-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.variant-label-img { height: 20px; object-fit: contain; }
-.variant-pills { display: flex; gap: 8px; }
-
-/* Image-based variant pills from the 6.1 launcher assets */
-.variant-pill {
-  height: 34px;
-  border: none;
-  background: center / contain no-repeat;
-  cursor: pointer;
-  opacity: .8;
-  transition: opacity .15s, transform .1s;
-}
-.variant-pill:hover { opacity: 1; }
-.variant-pill:active { transform: scale(.97); }
-.variant-pill.active { opacity: 1; }
-
-.variant-ef { width: 192px; background-image: url("assets/variant-ef.png"); }
-.variant-ef.active { background-image: url("assets/variant-ef-sel.png"); }
-.variant-classic { width: 85px; background-image: url("assets/variant-classic.png"); }
-.variant-classic.active { background-image: url("assets/variant-classic-sel.png"); }
-
-/* Ornate LAUNCH button straight from the 6.1 launcher */
-.launch-img {
-  width: 290px; height: 90px;
-  border: none;
-  background: url("assets/launch.png") center / contain no-repeat;
-  cursor: pointer;
-  transition: filter .15s, transform .1s;
-  filter: drop-shadow(0 4px 14px #00000088);
-}
-.launch-img:hover { background-image: url("assets/launch-hover.png"); }
-.launch-img:active { transform: scale(.985); }
-.launch-img:disabled { opacity: .4; cursor: not-allowed; }
-
-.launch-hint { margin-top: 10px; font-size: 12px; color: var(--muted); }
-.launch-hint a { color: var(--gold); cursor: pointer; }
-
-/* ============ Install block / progress ============ */
-
-.install-actions { display: flex; gap: 10px; margin: 12px 0 14px; }
-
-.progress { max-width: 460px; }
-.progress-head {
-  display: flex; justify-content: space-between; gap: 12px;
-  font-size: 12px; color: var(--muted);
-  margin-bottom: 6px;
-}
-.progress-track {
-  height: 10px;
-  border-radius: 6px;
-  background: #ffffff14;
-  border: 1px solid var(--line);
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  width: 0%;
-  border-radius: 6px;
-  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
-  transition: width .2s;
-}
-
-/* ============ News cards ============ */
-
-.row-head { margin: 26px 0 12px; }
-.row-head h3 { font-size: 17px; }
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-}
-
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px;
-  cursor: pointer;
-  transition: border-color .15s, transform .15s;
-}
-.card:hover { border-color: #d9b45b55; transform: translateY(-2px); }
-.card h4 { font-size: 15px; margin-bottom: 6px; color: var(--gold-bright); }
-.card p { font-size: 13px; color: var(--muted); line-height: 1.45; max-height: 57px; overflow: hidden; }
-.event-time {
+.view.active {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--gold);
-  margin-bottom: 6px;
-}
-.event-time.live {
-  color: var(--good);
-  animation: live-pulse 1.6s ease-in-out infinite;
-}
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .45; }
 }
 
-.card .date {
-  display: inline-block;
-  margin-top: 10px;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: #ffffff0d;
-  color: var(--muted);
+.view::-webkit-scrollbar {
+  width: 10px;
 }
-
-/* ============ Social row (6.1 launcher image buttons) ============ */
-
-.social-row {
-  display: flex; gap: 12px; margin-top: 26px;
-  flex-wrap: wrap; align-items: center;
+.view::-webkit-scrollbar-thumb {
+  background: #2e1f52;
+  border-radius: 5px;
 }
-
-.img-btn {
-  border: none;
-  background: var(--img) center / contain no-repeat;
-  cursor: pointer;
-  transition: filter .15s, transform .1s;
-}
-.img-btn:hover { background-image: var(--img-h); filter: brightness(1.08); }
-.img-btn:active { transform: scale(.97); }
-.img-btn.h42 { height: 34px; aspect-ratio: 3 / 1; }
-.img-btn.h34 { height: 27px; aspect-ratio: 429 / 80; }
-.img-btn.h34[data-url="twitch"], .img-btn.h34[data-url="youtube"] { aspect-ratio: 612 / 80; }
 
 /* ============ Panels (Mods / Settings) ============ */
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--ef-radius);
   padding: 18px 20px;
   margin-bottom: 16px;
 }
 
 .panel-head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
-.panel-head h3 { font-size: 16px; }
-.panel-actions { display: flex; gap: 8px; }
+.panel-head h3 {
+  font-size: 16px;
+}
+.panel-actions {
+  display: flex;
+  gap: 8px;
+}
 
-.muted { color: var(--muted); font-size: 13px; }
-code { background: #ffffff12; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-
-.file-list { list-style: none; margin-top: 10px; }
-.file-list li {
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 4px;
+.muted {
+  color: var(--ef-muted);
   font-size: 13px;
-  border-bottom: 1px solid #ffffff0a;
 }
-.file-list li:last-child { border-bottom: none; }
-.file-list .badge {
-  min-width: 64px; text-align: center;
-  font-size: 11px; font-weight: 700;
-  padding: 3px 8px; border-radius: 6px;
-}
-.badge.ok { background: #4cd97b22; color: var(--good); }
-.badge.missing { background: #e05c6e22; color: var(--bad); }
-.file-list .path { color: var(--muted); font-size: 11px; margin-left: auto; }
-
-.log {
-  margin-top: 12px;
-  padding: 12px;
-  background: #0a0512;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+code {
+  background: #ffffff12;
+  padding: 1px 5px;
+  border-radius: 4px;
   font-size: 12px;
-  line-height: 1.6;
-  color: #bfb3da;
-  white-space: pre-wrap;
-  user-select: text;
-  -webkit-user-select: text;
+}
+
+/* Status badge, shared by the mods list and its summary row. */
+.badge.ok {
+  background: #4cd97b22;
+  color: var(--good);
+}
+.badge.missing {
+  background: #e05c6e22;
+  color: var(--bad);
 }
 
 /* ============ Forms ============ */
 
-.field { display: block; margin-bottom: 14px; }
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
 .field > span {
   display: block;
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 6px;
 }
-.field small { color: var(--muted); font-weight: 400; }
-
-select {
-  /* WebKitGTK renders a native (light) select unless appearance is cleared —
-     that's the washed-out, unreadable dropdown. Draw our own with a chevron. */
-  appearance: none;
-  -webkit-appearance: none;
-  padding: 9px 34px 9px 12px;
-  font-size: 13px;
-  color: var(--text);
-  background-color: var(--bg-2);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239c90b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  outline: none;
-  transition: border-color .15s;
-  cursor: pointer;
+.field small {
+  color: var(--ef-muted);
+  font-weight: 400;
 }
-select:focus { border-color: var(--gold); }
-/* The open popup list — keep it dark so the options stay legible. */
-select option { background: var(--panel-2); color: var(--text); }
-.form-row select { flex: 1; }
 
-input[type="text"], input[type="password"] {
+input[type="text"],
+input[type="password"] {
   width: 100%;
   padding: 9px 12px;
   font-size: 13px;
@@ -475,19 +189,28 @@ input[type="text"], input[type="password"] {
   border: 1px solid var(--line);
   border-radius: 8px;
   outline: none;
-  transition: border-color .15s;
+  transition: border-color 0.15s;
   user-select: text;
   -webkit-user-select: text;
 }
-input:focus { border-color: var(--gold); }
-input[readonly] { color: var(--muted); cursor: default; }
-input[readonly]:focus { border-color: var(--line); }
+input:focus {
+  border-color: var(--gold);
+}
+input[readonly] {
+  color: var(--ef-muted);
+  cursor: default;
+}
+input[readonly]:focus {
+  border-color: var(--line);
+}
 
-.version-fields { display: flex; gap: 14px; }
-.version-fields .field { flex: 1; margin-bottom: 0; }
-
-.form-row { display: flex; gap: 8px; }
-.form-row input { flex: 1; }
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+.form-row input {
+  flex: 1;
+}
 
 .btn {
   padding: 9px 16px;
@@ -497,214 +220,31 @@ input[readonly]:focus { border-color: var(--line); }
   border: 1px solid var(--line);
   cursor: pointer;
   white-space: nowrap;
-  transition: filter .15s;
+  transition: filter 0.15s;
 }
-.btn:hover { filter: brightness(1.15); }
+.btn:hover {
+  filter: brightness(1.15);
+}
 .btn.primary {
   background: linear-gradient(135deg, var(--gold-bright), var(--gold));
   border-color: var(--gold);
   color: #16102a;
 }
-.btn.subtle { background: #ffffff0d; color: var(--text); }
-.btn.danger { background: #e05c6e14; border-color: #e05c6e55; color: var(--bad); }
-.btn.danger.armed { background: var(--bad); border-color: var(--bad); color: #fff; }
-.btn:disabled { opacity: .5; cursor: wait; }
-
-/* Destructive action on the left, primary save on the right. */
-.save-row { display: flex; justify-content: space-between; gap: 8px; }
-
-/* ============ Toggle switch ============ */
-
-.switch-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 14px;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer;
+.btn.subtle {
+  background: #ffffff0d;
+  color: var(--text);
 }
-.switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: none; }
-.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
-.switch .slider {
-  position: absolute; inset: 0;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  transition: background .15s, border-color .15s;
+.btn.danger {
+  background: #e05c6e14;
+  border-color: #e05c6e55;
+  color: var(--bad);
 }
-.switch .slider::before {
-  content: "";
-  position: absolute;
-  height: 16px; width: 16px;
-  left: 3px; top: 50%;
-  transform: translateY(-50%);
-  background: var(--muted);
-  border-radius: 50%;
-  transition: transform .15s, background .15s;
+.btn.danger.armed {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
 }
-.switch input:checked + .slider {
-  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
-  border-color: var(--gold);
+.btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
-.switch input:checked + .slider::before { transform: translate(18px, -50%); background: #16102a; }
-
-/* ============ Mods status ============ */
-
-.mods-status {
-  display: flex; align-items: center; gap: 10px;
-  margin: 12px 0 4px;
-  font-size: 14px; font-weight: 600;
-}
-.mods-status .badge {
-  min-width: 64px; text-align: center;
-  font-size: 11px; font-weight: 700;
-  padding: 4px 8px; border-radius: 6px;
-}
-
-/* ============ Account: token modal + friend-list popover ============ */
-
-#account-modal, #advanced-warn-modal {
-  position: fixed; inset: 0;
-  z-index: 55;
-  display: grid; place-items: center;
-  background: #0d0716ee;
-}
-#account-token-view input { margin-top: 12px; }
-
-/* Friend list dropdown — anchored under the account pill, like the in-game
-   breakdown popover. */
-#account-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 260px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 14px 40px #000c;
-  padding: 12px 14px;
-  z-index: 40;
-  text-align: left;
-}
-.acct-head {
-  font-size: 13px; font-weight: 700;
-  color: var(--gold);
-  padding: 2px 2px 8px;
-}
-.friend-self {
-  display: flex; align-items: center; gap: 11px;
-  padding: 8px 2px;
-  border-bottom: 1px solid #ffffff12;
-}
-.friend-self .avatar { width: 36px; height: 36px; font-size: 13px; }
-.friend-meta { display: flex; flex-direction: column; line-height: 1.3; }
-.friend-meta strong { font-size: 14px; color: var(--text); }
-.friend-meta small {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--muted);
-}
-.status-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--good); box-shadow: 0 0 6px var(--good);
-}
-.acct-soon {
-  font-size: 12px; color: var(--muted);
-  line-height: 1.5; padding: 8px 2px 4px;
-}
-.acct-link {
-  display: block; width: 100%;
-  margin-top: 6px;
-  padding: 8px;
-  font-size: 12px; font-weight: 600;
-  background: #ffffff0d; color: var(--text);
-  border: 1px solid var(--line); border-radius: 8px;
-  cursor: pointer; text-align: center;
-  transition: border-color .15s, filter .15s;
-}
-.acct-link:hover { border-color: #d9b45b66; filter: brightness(1.1); }
-
-/* ============ First-boot wizard ============ */
-
-#wizard, #update-modal {
-  position: fixed; inset: 0;
-  z-index: 50;
-  display: grid; place-items: center;
-  background: #0d0716ee;
-}
-#update-modal { z-index: 60; }
-
-.wizard-panel {
-  width: min(480px, 90vw);
-  background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
-  border: 1px solid var(--gold);
-  border-radius: 16px;
-  box-shadow: 0 24px 70px #000d, 0 0 40px #d9b45b22;
-  padding: 34px 38px 30px;
-  text-align: center;
-}
-
-.wizard-step h2 {
-  font-family: "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: 24px;
-  letter-spacing: .03em;
-  color: var(--gold-bright);
-  margin-bottom: 8px;
-}
-.wizard-step p {
-  font-family: "Montserrat", "Segoe UI", sans-serif;
-  font-size: 14px;
-  margin-bottom: 6px;
-}
-.wizard-step input { margin-top: 10px; font-family: "Montserrat", "Segoe UI", sans-serif; }
-
-.wizard-actions {
-  display: flex; gap: 10px; justify-content: center;
-  margin-top: 18px;
-  flex-wrap: wrap;
-}
-
-/* Wizard buttons follow the social-banner scheme: flat cream text that
-   turns gold on hover (primary starts gold, brightens on hover). */
-.wizard-actions .btn {
-  background: none;
-  border: none;
-  border-radius: 0;
-  font-family: "Montserrat", "Segoe UI", sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: .02em;
-  padding: 8px 14px;
-  transition: color .15s, transform .1s;
-}
-.wizard-actions .btn:hover { filter: none; }
-.wizard-actions .btn:active { transform: scale(.97); }
-.wizard-actions .btn.subtle { background: none; color: var(--cream); opacity: .85; }
-.wizard-actions .btn.subtle:hover { color: var(--gold); opacity: 1; }
-.wizard-actions .btn.primary { background: none; color: var(--gold); }
-.wizard-actions .btn.primary:hover { color: var(--gold-bright); }
-
-.wizard-tooltip {
-  font-family: "Montserrat", "Segoe UI", sans-serif;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 10px;
-  line-height: 1.5;
-}
-.wizard-tooltip a { color: var(--gold); cursor: pointer; }
-.wizard-tooltip a:hover { text-decoration: underline; }
-
-.wizard-result { margin-top: 12px; font-size: 12px; word-break: break-all; }
-
-/* ============ Toast ============ */
-
-#toast {
-  position: fixed;
-  bottom: 22px; left: 50%;
-  transform: translateX(-50%);
-  padding: 10px 18px;
-  font-size: 13px;
-  background: var(--panel-2);
-  border: 1px solid var(--gold);
-  border-radius: 10px;
-  box-shadow: 0 6px 24px #000a;
-  z-index: 99;
-}
-#toast.error { border-color: var(--bad); }

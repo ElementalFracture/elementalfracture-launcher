@@ -32,6 +32,40 @@ export default [
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       "react/react-in-jsx-scope": "off", // not needed in modern React
+      // No brace-less bodies — `if (x) return;` becomes `if (x) { return; }`.
+      // Auto-fixable, so editors wired to eslint's fixAll apply it on save.
+      curly: ["error", "all"],
+      // Spell the cast out: `Boolean(x)` over `!!x`, and likewise for the
+      // `+x` / `"" + x` shorthands. Auto-fixable alongside curly.
+      "no-implicit-coercion": "error",
+      // Keep the Rust boundary in one module so every crossing reads `rust.*`
+      // at its call site. ui/lib/rust.ts is exempted below.
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/generated/bindings",
+              importNames: ["commands"],
+              message:
+                'Reach Rust through `import * as rust from "@/lib/rust"` so the call site shows it.',
+            },
+          ],
+          patterns: [
+            {
+              group: ["@tauri-apps/api", "@tauri-apps/api/*", "@tauri-apps/plugin-*"],
+              message: "Wrap the Tauri API in @/lib/rust instead of calling it from a component.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The boundary module is the one place allowed to touch either directly.
+    files: ["ui/lib/rust.ts"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
   {
