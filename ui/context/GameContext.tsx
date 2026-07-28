@@ -199,8 +199,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // refreshStatus or it sees null and skips the update entirely.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    refreshStatus().then(autoUpdate);
-    checkLauncherUpdate().then(refreshVersions);
+    // Update-first: the launcher's own update check goes ahead of the game
+    // work, so a newer build prompts before a stale one starts patching.
+    checkLauncherUpdate().then(() => {
+      refreshStatus().then(autoUpdate);
+      refreshVersions();
+    });
     const id = setInterval(refreshStatus, 15_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps

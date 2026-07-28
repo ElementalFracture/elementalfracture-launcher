@@ -1,6 +1,8 @@
-import { Home, Box, Settings as SettingsIcon } from "lucide-react";
+import { useState } from "react";
+import { Home, Box, Info, Settings as SettingsIcon } from "lucide-react";
 import { useUI, type ViewName } from "@/context/UIContext";
 import { openLink } from "@/lib/links";
+import { AboutModal } from "@/components/modals/AboutModal";
 import { DiscordIcon } from "@/assets/icons/DiscordIcon";
 import "./Sidebar.css";
 
@@ -16,6 +18,7 @@ const NAV_ITEMS: { view: ViewName; title: string; icon: typeof Home }[] = [
 
 export function Sidebar() {
   const { view, setView } = useUI();
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   return (
     <aside id="sidebar">
@@ -33,6 +36,9 @@ export function Sidebar() {
       </nav>
 
       <div className="sidebar-foot">
+        <button className="nav-btn" title="About" onClick={() => setAboutOpen(true)}>
+          <Info strokeWidth={2} />
+        </button>
         <button
           className="nav-btn"
           title="Join the Discord"
@@ -41,6 +47,8 @@ export function Sidebar() {
           <DiscordIcon />
         </button>
       </div>
+
+      <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </aside>
   );
 }

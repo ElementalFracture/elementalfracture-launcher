@@ -130,6 +130,11 @@ export async function openUrl(url: string): Promise<void> {
   unwrap(await commands.openUrl(url));
 }
 
+/** Fully exit the launcher — the real quit path, bypassing minimize-on-close. */
+export async function quitLauncher(): Promise<void> {
+  await commands.quitLauncher();
+}
+
 /* ---------------- live data ---------------- */
 
 /** One game server as the players sidecar reports it. */

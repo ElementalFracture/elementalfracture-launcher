@@ -135,6 +135,13 @@ export function HomeView() {
     try {
       await rust.launchGame();
       toast("Launching Spellbreak…");
+      // Opt-in (Settings → Launcher): quit once the game is on its way. Held
+      // back a moment so the toast shows and the process is spawned first.
+      if (settings?.close_on_launch) {
+        setTimeout(() => {
+          rust.quitLauncher().catch(() => {});
+        }, 1200);
+      }
     } catch (e) {
       toast(String(e), true);
     } finally {

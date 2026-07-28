@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Setting up Elemental Fracture</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #0e0f14; color: #e8e6f0;
+    font: 14px/1.5 system-ui, "Segoe UI", Roboto, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+  .card { width: 100%; max-width: 400px; padding: 26px 30px; text-align: center; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 6px; color: #2fce6b; }
+  .sub { margin: 0 0 20px; color: #9aa0aa; font-size: 13px; }
+  .bar { height: 8px; border-radius: 6px; background: #1c1f27; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, #1aa653, #2fce6b); transition: width .2s ease; }
+  .status { margin-top: 12px; font-size: 12px; color: #8a90a0; min-height: 16px; word-break: break-word; }
+  button { margin-top: 18px; padding: 9px 20px; border: 0; border-radius: 8px;
+           background: #2a2e3a; color: #e8e6f0; font-size: 13px; cursor: pointer; display: none; }
+  button:hover { background: #343a48; }
+  .err h1 { color: #e06767; }
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <h1 id="title">Setting up Elemental Fracture</h1>
+    <p class="sub" id="sub">Fetching the latest launcher…</p>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="status" id="status">Contacting the update server…</div>
+    <button id="retry">Retry</button>
+  </div>
+
+  <script>
+    // Minimal bootstrap: this build exists only to pull the current full launcher
+    // from the CDN, swap itself in place, and restart into it. It deliberately
+    // avoids the full launcher's startup so a broken fresh-install UI can't block
+    // getting to a working version.
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+    const $ = (id) => document.getElementById(id);
+
+    listen("install-progress", (e) => {
+      const p = e.payload || {};
+      if (p.stage !== "download-launcher") return;
+      const pct = Math.max(0, Math.min(100, Number(p.percent) || 0));
+      $("fill").style.width = pct + "%";
+      $("status").textContent = p.message || pct.toFixed(0) + "%";
+    });
+
+    async function run() {
+      $("card").classList.remove("err");
+      $("title").textContent = "Setting up Elemental Fracture";
+      $("sub").textContent = "Fetching the latest launcher…";
+      $("retry").style.display = "none";
+      $("status").textContent = "Contacting the update server…";
+      try {
+        // On success the backend swaps the binary and restarts — this never resolves.
+        await invoke("update_launcher");
+      } catch (err) {
+        $("card").classList.add("err");
+        $("title").textContent = "Setup failed";
+        $("sub").textContent = "Couldn't fetch the launcher.";
+        $("status").textContent = String((err && err.message) || err);
+        $("retry").style.display = "inline-block";
+      }
+    }
+
+    $("retry").addEventListener("click", run);
+    window.addEventListener("DOMContentLoaded", run);
+    if (document.readyState !== "loading") run();
+  </script>
+</body>
+</html>
