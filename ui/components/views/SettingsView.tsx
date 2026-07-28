@@ -40,10 +40,13 @@ export function SettingsView() {
     checkLauncherUpdate,
     refreshVersions,
     autoUpdate,
+    provisionInstall,
     setShowUpdateModal,
   } = useGame();
   const { refreshPlayers } = useLiveData();
 
+  const [minimizeOnClose, setMinimizeOnClose] = useState(false);
+  const [closeOnLaunch, setCloseOnLaunch] = useState(false);
   const [winePrefix, setWinePrefix] = useState("");
   const [cdnBase, setCdnBase] = useState("");
   const [authUrl, setAuthUrl] = useState("");
@@ -68,6 +71,8 @@ export function SettingsView() {
   const srcAuthUrl = settings?.auth_url ?? "";
   const srcPlayersUrl = settings?.players_url ?? "";
   const srcLaunchCommand = settings?.launch_command ?? "";
+  const srcMinimizeOnClose = settings?.minimize_on_close ?? false;
+  const srcCloseOnLaunch = settings?.close_on_launch ?? false;
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -76,6 +81,11 @@ export function SettingsView() {
     setAuthUrl(srcAuthUrl);
     setPlayersUrl(srcPlayersUrl);
   }, [srcWinePrefix, srcCdnBase, srcAuthUrl, srcPlayersUrl]);
+
+  useEffect(() => {
+    setMinimizeOnClose(srcMinimizeOnClose);
+    setCloseOnLaunch(srcCloseOnLaunch);
+  }, [srcMinimizeOnClose, srcCloseOnLaunch]);
 
   // Separate pass: the detected wrapper list arrives after settings do, and
   // the saved command can only be classified as known-vs-custom once it's in.
@@ -106,6 +116,28 @@ export function SettingsView() {
     return "";
   })();
 
+  /* Change the game folder from Settings → Launcher. Saved on the spot rather
+     than with the rest of the form: the install work below depends on it. */
+  const onBrowseGame = async () => {
+    if (!settings) {
+      return;
+    }
+    try {
+      const dir = await rust.pickGameDir("Select your Spellbreak folder");
+      if (!dir) {
+        return;
+      }
+      await saveSettings({ ...settings, game_path: dir });
+      const fresh = await refreshStatus();
+      if (fresh?.exe_present) {
+        await provisionInstall();
+      }
+      toast("Game folder updated");
+    } catch (e) {
+      toast(String(e), true);
+    }
+  };
+
   const onBrowsePrefix = async () => {
     const dir = await rust.pickGameDir("Select a Wine prefix folder");
     if (dir) {
@@ -127,10 +159,12 @@ export function SettingsView() {
     if (!settings) {
       return;
     }
-    // game_path is owned by Mods & Install (Locate / Download); spreading the
-    // current settings keeps whatever it set rather than writing a stale copy.
+    // game_path is written by its own Browse button (and by Mods & Install);
+    // spreading the current settings keeps that rather than a stale copy.
     const next = {
       ...settings,
+      minimize_on_close: minimizeOnClose,
+      close_on_launch: closeOnLaunch,
       launch_command: selectedWrapper(),
       wine_prefix: winePrefix.trim(),
       cdn_base: cdnBase.trim(),
@@ -231,10 +265,45 @@ export function SettingsView() {
       </div>
 
       <div className="panel">
+        <div className="panel-head">
+          <h3>Launcher</h3>
+        </div>
+        <label className="field">
+          <span>Game folder</span>
+          <div className="form-row">
+            <input type="text" readOnly placeholder="Not set" value={settings?.game_path ?? ""} />
+            <button className="btn subtle" onClick={onBrowseGame}>
+              Browse…
+            </button>
+          </div>
+        </label>
+        <label className="switch-row">
+          <span>Minimize to taskbar when closing (X)</span>
+          <Switch
+            aria-label="Minimize to taskbar when closing (X)"
+            checked={minimizeOnClose}
+            onCheckedChange={setMinimizeOnClose}
+          />
+        </label>
+        <label className="switch-row">
+          <span>Close launcher when the game starts</span>
+          <Switch
+            aria-label="Close launcher when the game starts"
+            checked={closeOnLaunch}
+            onCheckedChange={setCloseOnLaunch}
+          />
+        </label>
+      </div>
+
+      <div className="panel">
         <label className="switch-row">
           <span>Show advanced options</span>
           {/* Reads as on while the warning is up; Back turns it off again. */}
-          <Switch checked={showAdvanced || advancedWarnOpen} onCheckedChange={onToggleAdvanced} />
+          <Switch
+            aria-label="Show advanced options"
+            checked={showAdvanced || advancedWarnOpen}
+            onCheckedChange={onToggleAdvanced}
+          />
         </label>
       </div>
 

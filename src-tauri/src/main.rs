@@ -10,7 +10,16 @@ mod settings;
 // same cfg or release builds warn about an unused import.
 #[cfg(debug_assertions)]
 use specta_typescript::Typescript;
+use tauri::Manager;
 use tauri_specta::{collect_commands, Builder};
+
+/// Fully exit the launcher. Used on game start (the window's X only minimizes,
+/// so this is the real quit path) and bypasses the close-to-minimize handler.
+#[tauri::command]
+#[specta::specta]
+fn quit_launcher(app: tauri::AppHandle) {
+    app.exit(0);
+}
 
 fn main() {
     // The webkit bundled into the AppImage trips webkit's DMA-BUF renderer
@@ -22,6 +31,7 @@ fn main() {
     }
 
     let builder = Builder::<tauri::Wry>::new().commands(collect_commands![
+        quit_launcher,
         settings::get_settings,
         settings::save_settings,
         settings::reset_settings,
@@ -58,6 +68,16 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Opt-in (Settings → Launcher): when "minimize on close" is enabled, the X
+        // minimizes to the taskbar instead of quitting. Off by default = normal close.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if settings::load(window.app_handle()).minimize_on_close {
+                    api.prevent_close();
+                    let _ = window.minimize();
+                }
+            }
+        })
         .invoke_handler(builder.invoke_handler())
         .run(tauri::generate_context!())
         .expect("error while running Elemental Fracture launcher");

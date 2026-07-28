@@ -32,6 +32,11 @@ pub struct Settings {
     pub auth_token: String,
     /// First-boot wizard completed.
     pub onboarded: bool,
+    /// Optional behaviors (off by default — user opts in via Settings):
+    /// close (X) minimizes to the taskbar instead of quitting.
+    pub minimize_on_close: bool,
+    /// quit the launcher when the game starts.
+    pub close_on_launch: bool,
 }
 
 impl Default for Settings {
@@ -52,6 +57,8 @@ impl Default for Settings {
             is_dev: false,
             auth_token: String::new(),
             onboarded: false,
+            minimize_on_close: false,
+            close_on_launch: false,
         }
     }
 }

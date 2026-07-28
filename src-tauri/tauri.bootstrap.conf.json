@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "version": "1.0.0",
+  "build": {
+    "frontendDist": "../ui-bootstrap",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Setting up Elemental Fracture",
+        "width": 460,
+        "height": 300,
+        "resizable": false,
+        "center": true
+      }
+    ]
+  }
+}

@@ -14,6 +14,8 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     is_dev: false,
     auth_token: "tok",
     onboarded: true,
+    minimize_on_close: false,
+    close_on_launch: false,
     ...over,
   };
 }

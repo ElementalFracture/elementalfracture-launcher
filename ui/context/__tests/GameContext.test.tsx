@@ -45,6 +45,36 @@ beforeEach(() => {
   commands.updatePatch.mockResolvedValue({ status: "ok", data: "6.0.3" });
 });
 
+describe("update-first startup", () => {
+  it("holds the game work until the launcher update check has answered", async () => {
+    // A launcher that is itself out of date shouldn't start patching the game
+    // first: the update prompt has to come up before that work begins.
+    const check = deferred<{ current: string; remote: string; update: boolean }>();
+    commands.getLauncherUpdate.mockReturnValue(check.promise);
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+
+    renderGame();
+    await Promise.resolve();
+    expect(commands.getStatus).not.toHaveBeenCalled();
+    expect(commands.updatePatch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      check.resolve({ current: "3.0.2", remote: "3.1.0", update: true });
+      await check.promise;
+    });
+    await waitFor(() => expect(commands.updatePatch).toHaveBeenCalled());
+  });
+
+  it("still runs the game work when the launcher check fails", async () => {
+    // Offline, get_launcher_update rejects — the rest of startup has to carry
+    // on regardless or the launcher comes up with no status at all.
+    commands.getLauncherUpdate.mockRejectedValue(new Error("offline"));
+    renderGame();
+    await waitFor(() => expect(commands.getStatus).toHaveBeenCalled());
+    expect(commands.getVersions).toHaveBeenCalled();
+  });
+});
+
 describe("startup update check", () => {
   it("applies a pending patch when the install is behind the CDN", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));

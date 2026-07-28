@@ -98,6 +98,29 @@
   text-decoration: underline;
 }
 
+/* ---------------- About modal ---------------- */
+
+.about-version {
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin: -2px 0 16px;
+}
+.about-legal {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ef-muted);
+  text-align: left;
+  margin: 0 0 12px;
+}
+.about-made {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--ef-muted);
+  text-align: center;
+  opacity: 0.85;
+}
+
 .wizard-result {
   margin-top: 12px;
   font-size: 12px;
