@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { AccountModal } from "@/components/modals/AccountModal";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
@@ -28,10 +32,14 @@ export function modeLabel(server: PlayerServer) {
   return serverName || "Other";
 }
 
-/** How many players are in one mode, and who they are when the sidecar says. */
+/** Regions the split leads with, in order; anything else trails them. */
+const REGION_ORDER: readonly string[] = ["NA", "EU"];
+
+/** How many players are in one mode, who they are, and where they're playing. */
 interface ModePlayers {
   count: number;
   names: string[];
+  byRegion: Map<string, number>;
 }
 
 /**
@@ -40,25 +48,72 @@ interface ModePlayers {
  * an empty mode reads as "No one in game" rather than vanishing. Modes the
  * sidecar reports but MODE_MATCHERS doesn't know are appended after those.
  */
-export function playersByMode(servers: readonly PlayerServer[]): Map<string, ModePlayers> {
+export function playersByMode(
+  servers: readonly PlayerServer[]
+): Map<string, ModePlayers> {
   const byMode = new Map<string, ModePlayers>(
-    MODE_MATCHERS.map(([, label]): [string, ModePlayers] => [label, { count: 0, names: [] }])
+    MODE_MATCHERS.map(([, label]): [string, ModePlayers] => [
+      label,
+      { count: 0, names: [], byRegion: new Map() },
+    ])
   );
 
   for (const server of servers) {
     const label = modeLabel(server);
     let players = byMode.get(label);
     if (!players) {
-      players = { count: 0, names: [] };
+      players = { count: 0, names: [], byRegion: new Map() };
       byMode.set(label, players);
     }
-    players.count += server.players ?? 0;
+    const count = server.players ?? 0;
+    players.count += count;
     if (Array.isArray(server.names)) {
       players.names.push(...server.names);
+    }
+    if (server.region) {
+      players.byRegion.set(
+        server.region,
+        (players.byRegion.get(server.region) ?? 0) + count
+      );
     }
   }
 
   return byMode;
+}
+
+/**
+ * One mode's per-region breakdown, e.g. "NA 12 · EU 4". Regions nobody is in
+ * are left out, so an empty EU doesn't pad every row.
+ */
+export function regionSplit(players: ModePlayers): string {
+  const rank = (region: string) => {
+    const index = REGION_ORDER.indexOf(region);
+    return index === -1 ? REGION_ORDER.length : index;
+  };
+  return [...players.byRegion]
+    .filter(([, count]) => count > 0)
+    .sort(([a], [b]) => rank(a) - rank(b))
+    .map(([region, count]) => `${region} ${count}`)
+    .join(" · ");
+}
+
+/**
+ * Whether a second region is actually reporting. Until the peer merge is live
+ * only NA answers, and a split would just restate each mode's total — so the
+ * popover holds it back and stays clean.
+ */
+export function hasMultipleRegions(servers: readonly PlayerServer[]): boolean {
+  let seen: string | undefined;
+  for (const server of servers) {
+    if (!server.region) {
+      continue;
+    }
+    if (seen && server.region !== seen) {
+      return true;
+    }
+    seen = server.region;
+  }
+  return false;
 }
 
 export function TopBar() {
@@ -80,10 +135,16 @@ export function TopBar() {
 
   const registered = Boolean(settings?.auth_token?.trim());
   const name = settings?.username?.trim();
-  const role = settings?.is_dev ? "Developer" : settings?.is_staff ? "Staff" : "";
+  const role = settings?.is_dev
+    ? "Developer"
+    : settings?.is_staff
+      ? "Staff"
+      : "";
   const initials = (name || "EF").slice(0, 2).toUpperCase();
 
-  const inGame = Number.isFinite(playersData?.online) ? (playersData!.online as number) : null;
+  const inGame = Number.isFinite(playersData?.online)
+    ? (playersData!.online as number)
+    : null;
   const connected = Number.isFinite(playersData?.connected)
     ? (playersData!.connected as number)
     : null;
@@ -91,6 +152,7 @@ export function TopBar() {
   const servers = playersData?.servers ?? [];
   const modePlayers = playersByMode(servers);
   const hasServers = servers.length > 0;
+  const multiRegion = hasMultipleRegions(servers);
 
   return (
     <header id="topbar">
@@ -115,7 +177,10 @@ export function TopBar() {
         {/* Refresh players on open, mak sure to have up-to-date data. */}
         <Popover onOpenChange={(open) => open && refreshPlayers()}>
           <PopoverTrigger asChild>
-            <button className="pill clickable" title="Players in game: click for a breakdown">
+            <button
+              className="pill clickable"
+              title="Players in game: click for a breakdown"
+            >
               <InGameIcon className="pill-icon" />
               <div className="pill-text">
                 <strong>{inGame ?? "–"}</strong>
@@ -124,27 +189,38 @@ export function TopBar() {
             </button>
           </PopoverTrigger>
           <PopoverContent className="popover-panel" align="end" sideOffset={8}>
-            {[...modePlayers].map(([label, players]) => (
-              <div key={label}>
-                <div className="mode-row">
-                  <span>{label}</span>
-                  <span className="mode-count">{players.count}</span>
+            {[...modePlayers].map(([label, players]) => {
+              const split =
+                multiRegion && players.count > 0 ? regionSplit(players) : "";
+              return (
+                <div key={label}>
+                  <div className="mode-row">
+                    <span>{label}</span>
+                    <span className="mode-count">
+                      {split ? `${players.count} (${split})` : players.count}
+                    </span>
+                  </div>
+                  <div className="mode-names">
+                    {players.count === 0
+                      ? "No one in game"
+                      : players.names.length
+                        ? players.names.join(", ")
+                        : `${players.count} player(s)`}
+                  </div>
                 </div>
-                <div className="mode-names">
-                  {players.count === 0
-                    ? "No one in game"
-                    : players.names.length
-                      ? players.names.join(", ")
-                      : `${players.count} player(s)`}
-                </div>
-              </div>
-            ))}
-            {!hasServers && <div className="mode-names">Server data unavailable.</div>}
+              );
+            })}
+            {!hasServers && (
+              <div className="mode-names">Server data unavailable.</div>
+            )}
           </PopoverContent>
         </Popover>
 
         {registered ? (
-          <Popover open={accountPopoverOpen} onOpenChange={setAccountPopoverOpen}>
+          <Popover
+            open={accountPopoverOpen}
+            onOpenChange={setAccountPopoverOpen}
+          >
             <PopoverTrigger asChild>
               <button className="pill account" title="Account">
                 <span className="avatar">{initials}</span>
@@ -170,8 +246,8 @@ export function TopBar() {
                 </div>
               </div>
               <p className="acct-soon">
-                Friends are coming soon — you’ll be able to see who’s online and party up right
-                here.
+                Friends are coming soon — you’ll be able to see who’s online and
+                party up right here.
               </p>
               <button
                 className="acct-link"
@@ -199,7 +275,10 @@ export function TopBar() {
         )}
       </div>
 
-      <AccountModal open={accountModalOpen} onOpenChange={setAccountModalOpen} />
+      <AccountModal
+        open={accountModalOpen}
+        onOpenChange={setAccountModalOpen}
+      />
     </header>
   );
 }

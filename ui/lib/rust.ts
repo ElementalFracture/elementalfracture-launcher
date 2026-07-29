@@ -143,6 +143,7 @@ export interface PlayerServer {
   name?: string;
   players?: number;
   names?: string[];
+  region?: string;
 }
 
 /** Sidecar player-count payload. */
