@@ -507,15 +507,32 @@ function renderIngamePopover() {
   const pop = $("ingame-popover");
   pop.innerHTML = "";
   const servers = playersData?.servers ?? [];
-  const modes = new Map(); // label → {count, names}
-  for (const [, label] of MODE_LABELS) modes.set(label, { count: 0, names: [] });
+  const modes = new Map(); // label → {count, names, byRegion: Map<region, count>}
+  for (const [, label] of MODE_LABELS) modes.set(label, { count: 0, names: [], byRegion: new Map() });
+  const regions = new Set();
   for (const srv of servers) {
     const label = modeLabel(srv);
-    if (!modes.has(label)) modes.set(label, { count: 0, names: [] });
+    if (!modes.has(label)) modes.set(label, { count: 0, names: [], byRegion: new Map() });
     const m = modes.get(label);
-    m.count += srv.players ?? 0;
+    const n = srv.players ?? 0;
+    m.count += n;
     if (Array.isArray(srv.names)) m.names.push(...srv.names);
+    const region = srv.region || "";
+    if (region) {
+      regions.add(region);
+      m.byRegion.set(region, (m.byRegion.get(region) ?? 0) + n);
+    }
   }
+  // Only show the NA/EU split once a second region is actually reporting, so the
+  // NA-only view stays clean until the peer merge is live.
+  const multiRegion = regions.size > 1;
+  const regionRank = (r) => (r === "NA" ? 0 : r === "EU" ? 1 : 2);
+  const regionSplit = (m) =>
+    [...m.byRegion.entries()]
+      .filter(([, c]) => c > 0)
+      .sort((a, b) => regionRank(a[0]) - regionRank(b[0]))
+      .map(([r, c]) => `${r} ${c}`)
+      .join(" · ");
   for (const [label, m] of modes) {
     const row = document.createElement("div");
     row.className = "mode-row";
@@ -523,7 +540,8 @@ function renderIngamePopover() {
     name.textContent = label;
     const count = document.createElement("span");
     count.className = "mode-count";
-    count.textContent = m.count;
+    const split = multiRegion && m.count > 0 ? regionSplit(m) : "";
+    count.textContent = split ? `${m.count}  (${split})` : String(m.count);
     row.append(name, count);
     const names = document.createElement("div");
     names.className = "mode-names";
