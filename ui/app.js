@@ -163,11 +163,9 @@ document.querySelectorAll(".img-btn[data-url]").forEach((btn) => {
 /* ---------------- hero art rotation ---------------- */
 
 const HERO_ART = [
-  "assets/art/art-0.jpg",
   "assets/art/art-1.jpg",
   "assets/art/art-2.jpg",
   "assets/art/art-3.jpg",
-  "assets/art/art-4.jpg",
   "assets/art/art-5.jpg",
   "assets/art/art-6.jpg",
 ];
@@ -282,18 +280,70 @@ async function refreshStatus() {
   document.querySelectorAll(".variant-pill").forEach((p) => {
     p.classList.toggle("active", p.dataset.variant === status.variant);
   });
+  applyVariantTheme(status.variant);
+}
+
+// Swap the hero text + colour theme by variant. Classic → warm tan (body.classic in CSS)
+// with the original-Spellbreak wording; EF → the default purple/gold + community-server copy.
+const HERO_TEXT = {
+  ef:      { eyebrow: "Elemental Fracture", title: "The Hollow Lands still beckon, breaker",
+             sub: "Community servers, restored battles, new balance. Spellbreak lives on." },
+  classic: { eyebrow: "Spellbreak Classic",  title: "The Hollow Lands, as they were before.",
+             sub: "Community servers, restored battles — the original balance. Spellbreak, preserved." },
+};
+let _variantApplied = null;
+function applyVariantTheme(variant) {
+  const classic = variant === "classic";
+  const heroEls = ["hero-eyebrow", "hero-title", "hero-sub"].map($).filter(Boolean);
+  const setText = () => {
+    const t = HERO_TEXT[classic ? "classic" : "ef"];
+    if (heroEls[0]) heroEls[0].textContent = t.eyebrow;
+    if (heroEls[1]) heroEls[1].textContent = t.title;
+    if (heroEls[2]) heroEls[2].textContent = t.sub;
+  };
+  // Same variant (incl. the 15 s status poll): nothing to do.
+  if (_variantApplied === variant) return;
+  const isChange = _variantApplied !== null; // false on first load → apply instantly
+  _variantApplied = variant;
+  if (!isChange) {
+    document.body.classList.toggle("classic", classic);
+    setText();
+    return;
+  }
+  // A real EF ⇄ Classic toggle: only the content that changes eases over, at
+  // the same 2.6 s as the hero-art crossfade. Colours transition via
+  // body.theming; the hero copy fades out, swaps at the midpoint, fades in.
+  document.body.classList.add("theming");
+  void document.body.offsetWidth; // commit the slow transitions before recolouring
+  document.body.classList.toggle("classic", classic);
+  clearTimeout(applyVariantTheme._recolour);
+  applyVariantTheme._recolour = setTimeout(
+    () => document.body.classList.remove("theming"), 2600);
+
+  heroEls.forEach((el) => el.classList.add("fading"));
+  clearTimeout(applyVariantTheme._copy);
+  applyVariantTheme._copy = setTimeout(() => {
+    setText();
+    requestAnimationFrame(() => heroEls.forEach((el) => el.classList.remove("fading")));
+  }, 1300);
 }
 
 document.querySelectorAll(".variant-pill").forEach((pill) => {
   pill.addEventListener("click", async () => {
     try {
-      const v = await invoke("set_variant", { variant: pill.dataset.variant });
-      toast(v === "ef" ? "Elemental Fracture balance active" : "Classic Spellbreak active");
+      await invoke("set_variant", { variant: pill.dataset.variant });
     } catch (e) {
       toast(String(e), true);
     }
     refreshStatus();
   });
+});
+
+/* "What's the difference?" popover next to the Game Version label. */
+$("variant-info-btn")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const pop = $("variant-info-pop");
+  if (pop) pop.hidden = !pop.hidden;
 });
 
 $("btn-launch").addEventListener("click", async () => {
@@ -574,6 +624,10 @@ document.addEventListener("click", (e) => {
   if (!pop.hidden && !pop.contains(e.target)) pop.hidden = true;
   const apop = $("account-popover");
   if (!apop.hidden && !apop.contains(e.target)) apop.hidden = true;
+  const ipop = $("variant-info-pop");
+  const ibtn = $("variant-info-btn");
+  if (ipop && !ipop.hidden && !ipop.contains(e.target) && e.target !== ibtn)
+    ipop.hidden = true;
 });
 
 async function refreshNews() {

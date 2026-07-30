@@ -88,14 +88,21 @@
           <div class="hero-bg" id="hero-bg-b" aria-hidden="true"></div>
           <div class="hero-shade" aria-hidden="true"></div>
           <div class="hero-text">
-            <span class="eyebrow">Elemental Fracture</span>
-            <h3>The Hollow Lands still beckon, breaker</h3>
-            <p>Community servers, restored battles, new balance. Spellbreak lives on.</p>
+            <span class="eyebrow" id="hero-eyebrow">Elemental Fracture</span>
+            <h3 id="hero-title">The Hollow Lands still beckon, breaker</h3>
+            <p id="hero-sub">Community servers, restored battles, new balance. Spellbreak lives on.</p>
 
             <!-- shown when a game install is configured -->
             <div id="play-block">
               <div class="variant-row">
                 <img src="assets/game-version.png" alt="Game Version" class="variant-label-img" />
+                <span class="info-wrap">
+                  <button id="variant-info-btn" class="info-btn" aria-label="What's the difference?" title="What's the difference?">i</button>
+                  <div id="variant-info-pop" class="info-pop" hidden>
+                    <p><strong>Elemental Fracture</strong> — the community edition: reworked talents, fresh balance and ongoing updates.</p>
+                    <p><strong>Classic</strong> — Spellbreak as it was at shutdown: the original balance, preserved untouched.</p>
+                  </div>
+                </span>
                 <div class="variant-pills" id="variant-pills">
                   <button data-variant="ef" class="variant-pill variant-ef" title="Elemental Fracture balance"></button>
                   <button data-variant="classic" class="variant-pill variant-classic" title="Classic Spellbreak"></button>

@@ -30,6 +30,20 @@
   --radius: 12px;
 }
 
+/* ── Classic (original Spellbreak) — warm tan hue, toggled by body.classic in app.js ── */
+body.classic {
+  --bg: #171009;
+  --bg-2: #22190e;
+  --panel: #291f12;
+  --panel-2: #342917;
+  --line: #4b3b20;
+  --text: #efe7d6;
+  --muted: #b3a487;
+  --gold: #cdae7a;
+  --gold-bright: #ecd6a8;
+  --cream: #f3e6d0;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 /* The hidden attribute must always win, even over display:grid/flex rules. */
@@ -39,17 +53,65 @@ html, body { height: 100%; }
 
 body {
   font-family: "Segoe UI", "Inter", "Noto Sans", system-ui, sans-serif;
-  background:
-    radial-gradient(1100px 500px at 85% -10%, #2b1a52cc 0%, transparent 60%),
-    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%),
-    var(--bg);
+  /* Solid base colour (transitions via background-color). The purple/warm
+     corner glows live on two crossfading pseudo-layers below, since gradient
+     backgrounds themselves can't be animated. */
+  background: var(--bg);
   color: var(--text);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
 }
+body::before, body::after {
+  content: "";
+  position: fixed; inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+/* EF glow (purple) */
+body::before {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #2b1a52cc 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%);
+  opacity: 1;
+}
+/* Classic glow (warm tan) */
+body::after {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #4a3418cc 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #3a2a12bb 0%, transparent 55%);
+  opacity: 0;
+}
+body.classic::before { opacity: 0; }
+body.classic::after { opacity: 1; }
 
 #app { display: flex; height: 100vh; }
+
+/* ── EF ⇄ Classic switch ─────────────────────────────────────────────
+   Only the content that actually changes eases over, at the same 2.6s as
+   the hero-art crossfade. The changing hero copy fades out → swaps → fades
+   in; every recoloured surface transitions its colours. `body.theming` is
+   added only for the duration of a switch (see applyVariantTheme) so normal
+   hover transitions stay snappy the rest of the time. */
+.hero-text .eyebrow, .hero-text h3, .hero-text p { transition: opacity 1.3s ease; }
+.hero-text .eyebrow.fading, .hero-text h3.fading, .hero-text p.fading { opacity: 0; }
+
+/* Slow the recolour of EVERY element (backgrounds, borders, text, icons)
+   uniformly to 2.6s. Scoped to the switch window so it never touches normal
+   hover feedback. */
+body.theming, body.theming::before, body.theming::after,
+body.theming *, body.theming *::before, body.theming *::after {
+  transition-property: background-color, color, border-color, fill, opacity !important;
+  transition-duration: 2.6s !important;
+  transition-timing-function: ease !important;
+}
+/* Hero copy keeps its faster fade so out + in still totals the 2.6 s window. */
+body.theming .hero-text .eyebrow,
+body.theming .hero-text h3,
+body.theming .hero-text p {
+  transition-property: opacity, color !important;
+  transition-duration: 1.3s, 2.6s !important;
+}
 
 /* ============ Sidebar ============ */
 
@@ -60,7 +122,9 @@ body {
   align-items: center;
   padding: 14px 0;
   gap: 6px;
-  background: linear-gradient(180deg, #120a20 0%, #0d0716 100%);
+  /* Solid (not a gradient) so the EF ⇄ Classic recolour can transition —
+     gradient background-images don't animate. */
+  background: var(--bg-2);
   border-right: 1px solid var(--line);
 }
 
@@ -188,7 +252,10 @@ main {
 .view.active { display: block; }
 
 .view::-webkit-scrollbar { width: 10px; }
-.view::-webkit-scrollbar-thumb { background: #2e1f52; border-radius: 5px; }
+/* Neutral/translucent: WebKit scrollbar parts can't transition, so a
+   theme-agnostic thumb reads right in both EF and Classic (and never snaps). */
+.view::-webkit-scrollbar-thumb { background: #ffffff26; border-radius: 5px; }
+.view::-webkit-scrollbar-thumb:hover { background: #ffffff3d; }
 
 .greet {
   font-size: 20px;
@@ -203,7 +270,7 @@ main {
   position: relative;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: #12092a;
+  background: var(--bg-2);
   overflow: hidden;
   padding: 30px 34px;
   min-height: 285px;
@@ -216,7 +283,9 @@ main {
    on software rendering). */
 .hero-bg {
   position: absolute; inset: 0;
-  background: right center / cover no-repeat;
+  /* Frame a little above centre so heads/torsos land in view rather than
+     cropping through the middle of the subject. */
+  background: center 32% / cover no-repeat;
   opacity: 0;
   transition: opacity 2.6s cubic-bezier(.4, 0, .2, 1);
   will-change: opacity;
@@ -224,12 +293,25 @@ main {
 }
 .hero-bg.visible { opacity: 1; }
 
-.hero-shade {
+.hero-shade { position: absolute; inset: 0; pointer-events: none; }
+/* Two gradient layers (EF purple / Classic warm) crossfade on theme switch,
+   since a gradient background can't be transitioned in place. */
+.hero-shade::before, .hero-shade::after {
+  content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(90deg,
-    #0d0716f2 0%, #0d0716d9 34%, #0d071680 55%, #0d071612 80%, transparent 100%);
-  pointer-events: none;
 }
+.hero-shade::before {
+  background: linear-gradient(90deg,
+    #0d0716f2 0%, #0d0716cc 30%, #0d071666 48%, #0d071614 68%, transparent 88%);
+  opacity: 1;
+}
+.hero-shade::after {
+  background: linear-gradient(90deg,
+    #171009f2 0%, #171009cc 30%, #17100966 48%, #17100914 68%, transparent 88%);
+  opacity: 0;
+}
+body.classic .hero-shade::before { opacity: 0; }
+body.classic .hero-shade::after { opacity: 1; }
 
 .hero-text { position: relative; max-width: 560px; }
 
@@ -251,9 +333,42 @@ main {
 
 .hero-text p { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
 
-.variant-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.variant-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .variant-label-img { height: 20px; object-fit: contain; }
-.variant-pills { display: flex; gap: 8px; }
+.variant-pills { display: flex; gap: 8px; margin-left: 2px; }
+
+/* "What's the difference?" helper next to the Game Version label. */
+.info-wrap { position: relative; display: inline-flex; }
+.info-btn {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic; font-weight: 700; font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.info-btn:hover { color: var(--gold); border-color: var(--gold); }
+.info-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 300px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 14px 40px #000c;
+  padding: 12px 14px;
+  z-index: 45;
+  text-align: left;
+}
+.info-pop p { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 8px; }
+.info-pop p:last-child { margin-bottom: 0; }
+.info-pop strong { color: var(--gold); }
 
 /* Image-based variant pills from the 6.1 launcher assets */
 .variant-pill {
