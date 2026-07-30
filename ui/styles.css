@@ -214,7 +214,20 @@ main {
   padding: 12px 14px;
   z-index: 40;
   text-align: left;
+  max-height: 70vh;
+  overflow-y: auto;
 }
+/* [Elemental Fracture] / [Classic] section heading in the in-game breakdown. */
+.variant-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 9px 2px 3px;
+  border-top: 1px solid #ffffff12;
+}
+.variant-head:first-child { border-top: none; padding-top: 2px; }
 .mode-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 2px 2px;

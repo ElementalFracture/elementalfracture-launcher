@@ -553,14 +553,28 @@ function modeLabel(srv) {
   return s || "Other";
 }
 
+// Elemental Fracture (EF balance) vs Classic (vanilla). Classic servers are the manager's
+// dynamic vanilla groups: container name vsolo/vduos/… and display "Classic <Mode> N".
+const VARIANTS = [["ef", "Elemental Fracture"], ["classic", "Classic"]];
+function variantOf(srv) {
+  return /^v(solo|duo|squad|arena)/i.test(srv.name || "") ||
+         /^classic\b/i.test(srv.display_name || "")
+    ? "classic" : "ef";
+}
+
 function renderIngamePopover() {
   const pop = $("ingame-popover");
   pop.innerHTML = "";
   const servers = playersData?.servers ?? [];
-  const modes = new Map(); // label → {count, names, byRegion: Map<region, count>}
-  for (const [, label] of MODE_LABELS) modes.set(label, { count: 0, names: [], byRegion: new Map() });
+  const newModes = () => {
+    const m = new Map(); // label → {count, names, byRegion: Map<region, count>}
+    for (const [, label] of MODE_LABELS) m.set(label, { count: 0, names: [], byRegion: new Map() });
+    return m;
+  };
+  const byVariant = { ef: newModes(), classic: newModes() };
   const regions = new Set();
   for (const srv of servers) {
+    const modes = byVariant[variantOf(srv)];
     const label = modeLabel(srv);
     if (!modes.has(label)) modes.set(label, { count: 0, names: [], byRegion: new Map() });
     const m = modes.get(label);
@@ -583,21 +597,33 @@ function renderIngamePopover() {
       .sort((a, b) => regionRank(a[0]) - regionRank(b[0]))
       .map(([r, c]) => `${r} ${c}`)
       .join(" · ");
-  for (const [label, m] of modes) {
-    const row = document.createElement("div");
-    row.className = "mode-row";
-    const name = document.createElement("span");
-    name.textContent = label;
-    const count = document.createElement("span");
-    count.className = "mode-count";
-    const split = multiRegion && m.count > 0 ? regionSplit(m) : "";
-    count.textContent = split ? `${m.count}  (${split})` : String(m.count);
-    row.append(name, count);
-    const names = document.createElement("div");
-    names.className = "mode-names";
-    names.textContent =
-      m.count === 0 ? "No one in game" : m.names.length ? m.names.join(", ") : `${m.count} player(s)`;
-    pop.append(row, names);
+
+  // One [Variant] heading followed by its four mode rows (idle = 0), so the shape stays
+  // stable. The per-mode roster only shows for populated modes to keep the two-section
+  // list compact.
+  for (const [vkey, vlabel] of VARIANTS) {
+    const head = document.createElement("div");
+    head.className = "variant-head";
+    head.textContent = vlabel;
+    pop.append(head);
+    for (const [label, m] of byVariant[vkey]) {
+      const row = document.createElement("div");
+      row.className = "mode-row";
+      const name = document.createElement("span");
+      name.textContent = label;
+      const count = document.createElement("span");
+      count.className = "mode-count";
+      const split = multiRegion && m.count > 0 ? regionSplit(m) : "";
+      count.textContent = split ? `${m.count}  (${split})` : String(m.count);
+      row.append(name, count);
+      pop.append(row);
+      if (m.count > 0) {
+        const names = document.createElement("div");
+        names.className = "mode-names";
+        names.textContent = m.names.length ? m.names.join(", ") : `${m.count} player(s)`;
+        pop.append(names);
+      }
+    }
   }
   if (servers.length === 0) {
     const empty = document.createElement("div");
