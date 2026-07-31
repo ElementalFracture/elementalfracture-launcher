@@ -70,10 +70,16 @@
               <span class="avatar" id="friend-avatar">EF</span>
               <div class="friend-meta">
                 <strong id="friend-name">You</strong>
-                <small><span class="status-dot"></span> Online</small>
+                <small><span class="status-dot" id="friend-self-dot"></span> <span id="friend-self-status">Online</span></small>
               </div>
             </div>
-            <p class="acct-soon">Friends are coming soon — you'll be able to see who's online and party up right here.</p>
+            <div class="friend-add">
+              <input id="friend-add-input" type="text" maxlength="20" spellcheck="false"
+                     autocomplete="off" placeholder="Add a friend by username" />
+              <button id="friend-add-btn" title="Send friend request">Add</button>
+            </div>
+            <div id="friend-requests"></div>
+            <div id="friend-list"></div>
             <button class="acct-link" id="account-change-token">Change token</button>
           </div>
         </div>

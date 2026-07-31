@@ -60,6 +60,10 @@ fn main() {
             remote::get_events,
             remote::get_news,
             remote::apply_token,
+            remote::friends_list,
+            remote::friend_add,
+            remote::friend_accept,
+            remote::friend_remove,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Elemental Fracture launcher");

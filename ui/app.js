@@ -82,10 +82,159 @@ function accountRegistered() {
 }
 
 /* Friend list: a dropdown anchored under the account pill (mirrors the
-   in-game breakdown popover), not a modal. */
+   in-game breakdown popover), not a modal. Data comes from the players
+   sidecar's /friends endpoint (friend graph + live online/in-game status). */
+let friendsData = null;
+
+const FRIEND_ERRORS = {
+  user_not_found: "No player with that username.",
+  cannot_friend_self: "That's you!",
+  invalid_token: "Set your account token first.",
+  username_required: "Enter a username.",
+  no_pending_request: "No pending request from them.",
+};
+const friendError = (code) => FRIEND_ERRORS[code] || "Friend server unavailable — try again.";
+const statusText = (s) => (s === "in_game" ? "in game" : s === "online" ? "online" : "offline");
+
 function renderAccountPopover() {
-  $("friend-name").textContent = settings.username?.trim() || "You";
-  $("friend-avatar").textContent = (settings.username?.trim() || "EF").slice(0, 2).toUpperCase();
+  const me = friendsData?.me?.username || settings.username?.trim() || "You";
+  $("friend-name").textContent = me;
+  $("friend-avatar").textContent = (me || "EF").slice(0, 2).toUpperCase();
+  const myStatus = friendsData?.me?.status || "online";
+  $("friend-self-status").textContent = statusText(myStatus);
+  $("friend-self-dot").dataset.status = myStatus;
+  renderFriendList();
+}
+
+function friendRow(name, status, actions) {
+  const row = document.createElement("div");
+  row.className = "friend-row";
+  const dot = document.createElement("span");
+  dot.className = "status-dot";
+  if (status) dot.dataset.status = status;
+  const meta = document.createElement("div");
+  meta.className = "friend-row-meta";
+  const nm = document.createElement("strong");
+  nm.textContent = name;
+  meta.append(nm);
+  if (status) {
+    const st = document.createElement("small");
+    st.textContent = statusText(status);
+    meta.append(st);
+  }
+  row.append(dot, meta);
+  const btns = document.createElement("div");
+  btns.className = "friend-row-actions";
+  for (const a of actions) {
+    const b = document.createElement("button");
+    b.textContent = a.label;
+    b.title = a.title || a.label;
+    if (a.kind) b.className = a.kind;
+    b.dataset.friendAction = a.action;
+    b.dataset.friendName = name;
+    btns.append(b);
+  }
+  row.append(btns);
+  return row;
+}
+
+function renderFriendList() {
+  const reqBox = $("friend-requests");
+  const listBox = $("friend-list");
+  reqBox.innerHTML = "";
+  listBox.innerHTML = "";
+  if (!friendsData) {
+    const p = document.createElement("p");
+    p.className = "friend-empty";
+    p.textContent = "Loading…";
+    listBox.append(p);
+    return;
+  }
+  const incoming = friendsData.incoming || [];
+  const outgoing = friendsData.outgoing || [];
+  const friends = friendsData.friends || [];
+
+  if (incoming.length) {
+    const h = document.createElement("div");
+    h.className = "friend-subhead";
+    h.textContent = `Requests (${incoming.length})`;
+    reqBox.append(h);
+    for (const r of incoming) {
+      reqBox.append(friendRow(r.username, null, [
+        { label: "✓", title: "Accept", action: "accept", kind: "ok" },
+        { label: "✕", title: "Decline", action: "remove", kind: "no" },
+      ]));
+    }
+  }
+
+  const h2 = document.createElement("div");
+  h2.className = "friend-subhead";
+  h2.textContent = `Friends (${friends.length})`;
+  listBox.append(h2);
+  if (!friends.length && !outgoing.length) {
+    const p = document.createElement("p");
+    p.className = "friend-empty";
+    p.textContent = "No friends yet — add someone by their username above.";
+    listBox.append(p);
+  }
+  // Sort in-game first, then online, then offline (server pre-sorts by name).
+  const rank = (s) => (s === "in_game" ? 0 : s === "online" ? 1 : 2);
+  for (const f of [...friends].sort((a, b) => rank(a.status) - rank(b.status))) {
+    listBox.append(friendRow(f.username, f.status || "offline", [
+      { label: "✕", title: "Remove friend", action: "remove", kind: "no" },
+    ]));
+  }
+  for (const o of outgoing) {
+    const row = friendRow(o.username, null, [
+      { label: "✕", title: "Cancel request", action: "remove", kind: "no" },
+    ]);
+    const pend = document.createElement("small");
+    pend.className = "friend-pending";
+    pend.textContent = "requested";
+    row.querySelector(".friend-row-meta").append(pend);
+    listBox.append(row);
+  }
+}
+
+async function refreshFriends() {
+  if (!accountRegistered()) return;
+  try {
+    const r = await invoke("friends_list");
+    if (r && r.ok) friendsData = r;
+  } catch {
+    /* server unreachable — keep last-known data */
+  }
+  if (!$("account-popover").hidden) renderAccountPopover();
+}
+
+async function friendAction(action, username) {
+  const cmd = action === "accept" ? "friend_accept"
+            : action === "add" ? "friend_add" : "friend_remove";
+  try {
+    const r = await invoke(cmd, { username });
+    if (r && r.ok) {
+      if (action === "add") {
+        toast(
+          r.state === "accepted" ? `You're now friends with ${r.username}.`
+          : r.state === "exists" ? `Already sent — waiting on ${r.username}.`
+          : `Friend request sent to ${r.username}.`
+        );
+      }
+      await refreshFriends();
+    } else {
+      toast(friendError(r?.error), true);
+    }
+  } catch (e) {
+    toast(String(e), true);
+  }
+}
+
+async function addFriend() {
+  const input = $("friend-add-input");
+  const name = input.value.trim();
+  if (!name) return;
+  input.value = "";
+  await friendAction("add", name);
 }
 
 /* Token entry stays a focused modal (it's a form). */
@@ -111,9 +260,20 @@ $("pill-account").addEventListener("click", (e) => {
   if (pop.hidden) {
     renderAccountPopover();
     pop.hidden = false;
+    refreshFriends(); // pull fresh statuses while it's open
   } else {
     pop.hidden = true;
   }
+});
+
+/* Add-friend input + delegated accept/decline/remove buttons. */
+$("friend-add-btn").addEventListener("click", addFriend);
+$("friend-add-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addFriend();
+});
+$("account-popover").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-friend-action]");
+  if (btn) friendAction(btn.dataset.friendAction, btn.dataset.friendName);
 });
 
 $("account-change-token").addEventListener("click", openTokenModal);
@@ -136,6 +296,8 @@ $("account-token-save").addEventListener("click", async () => {
     const res = await invoke("apply_token", { token });
     settings = await invoke("get_settings");
     renderAccount();
+    friendsData = null; // new identity — drop any previous account's friends
+    refreshFriends();
     if (res.verified && res.username) {
       const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
       toast(`Welcome, ${res.username}${badge}! Token saved.`);
@@ -503,6 +665,8 @@ $("btn-mods-token-save")?.addEventListener("click", async () => {
     const res = await invoke("apply_token", { token });
     settings = await invoke("get_settings");
     renderAccount();
+    friendsData = null; // new identity — drop any previous account's friends
+    refreshFriends();
     if (res.verified && res.username) {
       const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
       toast(`Welcome, ${res.username}${badge}! Token saved.`);
@@ -1218,7 +1382,11 @@ $("btn-reset-settings").addEventListener("click", async () => {
   refreshEvents();
   autoUpdate();
   refreshVersionFields();
+  refreshFriends();
   setInterval(refreshPlayers, 60_000);
   setInterval(refreshEvents, 300_000);
   setInterval(refreshStatus, 15_000);
+  // Also the launcher presence heartbeat: polling /friends marks the user
+  // "online" while the launcher is open (the sidecar bumps their presence).
+  setInterval(refreshFriends, 60_000);
 })();
