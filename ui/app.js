@@ -490,7 +490,7 @@ function applyVariantTheme(variant) {
   applyVariantTheme._copy = setTimeout(() => {
     setText();
     requestAnimationFrame(() => heroEls.forEach((el) => el.classList.remove("fading")));
-  }, 1300);
+  }, 1500);
 }
 
 document.querySelectorAll(".variant-pill").forEach((pill) => {

@@ -93,7 +93,7 @@ body.classic::after { opacity: 1; }
    in; every recoloured surface transitions its colours. `body.theming` is
    added only for the duration of a switch (see applyVariantTheme) so normal
    hover transitions stay snappy the rest of the time. */
-.hero-text .eyebrow, .hero-text h3, .hero-text p { transition: opacity 1.3s ease; }
+.hero-text .eyebrow, .hero-text h3, .hero-text p { transition: opacity 1.5s ease; }
 .hero-text .eyebrow.fading, .hero-text h3.fading, .hero-text p.fading { opacity: 0; }
 
 /* Slow the recolour of EVERY element (backgrounds, borders, text, icons)
@@ -105,12 +105,12 @@ body.theming *, body.theming *::before, body.theming *::after {
   transition-duration: 2.6s !important;
   transition-timing-function: ease !important;
 }
-/* Hero copy keeps its faster fade so out + in still totals the 2.6 s window. */
+/* Hero copy fades its opacity over 1.5s (out, then in) while colours recolour. */
 body.theming .hero-text .eyebrow,
 body.theming .hero-text h3,
 body.theming .hero-text p {
   transition-property: opacity, color !important;
-  transition-duration: 1.3s, 2.6s !important;
+  transition-duration: 1.5s, 2.6s !important;
 }
 
 /* ============ Sidebar ============ */
