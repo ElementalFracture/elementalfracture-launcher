@@ -647,11 +647,13 @@ input[readonly]:focus { border-color: var(--line); }
   display: flex; align-items: center; justify-content: space-between;
   gap: 14px;
   font-size: 13px; font-weight: 600;
-  cursor: pointer;
 }
-/* Label text + its "i" info button, laid out inline within a switch row. */
+/* Label text + its "i" info button, laid out inline within a switch row. The
+   row is a <div> (not a <label>) so the info button can't hijack the label's
+   control; the text and the switch are their own labels for the checkbox. */
 .switch-text { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: none; }
+.switch-label-text { cursor: pointer; }
+.switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: none; cursor: pointer; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch .slider {
   position: absolute; inset: 0;

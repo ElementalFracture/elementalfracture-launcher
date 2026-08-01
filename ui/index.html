@@ -235,8 +235,9 @@
       <section class="view" id="view-settings">
         <div class="panel">
           <div class="panel-head"><h3>Launcher</h3></div>
-          <label class="switch-row">
-            <span class="switch-text">Minimize to taskbar when closing (X)
+          <div class="switch-row">
+            <span class="switch-text">
+              <label class="switch-label-text" for="toggle-minimize-close">Minimize to taskbar when closing (X)</label>
               <span class="info-wrap">
                 <button type="button" class="info-btn" aria-label="More info">i</button>
                 <div class="info-pop" hidden>
@@ -244,13 +245,14 @@
                 </div>
               </span>
             </span>
-            <span class="switch">
+            <label class="switch">
               <input type="checkbox" id="toggle-minimize-close" />
               <span class="slider"></span>
-            </span>
-          </label>
-          <label class="switch-row">
-            <span class="switch-text">Close launcher when the game starts
+            </label>
+          </div>
+          <div class="switch-row">
+            <span class="switch-text">
+              <label class="switch-label-text" for="toggle-close-on-launch">Close launcher when the game starts</label>
               <span class="info-wrap">
                 <button type="button" class="info-btn" aria-label="More info">i</button>
                 <div class="info-pop" hidden>
@@ -258,11 +260,11 @@
                 </div>
               </span>
             </span>
-            <span class="switch">
+            <label class="switch">
               <input type="checkbox" id="toggle-close-on-launch" />
               <span class="slider"></span>
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
 
         <div class="panel">
@@ -279,8 +281,9 @@
         </div>
 
         <div class="panel">
-          <label class="switch-row">
-            <span class="switch-text">Show advanced options
+          <div class="switch-row">
+            <span class="switch-text">
+              <label class="switch-label-text" for="toggle-advanced">Show advanced options</label>
               <span class="info-wrap">
                 <button type="button" class="info-btn" aria-label="More info">i</button>
                 <div class="info-pop" hidden>
@@ -288,11 +291,11 @@
                 </div>
               </span>
             </span>
-            <span class="switch">
+            <label class="switch">
               <input type="checkbox" id="toggle-advanced" />
               <span class="slider"></span>
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
 
         <div class="panel" id="advanced-panel" hidden>
