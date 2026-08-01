@@ -30,7 +30,7 @@
   --radius: 12px;
 }
 
-/* ── Classic (original Spellbreak) — warm tan hue, toggled by body.classic in app.js ── */
+/* ── Classic (original Spellbreak) - warm tan hue, toggled by body.classic in app.js ── */
 body.classic {
   --bg: #171009;
   --bg-2: #22190e;
@@ -122,7 +122,7 @@ body.theming .hero-text p {
   align-items: center;
   padding: 14px 0;
   gap: 6px;
-  /* Solid (not a gradient) so the EF ⇄ Classic recolour can transition —
+  /* Solid (not a gradient) so the EF ⇄ Classic recolour can transition -
      gradient background-images don't animate. */
   background: var(--bg-2);
   border-right: 1px solid var(--line);
@@ -292,7 +292,7 @@ main {
 }
 
 /* Rotating promo art: two plain layers crossfade (the EF purple grade is
-   baked into the images — no live blending, so the fade stays cheap even
+   baked into the images - no live blending, so the fade stays cheap even
    on software rendering). */
 .hero-bg {
   position: absolute; inset: 0;
@@ -572,7 +572,7 @@ code { background: #ffffff12; padding: 1px 5px; border-radius: 4px; font-size: 1
 .field small { color: var(--muted); font-weight: 400; }
 
 select {
-  /* WebKitGTK renders a native (light) select unless appearance is cleared —
+  /* WebKitGTK renders a native (light) select unless appearance is cleared -
      that's the washed-out, unreadable dropdown. Draw our own with a chevron. */
   appearance: none;
   -webkit-appearance: none;
@@ -590,7 +590,7 @@ select {
   cursor: pointer;
 }
 select:focus { border-color: var(--gold); }
-/* The open popup list — keep it dark so the options stay legible. */
+/* The open popup list - keep it dark so the options stay legible. */
 select option { background: var(--panel-2); color: var(--text); }
 .form-row select { flex: 1; }
 
@@ -649,6 +649,8 @@ input[readonly]:focus { border-color: var(--line); }
   font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
+/* Label text + its "i" info button, laid out inline within a switch row. */
+.switch-text { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: none; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch .slider {
@@ -689,7 +691,7 @@ input[readonly]:focus { border-color: var(--line); }
 
 /* ============ Account: token modal + friend-list popover ============ */
 
-/* Small dialogs — floating popups, NOT full-screen dimmers. The wrapper still
+/* Small dialogs - floating popups, NOT full-screen dimmers. The wrapper still
    spans the viewport only to center the card; it paints nothing and doesn't
    capture clicks (the app behind stays usable), so it never reads as a
    full-screen takeover. Only the card itself is interactive/visible. */
@@ -705,7 +707,7 @@ input[readonly]:focus { border-color: var(--line); }
 #advanced-warn-modal .wizard-panel { pointer-events: auto; }
 #account-token-view input { margin-top: 12px; }
 
-/* Friend list dropdown — anchored under the account pill, like the in-game
+/* Friend list dropdown - anchored under the account pill, like the in-game
    breakdown popover. */
 #account-popover {
   position: absolute;

@@ -105,8 +105,8 @@
                 <span class="info-wrap">
                   <button id="variant-info-btn" class="info-btn" aria-label="What's the difference?" title="What's the difference?">i</button>
                   <div id="variant-info-pop" class="info-pop" hidden>
-                    <p><strong>Elemental Fracture</strong> — the community edition: reworked talents, fresh balance and ongoing updates.</p>
-                    <p><strong>Classic</strong> — Spellbreak as it was at shutdown: the original balance, preserved untouched.</p>
+                    <p><strong>Elemental Fracture</strong> is the community edition: reworked talents, fresh balance and ongoing updates.</p>
+                    <p><strong>Classic</strong> is Spellbreak as it was at shutdown: the original balance, preserved untouched.</p>
                   </div>
                 </span>
                 <div class="variant-pills" id="variant-pills">
@@ -127,7 +127,7 @@
               </div>
             </div>
 
-            <!-- shared by installs and updates — visible in either mode -->
+            <!-- shared by installs and updates - visible in either mode -->
             <div class="progress" id="progress" hidden>
               <div class="progress-head">
                 <span id="progress-stage">Downloading…</span>
@@ -236,14 +236,28 @@
         <div class="panel">
           <div class="panel-head"><h3>Launcher</h3></div>
           <label class="switch-row">
-            <span>Minimize to taskbar when closing (X)</span>
+            <span class="switch-text">Minimize to taskbar when closing (X)
+              <span class="info-wrap">
+                <button type="button" class="info-btn" aria-label="More info">i</button>
+                <div class="info-pop" hidden>
+                  <p>Pressing X hides the launcher to the taskbar instead of quitting, so it stays running in the background. Quit it fully from its tray/taskbar entry.</p>
+                </div>
+              </span>
+            </span>
             <span class="switch">
               <input type="checkbox" id="toggle-minimize-close" />
               <span class="slider"></span>
             </span>
           </label>
           <label class="switch-row">
-            <span>Close launcher when the game starts</span>
+            <span class="switch-text">Close launcher when the game starts
+              <span class="info-wrap">
+                <button type="button" class="info-btn" aria-label="More info">i</button>
+                <div class="info-pop" hidden>
+                  <p>Automatically closes the launcher a moment after the game launches, to free up memory while you play.</p>
+                </div>
+              </span>
+            </span>
             <span class="switch">
               <input type="checkbox" id="toggle-close-on-launch" />
               <span class="slider"></span>
@@ -266,7 +280,14 @@
 
         <div class="panel">
           <label class="switch-row">
-            <span>Show advanced options</span>
+            <span class="switch-text">Show advanced options
+              <span class="info-wrap">
+                <button type="button" class="info-btn" aria-label="More info">i</button>
+                <div class="info-pop" hidden>
+                  <p>Reveals developer and debug settings: launch wrapper, Wine prefix, and the CDN / auth / players URLs. Only change these if you know what you're doing.</p>
+                </div>
+              </span>
+            </span>
             <span class="switch">
               <input type="checkbox" id="toggle-advanced" />
               <span class="slider"></span>
@@ -277,7 +298,7 @@
         <div class="panel" id="advanced-panel" hidden>
           <div class="panel-head"><h3>Advanced</h3></div>
           <label class="field" id="field-launch-cmd">
-            <span>Launch wrapper <small>(Linux only; runs the game exe — Proton-GE recommended)</small></span>
+            <span>Launch wrapper <small>(Linux only; runs the game exe - Proton-GE recommended)</small></span>
             <div class="form-row">
               <select id="set-launch-select"></select>
               <input type="text" id="set-launch-cmd" placeholder="e.g. umu-run" hidden />
@@ -376,7 +397,7 @@
       <div class="wizard-step about-step">
         <h2>Elemental Fracture Launcher</h2>
         <p class="about-version" id="about-version"></p>
-        <p class="about-legal">Elemental Fracture is a community-driven preservation project operating under the principles of Fair Use to keep the online services of Spellbreak&reg; alive — originally developed by Proletariat, Inc., now a subsidiary of Blizzard Entertainment.</p>
+        <p class="about-legal">Elemental Fracture is a community-driven preservation project operating under the principles of Fair Use to keep the online services of Spellbreak&reg; alive, originally developed by Proletariat, Inc., now a subsidiary of Blizzard Entertainment.</p>
         <p class="about-legal">Not affiliated with or endorsed by Proletariat, Inc. Everyone involved is a volunteer and receives no financial compensation; donations only cover the website, game servers and CDN.</p>
         <div class="wizard-actions">
           <button class="btn primary" id="btn-about-close">Close</button>
@@ -408,7 +429,7 @@
     <div class="wizard-panel">
       <div class="wizard-step">
         <h2>Advanced options</h2>
-        <p class="muted">Warning — advanced options are meant for debugging or for custom configurations. Adjusting these settings may prevent you from playing the game without a full reset. Please only adjust these if you know what you're doing!</p>
+        <p class="muted">Warning: advanced options are meant for debugging or for custom configurations. Adjusting these settings may prevent you from playing the game without a full reset. Please only adjust these if you know what you're doing!</p>
         <div class="wizard-actions">
           <button class="btn primary" id="advanced-warn-continue">Continue</button>
           <button class="btn subtle" id="advanced-warn-back">Back</button>

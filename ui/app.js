@@ -1,7 +1,7 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-/* External links — edit in one place. */
+/* External links - edit in one place. */
 const LINKS = {
   discord: "https://dsc.gg/elefrac",
   donate: "https://patreon.com/elementalfracture",
@@ -66,7 +66,7 @@ function renderModsGame() {
   const line = $("mods-game-line");
   if (!line) return;
   const p = settings.game_path?.trim();
-  line.textContent = p ? "Game folder: " + p : "No game folder set — Locate or Download the game.";
+  line.textContent = p ? "Game folder: " + p : "No game folder set - Locate or Download the game.";
 }
 function renderModsView() {
   renderModsGame();
@@ -96,7 +96,7 @@ const FRIEND_ERRORS = {
   username_required: "Enter a username.",
   no_pending_request: "No pending request from them.",
 };
-const friendError = (code) => FRIEND_ERRORS[code] || "Friend server unavailable — try again.";
+const friendError = (code) => FRIEND_ERRORS[code] || "Friend server unavailable - try again.";
 const statusText = (s) => (s === "in_game" ? "in game" : s === "online" ? "online" : "offline");
 
 function renderAccountPopover() {
@@ -177,7 +177,7 @@ function renderFriendList() {
   if (!friends.length && !outgoing.length) {
     const p = document.createElement("p");
     p.className = "friend-empty";
-    p.textContent = "No friends yet — add someone by their username above.";
+    p.textContent = "No friends yet - add someone by their username above.";
     listBox.append(p);
   }
   // Sort in-game first, then online, then offline (server pre-sorts by name).
@@ -205,7 +205,7 @@ async function refreshFriends() {
     const r = await invoke("friends_list");
     if (r && r.ok) friendsData = r;
   } catch {
-    /* server unreachable — keep last-known data */
+    /* server unreachable - keep last-known data */
   }
   if (!$("account-popover").hidden) renderAccountPopover();
 }
@@ -219,7 +219,7 @@ async function friendAction(action, username) {
       if (action === "add") {
         toast(
           r.state === "accepted" ? `You're now friends with ${r.username}.`
-          : r.state === "exists" ? `Already sent — waiting on ${r.username}.`
+          : r.state === "exists" ? `Already sent - waiting on ${r.username}.`
           : `Friend request sent to ${r.username}.`
         );
       }
@@ -299,7 +299,7 @@ $("account-token-save").addEventListener("click", async () => {
     const res = await invoke("apply_token", { token });
     settings = await invoke("get_settings");
     renderAccount();
-    friendsData = null; // new identity — drop any previous account's friends
+    friendsData = null; // new identity - drop any previous account's friends
     refreshFriends();
     if (res.verified && res.username) {
       const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
@@ -399,7 +399,7 @@ function accountRole() {
 function renderAccount() {
   const name = settings.username?.trim();
   $("account-name").textContent = name || "Guest";
-  // Only staff/developers carry a subheading — everyone else (Guest included)
+  // Only staff/developers carry a subheading - everyone else (Guest included)
   // shows just their name.
   const role = accountRole();
   const sub = $("account-sub");
@@ -454,7 +454,7 @@ const HERO_TEXT = {
   ef:      { eyebrow: "Elemental Fracture", title: "The Hollow Lands still beckon, breaker",
              sub: "Community servers, restored battles, new balance. Spellbreak lives on." },
   classic: { eyebrow: "Spellbreak Classic",  title: "The Hollow Lands, as they were before.",
-             sub: "Community servers, restored battles — the original balance. Spellbreak, preserved." },
+             sub: "Community servers, restored battles, the original balance. Spellbreak, preserved." },
 };
 let _variantApplied = null;
 function applyVariantTheme(variant) {
@@ -504,11 +504,23 @@ document.querySelectorAll(".variant-pill").forEach((pill) => {
   });
 });
 
-/* "What's the difference?" popover next to the Game Version label. */
-$("variant-info-btn")?.addEventListener("click", (e) => {
-  e.stopPropagation();
-  const pop = $("variant-info-pop");
-  if (pop) pop.hidden = !pop.hidden;
+/* Info popovers (the little "i" buttons): toggle the sibling .info-pop. Delegated
+   so one handler covers the variant popover AND every settings-toggle popover.
+   stopImmediatePropagation keeps the click-outside handler below from instantly
+   re-hiding it; preventDefault stops a switch from flipping when the "i" sits
+   inside its <label>. */
+document.addEventListener("click", (e) => {
+  const closest = (s) => (e.target.closest ? e.target.closest(s) : null);
+  // A click inside an open popover must not flip a switch whose <label> contains it.
+  if (closest(".info-pop")) { e.preventDefault(); return; }
+  const btn = closest(".info-btn");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  const pop = btn.parentElement && btn.parentElement.querySelector(".info-pop");
+  const show = pop && pop.hidden;
+  document.querySelectorAll(".info-pop").forEach((p) => (p.hidden = true));
+  if (pop) pop.hidden = !show;
 });
 
 $("btn-launch").addEventListener("click", async () => {
@@ -540,7 +552,7 @@ $("btn-about-close").addEventListener("click", () => { $("about-modal").hidden =
 
 /* Bring a freshly-pointed-at install current: balance patch + mods, then
    the version bump (all in update_patch). Skipped when the install already
-   matches the CDN version — such installs were provisioned by this same
+   matches the CDN version - such installs were provisioned by this same
    pipeline, mods included. */
 async function provisionInstall(report = toast) {
   try {
@@ -603,7 +615,7 @@ listen("install-progress", (ev) => {
 
 /* Startup update check: if the install disagrees with the CDN version,
    pull the patch automatically and bump version.txt once it matches. */
-/* Game update is no longer applied silently on boot — instead we surface a
+/* Game update is no longer applied silently on boot - instead we surface a
    top-right "Game Update Available" popup the player clicks to apply (see
    showGameUpdatePop / the #game-update-pop handler). */
 async function checkGameUpdate() {
@@ -644,7 +656,7 @@ async function downloadGame() {
 $("btn-download-game").addEventListener("click", downloadGame);
 $("btn-mods-download")?.addEventListener("click", downloadGame);
 
-/* Auth token in the Mods & Install view — two-step (enter twice to confirm). */
+/* Auth token in the Mods & Install view - two-step (enter twice to confirm). */
 $("btn-mods-token-save")?.addEventListener("click", async () => {
   const token = $("mods-token").value.trim();
   const confirm = $("mods-token-confirm").value.trim();
@@ -652,7 +664,7 @@ $("btn-mods-token-save")?.addEventListener("click", async () => {
   if (!token) { toast("Enter your token.", true); return; }
   if (token !== confirm) {
     toast("Tokens don't match.", true);
-    if (line) line.textContent = "The two tokens don't match — re-enter to confirm.";
+    if (line) line.textContent = "The two tokens don't match - re-enter to confirm.";
     return;
   }
   const btn = $("btn-mods-token-save");
@@ -661,7 +673,7 @@ $("btn-mods-token-save")?.addEventListener("click", async () => {
     const res = await invoke("apply_token", { token });
     settings = await invoke("get_settings");
     renderAccount();
-    friendsData = null; // new identity — drop any previous account's friends
+    friendsData = null; // new identity - drop any previous account's friends
     refreshFriends();
     if (res.verified && res.username) {
       const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
@@ -810,10 +822,9 @@ document.addEventListener("click", (e) => {
   if (!pop.hidden && !pop.contains(e.target)) pop.hidden = true;
   const apop = $("account-popover");
   if (!apop.hidden && !apop.contains(e.target)) apop.hidden = true;
-  const ipop = $("variant-info-pop");
-  const ibtn = $("variant-info-btn");
-  if (ipop && !ipop.hidden && !ipop.contains(e.target) && e.target !== ibtn)
-    ipop.hidden = true;
+  document.querySelectorAll(".info-pop").forEach((p) => {
+    if (!p.hidden && !p.contains(e.target)) p.hidden = true;
+  });
 });
 
 async function refreshNews() {
@@ -932,7 +943,7 @@ async function refreshFiles() {
     badge.className = "badge missing";
     badge.textContent = "MISSING";
     text.textContent = missing === total ? "Mods are not installed." : "Some mod files are missing.";
-    summary.textContent = `${missing} of ${total} file(s) missing — run Install / Update mods.`;
+    summary.textContent = `${missing} of ${total} file(s) missing - run Install / Update mods.`;
   }
 }
 
@@ -1093,7 +1104,7 @@ function fillSettingsForm() {
   $("set-cdn-base").value = settings.cdn_base ?? "";
   $("set-auth-url").value = settings.auth_url ?? "";
   $("set-players-url").value = settings.players_url ?? "";
-  // Advanced is always collapsed on (re)load — it's opt-in per session.
+  // Advanced is always collapsed on (re)load - it's opt-in per session.
   $("toggle-advanced").checked = false;
   $("advanced-panel").hidden = true;
   syncWrapperUI();
