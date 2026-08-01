@@ -55,6 +55,9 @@ function showView(name) {
     refreshFiles();
     refreshVersions();
     renderModsView();
+    refreshVersionFields();
+  } else if (name === "settings") {
+    refreshVersionFields();
   }
 }
 
@@ -600,26 +603,19 @@ listen("install-progress", (ev) => {
 
 /* Startup update check: if the install disagrees with the CDN version,
    pull the patch automatically and bump version.txt once it matches. */
-async function autoUpdate() {
+/* Game update is no longer applied silently on boot — instead we surface a
+   top-right "Game Update Available" popup the player clicks to apply (see
+   showGameUpdatePop / the #game-update-pop handler). */
+async function checkGameUpdate() {
   let v;
   try {
     v = await invoke("get_versions");
   } catch {
-    return;
+    return false;
   }
-  if (!v?.remote || !status?.exe_present || v.local === v.remote) return;
-  toast(`Update available, updating to v${v.remote}…`);
-  $("btn-launch").disabled = true;
-  try {
-    const version = await invoke("update_patch");
-    toast(version && version !== "unknown" ? `Game updated to v${version}` : "Game updated");
-  } catch (e) {
-    toast("Update failed: " + e, true);
-  } finally {
-    $("btn-launch").disabled = false;
-    refreshStatus();
-    refreshVersions();
-  }
+  const outdated = !!(v?.remote && status?.exe_present && v.local !== v.remote);
+  if (outdated) showGameUpdatePop(v.remote);
+  return outdated;
 }
 
 async function downloadGame() {
@@ -1234,14 +1230,26 @@ $("btn-browse-game").addEventListener("click", async () => {
   }
 });
 
-/* ---------------- launcher self-update ---------------- */
+/* ---------------- update popups (top-right corner) ---------------- */
 
 let launcherInfo = null;
+let gameUpdateVer = null;
 
-function showLauncherUpdateModal() {
-  $("update-modal-line").textContent =
-    `Version ${launcherInfo.remote} is ready to install (you have v${launcherInfo.current}).`;
-  $("update-modal").hidden = false;
+function showLauncherUpdatePop() {
+  const sub = $("launcher-update-sub");
+  if (sub) {
+    sub.textContent = launcherInfo?.remote
+      ? `v${launcherInfo.remote} ready · click to update`
+      : "Click to update";
+  }
+  $("launcher-update-pop").hidden = false;
+}
+
+function showGameUpdatePop(remote) {
+  gameUpdateVer = remote || null;
+  const sub = $("game-update-sub");
+  if (sub) sub.textContent = remote ? `v${remote} ready · click to update` : "Click to update";
+  $("game-update-pop").hidden = false;
 }
 
 /* Startup check. Honors the backend's `update` flag, which stays quiet
@@ -1254,8 +1262,54 @@ async function checkLauncherUpdate() {
   } catch {
     return;
   }
-  if (launcherInfo?.update) showLauncherUpdateModal();
+  if (launcherInfo?.update) showLauncherUpdatePop();
 }
+
+/* ---- launcher-update popup: click = install, × = dismiss ---- */
+$("launcher-update-dismiss").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("launcher-update-pop").hidden = true;
+});
+$("launcher-update-pop").addEventListener("click", async () => {
+  const pop = $("launcher-update-pop");
+  if (pop.classList.contains("busy")) return;
+  pop.classList.add("busy");
+  $("launcher-update-sub").textContent = "Installing…";
+  try {
+    // On success the backend restarts the launcher; this call never resolves.
+    await invoke("update_launcher");
+  } catch (e) {
+    toast(String(e), true);
+    pop.classList.remove("busy");
+    $("launcher-update-sub").textContent = "Click to update";
+  }
+});
+
+/* ---- game-update popup: click = update, × = dismiss ---- */
+$("game-update-dismiss").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("game-update-pop").hidden = true;
+});
+$("game-update-pop").addEventListener("click", async () => {
+  const pop = $("game-update-pop");
+  if (pop.classList.contains("busy")) return;
+  pop.classList.add("busy");
+  $("game-update-sub").textContent = "Updating…";
+  $("btn-launch").disabled = true;
+  try {
+    const version = await invoke("update_patch");
+    toast(version && version !== "unknown" ? `Game updated to v${version}` : "Game updated");
+    pop.hidden = true;
+  } catch (e) {
+    toast("Update failed: " + e, true);
+    $("game-update-sub").textContent = "Click to update";
+  } finally {
+    pop.classList.remove("busy");
+    $("btn-launch").disabled = false;
+    refreshStatus();
+    refreshVersions();
+  }
+});
 
 /* The Settings "Versions" fields mirror the CDN config.ini version tracks,
    falling back to what's installed when the CDN is unreachable. */
@@ -1275,56 +1329,52 @@ async function refreshVersionFields() {
   }
 }
 
-/* Manual check from Settings: covers both tracks. Unlike the startup
-   check this compares versions directly (no marker guard): if the CDN
-   says a different launcher version, the install dialog opens; a game
-   update is applied on the spot. */
-$("btn-check-updates").addEventListener("click", async () => {
-  const btn = $("btn-check-updates");
+/* Manual game-update check (Game Settings). Compares the installed game
+   version to the CDN and, if behind, raises the "Game Update Available"
+   popup rather than updating on the spot. */
+$("btn-check-game-updates").addEventListener("click", async () => {
+  const btn = $("btn-check-game-updates");
   btn.disabled = true;
   btn.textContent = "Checking…";
   try {
-    try {
-      launcherInfo = await invoke("get_launcher_update");
-    } catch {}
-    const launcherOutdated =
-      !!(launcherInfo?.remote && launcherInfo.remote !== launcherInfo.current);
-    if (launcherOutdated) showLauncherUpdateModal();
-
     let v = null;
-    try {
-      v = await invoke("get_versions");
-    } catch {}
-    const gameOutdated = !!(v?.remote && status?.exe_present && v.local !== v.remote);
-    if (gameOutdated) await autoUpdate();
-
+    try { v = await invoke("get_versions"); } catch {}
     await refreshVersionFields();
-    if (!launcherInfo?.remote && !v?.remote) {
+    if (!v?.remote) {
       toast("Couldn't reach the update server, check the CDN base in Advanced.", true);
-    } else if (!gameOutdated && !launcherOutdated) {
-      toast("Everything is up to date");
+    } else if (v.local && v.remote && v.local !== v.remote && status?.exe_present) {
+      showGameUpdatePop(v.remote);
+    } else {
+      toast("Game is up to date");
     }
   } finally {
     btn.disabled = false;
-    btn.textContent = "Check for updates";
+    btn.textContent = "Check for game updates";
   }
 });
 
-$("btn-update-later").addEventListener("click", () => {
-  $("update-modal").hidden = true;
-});
-
-$("btn-update-install").addEventListener("click", async () => {
-  const btn = $("btn-update-install");
+/* Manual launcher-update check (Launcher Settings). Compares directly (no
+   marker guard); if the CDN reports a different launcher version, raises the
+   "Launcher Update Available" popup. */
+$("btn-check-launcher-updates").addEventListener("click", async () => {
+  const btn = $("btn-check-launcher-updates");
   btn.disabled = true;
-  btn.textContent = "Installing…";
+  btn.textContent = "Checking…";
   try {
-    // On success the backend restarts the launcher; this call never resolves.
-    await invoke("update_launcher");
-  } catch (e) {
-    toast(String(e), true);
+    try { launcherInfo = await invoke("get_launcher_update"); } catch {}
+    await refreshVersionFields();
+    const outdated =
+      !!(launcherInfo?.remote && launcherInfo.remote !== launcherInfo.current);
+    if (outdated) {
+      showLauncherUpdatePop();
+    } else if (!launcherInfo?.remote) {
+      toast("Couldn't reach the update server, check the CDN base in Advanced.", true);
+    } else {
+      toast("Launcher is up to date");
+    }
+  } finally {
     btn.disabled = false;
-    btn.textContent = "Install";
+    btn.textContent = "Check for launcher updates";
   }
 });
 
@@ -1380,7 +1430,7 @@ $("btn-reset-settings").addEventListener("click", async () => {
   refreshNews();
   refreshPlayers();
   refreshEvents();
-  autoUpdate();
+  checkGameUpdate();
   refreshVersionFields();
   refreshFriends();
   setInterval(refreshPlayers, 60_000);

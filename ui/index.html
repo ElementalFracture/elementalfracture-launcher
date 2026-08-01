@@ -13,11 +13,11 @@
         <button class="nav-btn active" data-view="home" title="Home">
           <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>
         </button>
-        <button class="nav-btn" data-view="mods" title="Mods &amp; Install">
+        <button class="nav-btn" data-view="mods" title="Game Settings">
           <svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zm0 2.3L18.6 8 12 11.7 5.4 8zM5 9.7l6 3.4v6.6l-6-3.4zm14 0v6.6l-6 3.4v-6.6z"/></svg>
         </button>
-        <button class="nav-btn" data-view="settings" title="Settings">
-          <img src="assets/gear.png" alt="Settings" class="nav-img" />
+        <button class="nav-btn" data-view="settings" title="Launcher Settings">
+          <img src="assets/gear.png" alt="Launcher Settings" class="nav-img" />
         </button>
       </nav>
 
@@ -158,9 +158,9 @@
         </div>
       </section>
 
-      <!-- ================= MODS & INSTALL ================= -->
+      <!-- ================= GAME SETTINGS ================= -->
       <section class="view" id="view-mods">
-        <!-- Game -->
+        <!-- Game download location -->
         <div class="panel">
           <div class="panel-head">
             <h3>Game</h3>
@@ -169,6 +169,13 @@
               <button class="btn primary" id="btn-mods-download">Download game…</button>
             </div>
           </div>
+          <label class="field">
+            <span>Install location</span>
+            <div class="form-row">
+              <input type="text" id="set-game-path" readonly placeholder="Not set" />
+              <button class="btn subtle" id="btn-browse-game">Browse…</button>
+            </div>
+          </label>
           <div id="mods-game-line" class="muted"></div>
         </div>
 
@@ -208,38 +215,26 @@
           <div id="install-summary" class="muted"></div>
           <pre id="install-log" class="log" hidden></pre>
         </div>
-      </section>
 
-      <!-- ================= SETTINGS ================= -->
-      <section class="view" id="view-settings">
+        <!-- Game version -->
         <div class="panel">
           <div class="panel-head">
-            <h3>Versions</h3>
+            <h3>Game version</h3>
             <div class="panel-actions">
-              <button class="btn subtle" id="btn-check-updates">Check for updates</button>
+              <button class="btn subtle" id="btn-check-game-updates">Check for game updates</button>
             </div>
           </div>
-          <div class="version-fields">
-            <label class="field">
-              <span>Game version</span>
-              <input type="text" id="set-game-version" readonly placeholder="unavailable" />
-            </label>
-            <label class="field">
-              <span>Launcher version</span>
-              <input type="text" id="set-launcher-version" readonly placeholder="unavailable" />
-            </label>
-          </div>
+          <label class="field">
+            <span>Version</span>
+            <input type="text" id="set-game-version" readonly placeholder="unavailable" />
+          </label>
         </div>
+      </section>
 
+      <!-- ================= LAUNCHER SETTINGS ================= -->
+      <section class="view" id="view-settings">
         <div class="panel">
           <div class="panel-head"><h3>Launcher</h3></div>
-          <label class="field">
-            <span>Game folder</span>
-            <div class="form-row">
-              <input type="text" id="set-game-path" readonly placeholder="Not set" />
-              <button class="btn subtle" id="btn-browse-game">Browse…</button>
-            </div>
-          </label>
           <label class="switch-row">
             <span>Minimize to taskbar when closing (X)</span>
             <span class="switch">
@@ -253,6 +248,19 @@
               <input type="checkbox" id="toggle-close-on-launch" />
               <span class="slider"></span>
             </span>
+          </label>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Launcher version</h3>
+            <div class="panel-actions">
+              <button class="btn subtle" id="btn-check-launcher-updates">Check for launcher updates</button>
+            </div>
+          </div>
+          <label class="field">
+            <span>Version</span>
+            <input type="text" id="set-launcher-version" readonly placeholder="unavailable" />
           </label>
         </div>
 
@@ -348,17 +356,17 @@
     </div>
   </div>
 
-  <!-- ================= LAUNCHER SELF-UPDATE ================= -->
-  <div id="update-modal" hidden>
-    <div class="wizard-panel">
-      <div class="wizard-step">
-        <h2>New update available for launcher</h2>
-        <p class="muted" id="update-modal-line">A new launcher version is ready to install.</p>
-        <div class="wizard-actions">
-          <button class="btn primary" id="btn-update-install">Install</button>
-          <button class="btn subtle" id="btn-update-later">Not now</button>
-        </div>
-      </div>
+  <!-- ============ UPDATE POPUPS (top-right corner) ============ -->
+  <div id="update-pops">
+    <div class="update-pop" id="launcher-update-pop" role="button" tabindex="0" hidden>
+      <button class="update-pop-x" id="launcher-update-dismiss" title="Dismiss">&times;</button>
+      <div class="update-pop-title">Launcher Update Available</div>
+      <div class="update-pop-sub" id="launcher-update-sub">Click to update</div>
+    </div>
+    <div class="update-pop" id="game-update-pop" role="button" tabindex="0" hidden>
+      <button class="update-pop-x" id="game-update-dismiss" title="Dismiss">&times;</button>
+      <div class="update-pop-title">Game Update Available</div>
+      <div class="update-pop-sub" id="game-update-sub">Click to update</div>
     </div>
   </div>
 
