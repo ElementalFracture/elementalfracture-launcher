@@ -689,15 +689,20 @@ input[readonly]:focus { border-color: var(--line); }
 
 /* ============ Account: token modal + friend-list popover ============ */
 
-#account-modal, #advanced-warn-modal {
+/* Small dialogs — floating popups, NOT full-screen dimmers. The wrapper still
+   spans the viewport only to center the card; it paints nothing and doesn't
+   capture clicks (the app behind stays usable), so it never reads as a
+   full-screen takeover. Only the card itself is interactive/visible. */
+#about-modal, #account-modal, #advanced-warn-modal {
   position: fixed; inset: 0;
-  z-index: 55;
+  z-index: 60;
   display: grid; place-items: center;
-  background: #0d0716ee;
-  /* Force a GPU layer: WebKitGTK otherwise sometimes paints a full-screen
-     fixed overlay as a blank box (content never composites). */
-  transform: translateZ(0);
+  background: transparent;
+  pointer-events: none;
 }
+#about-modal .wizard-panel,
+#account-modal .wizard-panel,
+#advanced-warn-modal .wizard-panel { pointer-events: auto; }
 #account-token-view input { margin-top: 12px; }
 
 /* Friend list dropdown — anchored under the account pill, like the in-game
@@ -820,15 +825,14 @@ input[readonly]:focus { border-color: var(--line); }
 
 /* ============ First-boot wizard ============ */
 
-#wizard, #about-modal {
+/* First-boot onboarding keeps a dim backdrop (deliberately focus-stealing). */
+#wizard {
   position: fixed; inset: 0;
   z-index: 50;
   display: grid; place-items: center;
   background: #0d0716ee;
-  /* Force a GPU layer — see note on #account-modal above (blank-box glitch). */
   transform: translateZ(0);
 }
-#about-modal { z-index: 60; }
 
 /* ============ Update popups (top-right corner) ============ */
 #update-pops {
