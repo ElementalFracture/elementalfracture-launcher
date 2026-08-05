@@ -110,6 +110,76 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
     Ok(unverified("Token saved, but the auth server doesn't recognize it.".into()))
 }
 
+/// Base URL of the players sidecar (where /friends lives), derived from the
+/// configured players URL: "https://play.elefrac.com/players" → ".../".
+fn sidecar_base(s: &settings::Settings) -> Option<String> {
+    let base = s.players_url.trim();
+    if base.is_empty() {
+        return None;
+    }
+    Some(match base.strip_suffix("/players") {
+        Some(prefix) => prefix.to_string(),
+        None => base.trim_end_matches('/').to_string(),
+    })
+}
+
+/// POST {token[, username]} to a /friends* endpoint and return its JSON. The
+/// token comes from stored settings, so the frontend never handles it — it
+/// just names the friend to act on.
+async fn friend_call(
+    app: &tauri::AppHandle,
+    path: &str,
+    username: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let s = settings::load(app);
+    let token = s.auth_token.trim().to_string();
+    if token.is_empty() {
+        return Err("No account token set.".into());
+    }
+    let base = sidecar_base(&s).ok_or("players URL not configured")?;
+    let mut body = serde_json::json!({ "token": token });
+    if let Some(name) = username {
+        body["username"] = serde_json::Value::String(name);
+    }
+    client()?
+        .post(format!("{base}{path}"))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Friend list + statuses (also serves as the launcher presence heartbeat).
+#[tauri::command]
+#[specta::specta]
+pub async fn friends_list(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    friend_call(&app, "/friends", None).await
+}
+
+/// Send a friend request to (or auto-accept a reciprocal request from) a username.
+#[tauri::command]
+#[specta::specta]
+pub async fn friend_add(app: tauri::AppHandle, username: String) -> Result<serde_json::Value, String> {
+    friend_call(&app, "/friends/add", Some(username)).await
+}
+
+/// Accept a pending incoming request from a username.
+#[tauri::command]
+#[specta::specta]
+pub async fn friend_accept(app: tauri::AppHandle, username: String) -> Result<serde_json::Value, String> {
+    friend_call(&app, "/friends/accept", Some(username)).await
+}
+
+/// Unfriend / decline / cancel — drops any relationship with a username.
+#[tauri::command]
+#[specta::specta]
+pub async fn friend_remove(app: tauri::AppHandle, username: String) -> Result<serde_json::Value, String> {
+    friend_call(&app, "/friends/remove", Some(username)).await
+}
+
 /// Live Discord events, served by the players sidecar (pushed there by the
 /// Discord bot). The endpoint lives next to /players on the same service.
 #[tauri::command]

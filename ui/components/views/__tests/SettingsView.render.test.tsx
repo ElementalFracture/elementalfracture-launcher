@@ -191,9 +191,9 @@ describe("advanced options gate", () => {
   });
 });
 
-describe("version fields", () => {
+/* The game version lives in Game Settings now; only the launcher's is here. */
+describe("launcher version field", () => {
   it("prefers the CDN version and notes what is installed alongside it", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
     commands.getLauncherUpdate.mockResolvedValue({
       current: "3.0.2",
       remote: "3.1.0",
@@ -201,15 +201,14 @@ describe("version fields", () => {
     });
     render(<SettingsView />, { wrapper: Providers });
 
-    await waitFor(() => expect(screen.getByDisplayValue("v6.0.3")).toBeTruthy());
-    expect(screen.getByDisplayValue("v3.1.0 (installed: v3.0.2)")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("v3.1.0 (installed: v3.0.2)")).toBeTruthy()
+    );
   });
 
   it("falls back to the installed version when the CDN is unreachable", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
     render(<SettingsView />, { wrapper: Providers });
 
-    await waitFor(() => expect(screen.getByDisplayValue("v6.0.2 (installed)")).toBeTruthy());
-    expect(screen.getByDisplayValue("v3.0.2 (installed)")).toBeTruthy();
+    await waitFor(() => expect(screen.getByDisplayValue("v3.0.2 (installed)")).toBeTruthy());
   });
 });

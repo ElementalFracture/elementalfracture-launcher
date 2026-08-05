@@ -58,7 +58,13 @@
   gap: 14px;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
+}
+/* Row label plus its "i" button, laid out inline. */
+.switch-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 [data-slot="switch"] {
   background-color: var(--bg);

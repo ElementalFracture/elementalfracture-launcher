@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { hasMultipleRegions, modeLabel, playersByMode, regionSplit } from "../TopBar";
+import {
+  hasMultipleRegions,
+  modeLabel,
+  playersByMode,
+  playersByVariant,
+  regionSplit,
+  variantOf,
+} from "../TopBar";
 
 describe("modeLabel", () => {
   it("buckets a server by the mode named in its display name", () => {
@@ -170,5 +177,53 @@ describe("hasMultipleRegions", () => {
 
   it("ignores servers that report no region at all", () => {
     expect(hasMultipleRegions([{ display_name: "Solos" }, { display_name: "Duos" }])).toBe(false);
+  });
+});
+
+describe("variantOf", () => {
+  it("reads the manager's vanilla container names as Classic", () => {
+    expect(variantOf({ name: "vsolo-1" })).toBe("classic");
+    expect(variantOf({ name: "vduos-2" })).toBe("classic");
+    expect(variantOf({ name: "vsquad-1" })).toBe("classic");
+    expect(variantOf({ name: "varena-3" })).toBe("classic");
+  });
+
+  it("reads a Classic display name as Classic", () => {
+    expect(variantOf({ display_name: "Classic Solos 1" })).toBe("classic");
+  });
+
+  it("treats everything else as Elemental Fracture", () => {
+    expect(variantOf({ name: "solo-1", display_name: "NA Solos #1" })).toBe("ef");
+    expect(variantOf({})).toBe("ef");
+  });
+
+  it("does not mistake an EF server whose name merely starts with v", () => {
+    expect(variantOf({ name: "vault-arena", display_name: "Vault Arena" })).toBe("ef");
+  });
+});
+
+describe("playersByVariant", () => {
+  it("keeps both sections listing every mode, populated or not", () => {
+    const split = playersByVariant([]);
+    expect([...split.ef.keys()]).toEqual(["Solos", "Duos", "Squads", "Arena/TDM"]);
+    expect([...split.classic.keys()]).toEqual(["Solos", "Duos", "Squads", "Arena/TDM"]);
+  });
+
+  it("counts a mode against the balance its server runs", () => {
+    const split = playersByVariant([
+      { display_name: "NA Solos", players: 5 },
+      { name: "vsolo-1", display_name: "Classic Solos 1", players: 2 },
+    ]);
+    expect(split.ef.get("Solos")?.count).toBe(5);
+    expect(split.classic.get("Solos")?.count).toBe(2);
+  });
+
+  it("keeps the rosters apart", () => {
+    const split = playersByVariant([
+      { display_name: "NA Duos", players: 1, names: ["Lytion"] },
+      { name: "vduos-1", display_name: "Classic Duos 1", players: 1, names: ["Doobs"] },
+    ]);
+    expect(split.ef.get("Duos")?.names).toEqual(["Lytion"]);
+    expect(split.classic.get("Duos")?.names).toEqual(["Doobs"]);
   });
 });

@@ -19,12 +19,15 @@ export function ModsView() {
     refreshStatus,
     locateGame,
     downloadGame,
+    provisionInstall,
+    checkGameUpdate,
   } = useGame();
-  const { settings, applyToken } = useSettings();
+  const { settings, saveSettings, applyToken } = useSettings();
 
   const [files, setFiles] = useState<FileCheck[] | null>(null);
   const [updateBusy, setUpdateBusy] = useState(false);
   const [modsBusy, setModsBusy] = useState(false);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [log, setLog] = useState<string | null>(null);
 
   const [token, setToken] = useState("");
@@ -63,8 +66,55 @@ export function ModsView() {
     versions?.local && versions?.remote && versions.local !== versions.remote
   );
 
+  // The CDN's current track, falling back to what's installed when it's unreachable.
+  const gameVersionField = versions?.remote
+    ? `v${versions.remote}`
+    : versions?.local
+      ? `v${versions.local} (installed)`
+      : "";
+
   const total = files?.length ?? 0;
   const missing = files?.filter((f) => !f.present).length ?? 0;
+
+  /* Repoint the install from here. Saved on the spot rather than behind a
+     Save button: the provisioning below depends on the new folder. */
+  const onBrowseGame = async () => {
+    if (!settings) {
+      return;
+    }
+    try {
+      const dir = await rust.pickGameDir("Select your Spellbreak folder");
+      if (!dir) {
+        return;
+      }
+      await saveSettings({ ...settings, game_path: dir });
+      const fresh = await refreshStatus();
+      if (fresh?.exe_present) {
+        await provisionInstall();
+      }
+      toast("Game folder updated");
+    } catch (e) {
+      toast(String(e), true);
+    }
+  };
+
+  /* Manual game check: raises the corner popup rather than patching on the
+     spot, so an update never starts without a click. */
+  const onCheckGameUpdates = async () => {
+    setCheckingUpdates(true);
+    try {
+      const v = await refreshVersions();
+      if (!v?.remote) {
+        toast("Couldn't reach the update server, check the CDN base in Advanced.", true);
+        return;
+      }
+      if (!(await checkGameUpdate())) {
+        toast("Game is up to date");
+      }
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
 
   const onUpdate = async () => {
     setUpdateBusy(true);
@@ -153,6 +203,15 @@ export function ModsView() {
             </button>
           </div>
         </div>
+        <label className="field">
+          <span>Install location</span>
+          <div className="form-row">
+            <input type="text" readOnly placeholder="Not set" value={settings?.game_path ?? ""} />
+            <button className="btn subtle" onClick={onBrowseGame}>
+              Browse…
+            </button>
+          </div>
+        </label>
         <div className="muted">{gameLine}</div>
       </div>
 
@@ -238,6 +297,21 @@ export function ModsView() {
         </div>
 
         {log !== null && <pre className="log">{log}</pre>}
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h3>Game version</h3>
+          <div className="panel-actions">
+            <button className="btn subtle" disabled={checkingUpdates} onClick={onCheckGameUpdates}>
+              {checkingUpdates ? "Checking…" : "Check for game updates"}
+            </button>
+          </div>
+        </div>
+        <label className="field">
+          <span>Version</span>
+          <input type="text" readOnly placeholder="unavailable" value={gameVersionField} />
+        </label>
       </div>
     </section>
   );

@@ -52,12 +52,16 @@ export function AccountModal({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="wizard-panel" showCloseButton={false}>
+      <DialogContent
+        className="wizard-panel"
+        showCloseButton={false}
+        showOverlay={false}
+      >
         <div className="wizard-step">
           <h2>Please enter your auth token</h2>
           <p className="muted">
-            Identifies you on Elemental Fracture. Only change this token when rotated by either
-            yourself on Discord or by a mod.
+            Identifies you on Elemental Fracture. Only change this token when
+            rotated by either yourself on Discord or by a mod.
           </p>
           <input
             type="password"
@@ -66,14 +70,19 @@ export function AccountModal({
             onChange={(e) => setToken(e.target.value)}
           />
           <p className="wizard-tooltip">
-            Don’t have a token? <a onClick={() => openLink(DISCORD_URL)}>Join the Discord</a> to get
+            Don’t have a token?{" "}
+            <a onClick={() => openLink(DISCORD_URL)}>Join the Discord</a> to get
             one.
           </p>
           <div className="wizard-actions">
             <button className="btn primary" disabled={saving} onClick={save}>
               Save
             </button>
-            <button className="btn subtle" disabled={saving} onClick={() => onOpenChange(false)}>
+            <button
+              className="btn subtle"
+              disabled={saving}
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </button>
           </div>

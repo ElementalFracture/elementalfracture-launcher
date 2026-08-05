@@ -59,6 +59,21 @@
   --ring: var(--gold);
 }
 
+/* Classic (original Spellbreak): the same tokens in a warm tan hue. Toggled by
+   body.classic, which HomeView's useVariantTheme sets from the installed pak. */
+body.classic {
+  --bg: #171009;
+  --bg-2: #22190e;
+  --panel: #291f12;
+  --panel-2: #342917;
+  --line: #4b3b20;
+  --text: #efe7d6;
+  --ef-muted: #b3a487;
+  --gold: #cdae7a;
+  --gold-bright: #ecd6a8;
+  --cream: #f3e6d0;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -77,18 +92,82 @@ body {
 
 body {
   font-family: "Segoe UI", "Inter", "Noto Sans", system-ui, sans-serif;
-  background:
-    radial-gradient(1100px 500px at 85% -10%, #2b1a52cc 0%, transparent 60%),
-    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%), var(--bg);
+  /* Solid base colour, so it can transition. The corner glows live on the two
+     crossfading pseudo-layers below, since gradients themselves can't animate. */
+  background: var(--bg);
   color: var(--text);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
 }
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+/* EF glow (purple) */
+body::before {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #2b1a52cc 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%);
+  opacity: 1;
+}
+/* Classic glow (warm tan) */
+body::after {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #4a3418cc 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #3a2a12bb 0%, transparent 55%);
+  opacity: 0;
+}
+body.classic::before {
+  opacity: 0;
+}
+body.classic::after {
+  opacity: 1;
+}
 
 #app {
   display: flex;
   height: 100vh;
+}
+
+/* ============ EF ⇄ Classic switch ============
+   Only what actually changes eases over, at the same 2.6s as the hero-art
+   crossfade: the hero copy fades out, swaps, and fades back in while every
+   recoloured surface transitions its colours. body.theming is only set for
+   the length of a switch, so normal hover feedback stays snappy. */
+.hero-text .eyebrow,
+.hero-text h3,
+.hero-text p {
+  transition: opacity 1.5s ease;
+}
+.hero-text .eyebrow.fading,
+.hero-text h3.fading,
+.hero-text p.fading {
+  opacity: 0;
+}
+
+/* Slow the recolour of every element — backgrounds, borders, text, icons —
+   uniformly, for the duration of the switch only. */
+body.theming,
+body.theming::before,
+body.theming::after,
+body.theming *,
+body.theming *::before,
+body.theming *::after {
+  transition-property: background-color, color, border-color, fill, opacity !important;
+  transition-duration: 2.6s !important;
+  transition-timing-function: ease !important;
+}
+/* The hero copy still fades on its own 1.5s beat while colours take 2.6s. */
+body.theming .hero-text .eyebrow,
+body.theming .hero-text h3,
+body.theming .hero-text p {
+  transition-property: opacity, color !important;
+  transition-duration: 1.5s, 2.6s !important;
 }
 /* ============ App shell ============ */
 
@@ -112,9 +191,14 @@ main {
 .view::-webkit-scrollbar {
   width: 10px;
 }
+/* Neutral and translucent: WebKit scrollbar parts can't transition, so a
+   theme-agnostic thumb reads right in both palettes instead of snapping. */
 .view::-webkit-scrollbar-thumb {
-  background: #2e1f52;
+  background: #ffffff26;
   border-radius: 5px;
+}
+.view::-webkit-scrollbar-thumb:hover {
+  background: #ffffff3d;
 }
 
 /* ============ Panels (Mods / Settings) ============ */

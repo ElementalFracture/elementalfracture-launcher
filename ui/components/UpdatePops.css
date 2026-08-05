@@ -1,0 +1,75 @@
+/* ============ Update popups (top-right corner) ============ */
+
+#update-pops {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+  z-index: 80;
+}
+
+.update-pop {
+  position: relative;
+  width: 240px;
+  text-align: left;
+  background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  box-shadow:
+    0 12px 34px #000c,
+    0 0 22px #d9b45b22;
+  padding: 13px 16px 14px;
+  cursor: pointer;
+  transition:
+    transform 0.1s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.update-pop:hover {
+  transform: translateY(-1px);
+  border-color: var(--gold-bright);
+  box-shadow:
+    0 16px 40px #000d,
+    0 0 28px #d9b45b33;
+}
+.update-pop:active {
+  transform: translateY(0);
+}
+/* While the update runs the card stops taking clicks, so a second one can't
+   kick off a parallel install. */
+.update-pop.busy {
+  cursor: default;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.update-pop-title {
+  font-family: "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold-bright);
+  padding-right: 16px;
+}
+.update-pop-sub {
+  font-size: 12px;
+  color: var(--ef-muted);
+  margin-top: 3px;
+}
+.update-pop-x {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ef-muted);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.update-pop-x:hover {
+  color: var(--cream);
+}

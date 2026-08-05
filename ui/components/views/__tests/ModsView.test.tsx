@@ -50,6 +50,20 @@ beforeEach(() => {
   commands.verifyInstall.mockResolvedValue([{ name: "Elefrac.dll", present: true }]);
 });
 
+describe("game version field", () => {
+  it("prefers the CDN version over what is installed", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    renderMods();
+    await waitFor(() => expect(screen.getByDisplayValue("v6.0.3")).toBeTruthy());
+  });
+
+  it("falls back to the installed version when the CDN is unreachable", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+    renderMods();
+    await waitFor(() => expect(screen.getByDisplayValue("v6.0.2 (installed)")).toBeTruthy());
+  });
+});
+
 describe("version line", () => {
   it("names the launcher version alongside the game's", async () => {
     renderMods();

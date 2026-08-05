@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { InfoPopover } from "@/components/InfoPopover";
 import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
@@ -8,16 +9,15 @@ import * as rust from "@/lib/rust";
 import { openLink } from "@/lib/links";
 import { toast } from "@/lib/toast";
 import gameVersionLabel from "@/assets/game-version.png";
-import art0 from "@/assets/art/art-0.jpg";
 import art1 from "@/assets/art/art-1.jpg";
 import art2 from "@/assets/art/art-2.jpg";
 import art3 from "@/assets/art/art-3.jpg";
-import art4 from "@/assets/art/art-4.jpg";
 import art5 from "@/assets/art/art-5.jpg";
 import art6 from "@/assets/art/art-6.jpg";
 import "./HomeView.css";
 
-const HERO_ART = [art0, art1, art2, art3, art4, art5, art6];
+/** art-0 and art-4 are left out: neither frames well behind the hero copy. */
+const HERO_ART = [art1, art2, art3, art5, art6];
 
 const LINKS = {
   discord: "https://dsc.gg/elefrac",
@@ -32,11 +32,17 @@ export function greeting(name: string, pick: number) {
   const h = new Date().getHours();
   let lines: string[];
   if (h >= 22 || h < 5) {
-    lines = [`Burning the midnight oil, ${name}?`, `The Hollow Lands never sleep, ${name}.`];
+    lines = [
+      `Burning the midnight oil, ${name}?`,
+      `The Hollow Lands never sleep, ${name}.`,
+    ];
   } else if (h < 12) {
     lines = [`Good morning, ${name}!`, `Rise and cast, ${name}!`];
   } else if (h < 17) {
-    lines = [`Good afternoon, ${name}!`, `Perfect weather for a Spellstorm, ${name}.`];
+    lines = [
+      `Good afternoon, ${name}!`,
+      `Perfect weather for a Spellstorm, ${name}.`,
+    ];
   } else {
     lines = [`Good evening, ${name}!`, `The storm rolls in at dusk, ${name}.`];
   }
@@ -110,16 +116,98 @@ function HeroArt() {
   );
 }
 
+/** Hero copy per balance: EF sells the community edition, Classic the preserved one. */
+const HERO_TEXT = {
+  ef: {
+    eyebrow: "Elemental Fracture",
+    title: "The Hollow Lands still beckon, breaker",
+    sub: "Community servers, restored battles, new balance. Spellbreak lives on.",
+  },
+  classic: {
+    eyebrow: "Spellbreak Classic",
+    title: "The Hollow Lands, as they were before.",
+    sub: "Community servers, restored battles, the original balance. Spellbreak, preserved.",
+  },
+} as const;
+
+/** How long the theme recolour runs — matched to the hero-art crossfade. */
+const THEME_MS = 2600;
+/** Midpoint of the copy fade: text is swapped while it's invisible. */
+const COPY_SWAP_MS = 1500;
+
+/**
+ * Drive the EF ⇄ Classic look off the installed variant: `body.classic` carries
+ * the warm palette, and `body.theming` slows every recolour for the length of a
+ * switch (so ordinary hover feedback stays snappy). Only the hero copy actually
+ * animates — it fades out, swaps at the midpoint, and fades back in.
+ */
+// TODO: I think this could be done in css.
+function useVariantTheme(variant: string | undefined) {
+  const [copy, setCopy] = useState<(typeof HERO_TEXT)[keyof typeof HERO_TEXT]>(
+    HERO_TEXT.ef
+  );
+  const [fading, setFading] = useState(false);
+  // Which theme is on screen. Null until the first status arrives, which is
+  // what tells a fresh load (apply instantly) from a real toggle (animate).
+  const applied = useRef<"ef" | "classic" | null>(null);
+
+  useEffect(() => {
+    if (!variant) {
+      return;
+    }
+    const theme = variant === "classic" ? "classic" : "ef";
+    if (applied.current === theme) {
+      return;
+    }
+    const first = applied.current === null;
+    applied.current = theme;
+
+    if (first) {
+      document.body.classList.toggle("classic", theme === "classic");
+      setCopy(HERO_TEXT[theme]);
+      return;
+    }
+
+    document.body.classList.add("theming");
+    void document.body.offsetWidth; // commit the slow transitions before recolouring
+    document.body.classList.toggle("classic", theme === "classic");
+    setFading(true);
+
+    const recolour = setTimeout(
+      () => document.body.classList.remove("theming"),
+      THEME_MS
+    );
+    const swap = setTimeout(() => {
+      setCopy(HERO_TEXT[theme]);
+      setFading(false);
+    }, COPY_SWAP_MS);
+    return () => {
+      clearTimeout(recolour);
+      clearTimeout(swap);
+    };
+  }, [variant]);
+
+  return { copy, fadeClass: fading ? " fading" : "" };
+}
+
 export function HomeView() {
   const { view } = useUI();
   const { settings } = useSettings();
-  const { status, updating, installBusy, installNotice, refreshStatus, locateGame, downloadGame } =
-    useGame();
+  const {
+    status,
+    updating,
+    installBusy,
+    installNotice,
+    refreshStatus,
+    locateGame,
+    downloadGame,
+  } = useGame();
   const { news, events } = useLiveData();
   const progress = useProgress();
 
   const [greetPick] = useState(() => Math.floor(Math.random() * 2));
   const [launchBusy, setLaunchBusy] = useState(false);
+  const { copy, fadeClass } = useVariantTheme(status?.variant);
 
   const name = settings?.username?.trim() || "breaker";
   const installed = Boolean(status?.exe_present);
@@ -149,10 +237,10 @@ export function HomeView() {
     }
   };
 
+  /* No toast on success: the theme swap below is the confirmation. */
   const onVariant = async (variant: string) => {
     try {
-      const v = await rust.setVariant(variant);
-      toast(v === "ef" ? "Elemental Fracture balance active" : "Classic Spellbreak active");
+      await rust.setVariant(variant);
     } catch (e) {
       toast(String(e), true);
     }
@@ -167,18 +255,34 @@ export function HomeView() {
         <HeroArt />
         <div className="hero-shade" aria-hidden="true" />
         <div className="hero-text">
-          <span className="eyebrow">Elemental Fracture</span>
-          <h3>The Hollow Lands still beckon, breaker</h3>
-          <p>Community servers, restored battles, new balance. Spellbreak lives on.</p>
+          <span className={"eyebrow" + fadeClass}>{copy.eyebrow}</span>
+          <h3 className={fadeClass.trim()}>{copy.title}</h3>
+          <p className={fadeClass.trim()}>{copy.sub}</p>
 
           {installed ? (
             <div>
               <div className="variant-row">
-                <img src={gameVersionLabel} alt="Game Version" className="variant-label-img" />
+                <img
+                  src={gameVersionLabel}
+                  alt="Game Version"
+                  className="variant-label-img"
+                />
+                <InfoPopover label="What's the difference?">
+                  <p>
+                    <strong>Elemental Fracture</strong> is the community
+                    edition: reworked talents, fresh balance and ongoing
+                    updates.
+                  </p>
+                  <p>
+                    <strong>Classic</strong> is Spellbreak as it was at
+                    shutdown: the original balance, preserved untouched.
+                  </p>
+                </InfoPopover>
                 <div className="variant-pills">
                   <button
                     className={
-                      "variant-pill variant-ef" + (status?.variant === "ef" ? " active" : "")
+                      "variant-pill variant-ef" +
+                      (status?.variant === "ef" ? " active" : "")
                     }
                     title="Elemental Fracture balance"
                     onClick={() => onVariant("ef")}
@@ -205,10 +309,18 @@ export function HomeView() {
             <div>
               <p className="muted">{installMsg}</p>
               <div className="install-actions">
-                <button className="btn subtle" disabled={installBusy} onClick={locateGame}>
+                <button
+                  className="btn subtle"
+                  disabled={installBusy}
+                  onClick={locateGame}
+                >
                   Locate existing install
                 </button>
-                <button className="btn primary" disabled={installBusy} onClick={downloadGame}>
+                <button
+                  className="btn primary"
+                  disabled={installBusy}
+                  onClick={downloadGame}
+                >
                   Download game…
                 </button>
               </div>
@@ -224,7 +336,9 @@ export function HomeView() {
               <div className="progress-track">
                 <div
                   className="progress-fill"
-                  style={{ width: `${Math.max(0, Math.min(100, progress.percent)).toFixed(1)}%` }}
+                  style={{
+                    width: `${Math.max(0, Math.min(100, progress.percent)).toFixed(1)}%`,
+                  }}
                 />
               </div>
             </div>
@@ -239,14 +353,25 @@ export function HomeView() {
           </div>
           <div className="cards">
             {events.slice(0, 4).map((ev, i) => (
-              <div key={i} className="card event-card" onClick={() => ev.url && openLink(ev.url)}>
+              <div
+                key={i}
+                className="card event-card"
+                onClick={() => ev.url && openLink(ev.url)}
+              >
                 <h4>{ev.name ?? ""}</h4>
-                <span className={"event-time" + (ev.status === "ACTIVE" ? " live" : "")}>
+                <span
+                  className={
+                    "event-time" + (ev.status === "ACTIVE" ? " live" : "")
+                  }
+                >
                   {formatEventTime(ev)}
                 </span>
                 <p>{ev.description ?? ""}</p>
                 <span className="date">
-                  {[ev.location, ev.interested ? `${ev.interested} interested` : ""]
+                  {[
+                    ev.location,
+                    ev.interested ? `${ev.interested} interested` : "",
+                  ]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
@@ -261,7 +386,11 @@ export function HomeView() {
       </div>
       <div className="cards">
         {news.slice(0, 6).map((item, i) => (
-          <div key={i} className="card" onClick={() => item.url && openLink(item.url)}>
+          <div
+            key={i}
+            className="card"
+            onClick={() => item.url && openLink(item.url)}
+          >
             <h4>{item.title ?? ""}</h4>
             <p>{item.body ?? ""}</p>
             <span className="date">{item.date ?? ""}</span>
@@ -285,7 +414,11 @@ export function HomeView() {
           onClick={() => openLink(LINKS.patchnotes)}
           aria-label="Patch notes"
         />
-        <button className="img-btn h34 social-x" onClick={() => openLink(LINKS.x)} aria-label="X" />
+        <button
+          className="img-btn h34 social-x"
+          onClick={() => openLink(LINKS.x)}
+          aria-label="X"
+        />
         <button
           className="img-btn h34 social-twitch"
           onClick={() => openLink(LINKS.twitch)}

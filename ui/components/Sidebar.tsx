@@ -12,8 +12,8 @@ const LINKS = {
 
 const NAV_ITEMS: { view: ViewName; title: string; icon: typeof Home }[] = [
   { view: "home", title: "Home", icon: Home },
-  { view: "mods", title: "Mods & Install", icon: Box },
-  { view: "settings", title: "Settings", icon: SettingsIcon },
+  { view: "mods", title: "Game Settings", icon: Box },
+  { view: "settings", title: "Launcher Settings", icon: SettingsIcon },
 ];
 
 export function Sidebar() {
