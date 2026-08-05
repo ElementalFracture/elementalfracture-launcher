@@ -3,6 +3,7 @@ import "./styles.css";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
 import { LiveDataProvider } from "@/context/LiveDataContext";
+import { FriendsProvider } from "@/context/FriendsContext";
 import { ProgressProvider } from "@/context/ProgressContext";
 import { UIProvider } from "@/context/UIContext";
 import { Sidebar } from "@/components/Sidebar";
@@ -11,7 +12,7 @@ import { HomeView } from "@/components/views/HomeView";
 import { ModsView } from "@/components/views/ModsView";
 import { SettingsView } from "@/components/views/SettingsView";
 import { Wizard } from "@/components/Wizard";
-import { UpdateModal } from "@/components/modals/UpdateModal";
+import { UpdatePops } from "@/components/UpdatePops";
 import { Toast } from "@/components/Toast";
 
 function App() {
@@ -19,22 +20,24 @@ function App() {
     <SettingsProvider>
       <GameProvider>
         <LiveDataProvider>
-          <ProgressProvider>
-            <UIProvider>
-              <div id="app">
-                <Sidebar />
-                <main>
-                  <TopBar />
-                  <HomeView />
-                  <ModsView />
-                  <SettingsView />
-                </main>
-              </div>
-              <Wizard />
-              <UpdateModal />
-              <Toast />
-            </UIProvider>
-          </ProgressProvider>
+          <FriendsProvider>
+            <ProgressProvider>
+              <UIProvider>
+                <div id="app">
+                  <Sidebar />
+                  <main>
+                    <TopBar />
+                    <HomeView />
+                    <ModsView />
+                    <SettingsView />
+                  </main>
+                </div>
+                <Wizard />
+                <UpdatePops />
+                <Toast />
+              </UIProvider>
+            </ProgressProvider>
+          </FriendsProvider>
         </LiveDataProvider>
       </GameProvider>
     </SettingsProvider>

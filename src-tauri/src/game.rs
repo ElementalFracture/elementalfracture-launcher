@@ -156,7 +156,11 @@ pub fn set_variant(app: tauri::AppHandle, variant: String) -> Result<String, Str
     }
 
     apply_variant(&paks, &variant)?;
-    Ok(detect_variant(Path::new(&s.game_path)))
+    let current = detect_variant(Path::new(&s.game_path));
+    // Tell the in-game controller which balance is active so it can re-skin + swap its
+    // Loadout data to match (read by auth_injector from this marker at launch).
+    write_hidden_mode(Path::new(&s.game_path), &current);
+    Ok(current)
 }
 
 /// Rename the balance pak (and its .sig) in or out of the way. Robust
@@ -580,6 +584,8 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
         cmd.env("EF_SERVER", &server_host);
     }
     write_hidden_auth(&root, s.auth_token.trim(), &server_host);
+    // Current balance mode, written fresh each launch so the controller matches the loaded pak.
+    write_hidden_mode(&root, &detect_variant(&root));
 
     // Scrub legacy visible plaintext copies from older installs.
     let cmds_dir = root.join("Mods").join("commands");
@@ -639,6 +645,26 @@ fn write_hidden_auth(root: &Path, token: &str, host: &str) {
         return;
     }
     if fs::write(&path, format!("{token}\n{host}\n")).is_err() {
+        return;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        const FILE_ATTRIBUTE_HIDDEN: u32 = 0x2;
+        extern "system" {
+            fn SetFileAttributesW(name: *const u16, attrs: u32) -> i32;
+        }
+        let wide: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+        unsafe { SetFileAttributesW(wide.as_ptr(), FILE_ATTRIBUTE_HIDDEN) };
+    }
+}
+
+/// Write the hidden `.ef_mode` marker the injector reads (one line: `ef` or `classic`) so the
+/// in-game controller can re-skin + swap its Loadout data to match the active balance pak.
+/// Marked Hidden on Windows, like `.ef_auth`.
+fn write_hidden_mode(root: &Path, mode: &str) {
+    let path = root.join(".ef_mode");
+    if fs::write(&path, format!("{mode}\n")).is_err() {
         return;
     }
     #[cfg(windows)]

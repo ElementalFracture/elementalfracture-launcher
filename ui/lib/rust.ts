@@ -179,6 +179,56 @@ export async function getNews(): Promise<NewsItem[]> {
   return unwrap(await commands.getNews());
 }
 
+/* ---------------- friends ---------------- */
+
+/** Presence the sidecar reports for a player. */
+export type FriendStatus = "online" | "in_game" | "offline";
+
+/** One player in the friend graph. Pending requests carry no status. */
+export interface Friend {
+  username: string;
+  status?: FriendStatus;
+}
+
+/** The friend graph as `/friends` returns it, from the caller's point of view. */
+export interface FriendsData {
+  ok?: boolean;
+  error?: string;
+  me?: { username?: string; status?: FriendStatus };
+  friends?: Friend[];
+  /** Requests waiting on the caller to accept. */
+  incoming?: Friend[];
+  /** Requests the caller has sent and nobody has answered yet. */
+  outgoing?: Friend[];
+}
+
+/** What add/accept/remove come back with. `state` is only set by add. */
+export interface FriendActionResult {
+  ok?: boolean;
+  error?: string;
+  state?: "accepted" | "exists" | "sent";
+  username?: string;
+}
+
+/** Friend list + statuses. Doubles as the presence heartbeat: asking marks
+ *  the account online for as long as the launcher keeps polling. */
+export async function friendsList(): Promise<FriendsData> {
+  return unwrap(await commands.friendsList()) as FriendsData;
+}
+
+export async function friendAdd(username: string): Promise<FriendActionResult> {
+  return unwrap(await commands.friendAdd(username)) as FriendActionResult;
+}
+
+export async function friendAccept(username: string): Promise<FriendActionResult> {
+  return unwrap(await commands.friendAccept(username)) as FriendActionResult;
+}
+
+/** Unfriend, decline an incoming request, or cancel an outgoing one. */
+export async function friendRemove(username: string): Promise<FriendActionResult> {
+  return unwrap(await commands.friendRemove(username)) as FriendActionResult;
+}
+
 /* ---------------- events pushed from Rust ---------------- */
 
 export interface InstallProgress {

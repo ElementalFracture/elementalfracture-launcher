@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AdvancedWarnModal } from "@/components/modals/AdvancedWarnModal";
+import { InfoPopover } from "@/components/InfoPopover";
 import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
@@ -19,7 +20,10 @@ import "./SettingsView.css";
 
 const CUSTOM_WRAPPER = "__custom__";
 
-export function computeWrapperState(cur: string, wrappers: { command: string }[]) {
+export function computeWrapperState(
+  cur: string,
+  wrappers: { command: string }[]
+) {
   const trimmed = cur.trim();
   if (trimmed && wrappers.some((w) => w.command === trimmed)) {
     return { mode: "select" as const, value: trimmed };
@@ -34,14 +38,12 @@ export function SettingsView() {
   const { view, setView } = useUI();
   const { settings, wrappers, saveSettings, resetSettings } = useSettings();
   const {
-    versions,
     launcherInfo,
     refreshStatus,
     checkLauncherUpdate,
     refreshVersions,
-    autoUpdate,
     provisionInstall,
-    setShowUpdateModal,
+    setLauncherUpdatePop,
   } = useGame();
   const { refreshPlayers } = useLiveData();
 
@@ -59,7 +61,9 @@ export function SettingsView() {
   const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [resetArmed, setResetArmed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const disarmTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const disarmTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
 
   // Mirror the backend-loaded settings into the form fields whenever the
   // persisted values change (initial load, save, reset, or a folder picked
@@ -95,12 +99,6 @@ export function SettingsView() {
     setWrapperValue(w.value);
   }, [srcLaunchCommand, wrappers]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  const gameVersionField = versions?.remote
-    ? `v${versions.remote}`
-    : versions?.local
-      ? `v${versions.local} (installed)`
-      : "";
 
   const launcherVersionField = (() => {
     if (launcherInfo?.remote) {
@@ -192,26 +190,25 @@ export function SettingsView() {
     }
   };
 
-  const onCheckUpdates = async () => {
+  /* Manual launcher check. Unlike the startup one this compares versions
+     directly (no marker guard); an update is offered by the corner popup that
+     checkLauncherUpdate raises, never installed from here. */
+  const onCheckLauncherUpdates = async () => {
     setCheckingUpdates(true);
     try {
       const info = await checkLauncherUpdate();
-      const launcherOutdated = Boolean(info?.remote && info.remote !== info.current);
-      if (launcherOutdated) {
-        setShowUpdateModal(true);
-      }
-
-      const v = await refreshVersions();
-      const gameOutdated = Boolean(v?.remote && v.local !== v.remote);
-      // A pending game patch is applied on the spot, same as the startup check.
-      if (gameOutdated) {
-        await autoUpdate();
-      }
-
-      if (!info?.remote && !v?.remote) {
-        toast("Couldn't reach the update server, check the CDN base in Advanced.", true);
-      } else if (!gameOutdated && !launcherOutdated) {
-        toast("Everything is up to date");
+      await refreshVersions();
+      if (!info?.remote) {
+        toast(
+          "Couldn't reach the update server, check the CDN base in Advanced.",
+          true
+        );
+      } else if (info.remote !== info.current) {
+        // checkLauncherUpdate only raises the popup when the backend's own
+        // marker agrees; a manual check goes on the version alone.
+        setLauncherUpdatePop(true);
+      } else {
+        toast("Launcher is up to date");
       }
     } finally {
       setCheckingUpdates(false);
@@ -245,66 +242,100 @@ export function SettingsView() {
     <section className={"view" + (view === "settings" ? " active" : "")}>
       <div className="panel">
         <div className="panel-head">
-          <h3>Versions</h3>
-          <div className="panel-actions">
-            <button className="btn subtle" disabled={checkingUpdates} onClick={onCheckUpdates}>
-              {checkingUpdates ? "Checking…" : "Check for updates"}
-            </button>
-          </div>
-        </div>
-        <div className="version-fields">
-          <label className="field">
-            <span>Game version</span>
-            <input type="text" readOnly placeholder="unavailable" value={gameVersionField} />
-          </label>
-          <label className="field">
-            <span>Launcher version</span>
-            <input type="text" readOnly placeholder="unavailable" value={launcherVersionField} />
-          </label>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-head">
           <h3>Launcher</h3>
         </div>
         <label className="field">
           <span>Game folder</span>
           <div className="form-row">
-            <input type="text" readOnly placeholder="Not set" value={settings?.game_path ?? ""} />
+            <input
+              type="text"
+              readOnly
+              placeholder="Not set"
+              value={settings?.game_path ?? ""}
+            />
             <button className="btn subtle" onClick={onBrowseGame}>
               Browse…
             </button>
           </div>
         </label>
-        <label className="switch-row">
-          <span>Minimize to taskbar when closing (X)</span>
+        <div className="switch-row">
+          <span className="switch-text">
+            <span>Minimize to taskbar when closing (X)</span>
+            <InfoPopover>
+              <p>
+                Pressing X hides the launcher to the taskbar instead of
+                quitting, so it stays running in the background. Quit it fully
+                from its tray/taskbar entry.
+              </p>
+            </InfoPopover>
+          </span>
           <Switch
             aria-label="Minimize to taskbar when closing (X)"
             checked={minimizeOnClose}
             onCheckedChange={setMinimizeOnClose}
           />
-        </label>
-        <label className="switch-row">
-          <span>Close launcher when the game starts</span>
+        </div>
+        <div className="switch-row">
+          <span className="switch-text">
+            <span>Close launcher when the game starts</span>
+            <InfoPopover>
+              <p>
+                Automatically closes the launcher a moment after the game
+                launches, to free up memory while you play.
+              </p>
+            </InfoPopover>
+          </span>
           <Switch
             aria-label="Close launcher when the game starts"
             checked={closeOnLaunch}
             onCheckedChange={setCloseOnLaunch}
           />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h3>Launcher version</h3>
+          <div className="panel-actions">
+            <button
+              className="btn subtle"
+              disabled={checkingUpdates}
+              onClick={onCheckLauncherUpdates}
+            >
+              {checkingUpdates ? "Checking…" : "Check for launcher updates"}
+            </button>
+          </div>
+        </div>
+        <label className="field">
+          <span>Version</span>
+          <input
+            type="text"
+            readOnly
+            placeholder="unavailable"
+            value={launcherVersionField}
+          />
         </label>
       </div>
 
       <div className="panel">
-        <label className="switch-row">
-          <span>Show advanced options</span>
+        <div className="switch-row">
+          <span className="switch-text">
+            <span>Show advanced options</span>
+            <InfoPopover>
+              <p>
+                Reveals developer and debug settings: launch wrapper, Wine
+                prefix, and the CDN / auth / players URLs. Only change these if
+                you know what you’re doing.
+              </p>
+            </InfoPopover>
+          </span>
           {/* Reads as on while the warning is up; Back turns it off again. */}
           <Switch
             aria-label="Show advanced options"
             checked={showAdvanced || advancedWarnOpen}
             onCheckedChange={onToggleAdvanced}
           />
-        </label>
+        </div>
       </div>
 
       {showAdvanced && (
@@ -317,7 +348,9 @@ export function SettingsView() {
             <label className="field">
               <span>
                 Launch wrapper{" "}
-                <small>(Linux only; runs the game exe — Proton-GE recommended)</small>
+                <small>
+                  (Linux only; runs the game exe — Proton-GE recommended)
+                </small>
               </span>
               {/* The picker stays put once "Custom…" is chosen — the free-text
                   box appears beside it rather than replacing it, so a detected
@@ -325,7 +358,9 @@ export function SettingsView() {
               <div className="form-row">
                 {wrappers.length > 0 && (
                   <Select
-                    value={wrapperMode === "custom" ? CUSTOM_WRAPPER : wrapperValue}
+                    value={
+                      wrapperMode === "custom" ? CUSTOM_WRAPPER : wrapperValue
+                    }
                     onValueChange={(v) => {
                       if (v === CUSTOM_WRAPPER) {
                         setWrapperMode("custom");
@@ -370,7 +405,8 @@ export function SettingsView() {
               <span>
                 Wine prefix{" "}
                 <small>
-                  (optional; passed as <code>WINEPREFIX</code>, empty = the launcher makes its own)
+                  (optional; passed as <code>WINEPREFIX</code>, empty = the
+                  launcher makes its own)
                 </small>
               </span>
               <div className="form-row">
@@ -389,12 +425,19 @@ export function SettingsView() {
 
           <label className="field">
             <span>CDN base</span>
-            <input type="text" value={cdnBase} onChange={(e) => setCdnBase(e.target.value)} />
+            <input
+              type="text"
+              value={cdnBase}
+              onChange={(e) => setCdnBase(e.target.value)}
+            />
           </label>
           <label className="field">
             <span>
               Auth URL{" "}
-              <small>(token validation endpoint; the game server host is derived from it)</small>
+              <small>
+                (token validation endpoint; the game server host is derived from
+                it)
+              </small>
             </span>
             <input
               type="text"

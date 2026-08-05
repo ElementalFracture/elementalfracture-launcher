@@ -13,7 +13,7 @@
   position: relative;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: #12092a;
+  background: var(--bg-2);
   overflow: hidden;
   padding: 30px 34px;
   min-height: 285px;
@@ -27,7 +27,9 @@
 .hero-bg {
   position: absolute;
   inset: 0;
-  background: right center / cover no-repeat;
+  /* Framed a little above centre so heads and torsos land in view rather
+     than cropping through the middle of the subject. */
+  background: center 32% / cover no-repeat;
   opacity: 0;
   transition: opacity 2.6s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: opacity;
@@ -40,15 +42,43 @@
 .hero-shade {
   position: absolute;
   inset: 0;
+  pointer-events: none;
+}
+/* Two gradient layers (EF purple / Classic warm) crossfade on a theme switch,
+   since a gradient background can't be transitioned in place. */
+.hero-shade::before,
+.hero-shade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.hero-shade::before {
   background: linear-gradient(
     90deg,
     #0d0716f2 0%,
-    #0d0716d9 34%,
-    #0d071680 55%,
-    #0d071612 80%,
-    transparent 100%
+    #0d0716cc 30%,
+    #0d071666 48%,
+    #0d071614 68%,
+    transparent 88%
   );
-  pointer-events: none;
+  opacity: 1;
+}
+.hero-shade::after {
+  background: linear-gradient(
+    90deg,
+    #171009f2 0%,
+    #171009cc 30%,
+    #17100966 48%,
+    #17100914 68%,
+    transparent 88%
+  );
+  opacity: 0;
+}
+body.classic .hero-shade::before {
+  opacity: 0;
+}
+body.classic .hero-shade::after {
+  opacity: 1;
 }
 
 .hero-text {
@@ -81,7 +111,7 @@
 .variant-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   margin-bottom: 18px;
 }
 .variant-label-img {
@@ -91,6 +121,7 @@
 .variant-pills {
   display: flex;
   gap: 8px;
+  margin-left: 2px;
 }
 
 /* Image-based variant pills from the 6.1 launcher assets */

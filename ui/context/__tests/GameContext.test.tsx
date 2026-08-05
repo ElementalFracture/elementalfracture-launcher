@@ -47,22 +47,22 @@ beforeEach(() => {
 
 describe("update-first startup", () => {
   it("holds the game work until the launcher update check has answered", async () => {
-    // A launcher that is itself out of date shouldn't start patching the game
-    // first: the update prompt has to come up before that work begins.
+    // A launcher that is itself out of date shouldn't offer a game update
+    // first: its own prompt has to come up before that work begins.
     const check = deferred<{ current: string; remote: string; update: boolean }>();
     commands.getLauncherUpdate.mockReturnValue(check.promise);
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
 
-    renderGame();
+    const { result } = renderGame();
     await Promise.resolve();
     expect(commands.getStatus).not.toHaveBeenCalled();
-    expect(commands.updatePatch).not.toHaveBeenCalled();
+    expect(result.current.gameUpdatePop).toBeNull();
 
     await act(async () => {
       check.resolve({ current: "3.0.2", remote: "3.1.0", update: true });
       await check.promise;
     });
-    await waitFor(() => expect(commands.updatePatch).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
   });
 
   it("still runs the game work when the launcher check fails", async () => {
@@ -75,89 +75,120 @@ describe("update-first startup", () => {
   });
 });
 
-describe("startup update check", () => {
-  it("applies a pending patch when the install is behind the CDN", async () => {
+describe("startup game-update check", () => {
+  it("offers the update when the install is behind the CDN", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
-    renderGame();
-    await waitFor(() => expect(commands.updatePatch).toHaveBeenCalled());
+    const { result } = renderGame();
+    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
   });
 
-  it("still applies it when get_status resolves after get_versions", async () => {
-    // autoUpdate reads the status through a ref. Firing it before the first
-    // refreshStatus lands makes it see null and skip the update silently, so
-    // the startup sequence has to order the two.
+  it("never patches on its own — the popup has to be clicked", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    const { result } = renderGame();
+    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    expect(commands.updatePatch).not.toHaveBeenCalled();
+  });
+
+  it("still offers it when get_status resolves after get_versions", async () => {
+    // checkGameUpdate reads the status through a ref. Firing it before the
+    // first refreshStatus lands makes it see null and skip the offer silently,
+    // so the startup sequence has to order the two.
     const status = deferred<ReturnType<typeof makeStatus>>();
     commands.getStatus.mockReturnValue(status.promise);
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
 
-    renderGame();
+    const { result } = renderGame();
     await Promise.resolve();
-    expect(commands.updatePatch).not.toHaveBeenCalled();
+    expect(result.current.gameUpdatePop).toBeNull();
 
     await act(async () => {
       status.resolve(makeStatus());
       await status.promise;
     });
-    await waitFor(() => expect(commands.updatePatch).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
   });
 
-  it("does nothing when the install already matches the CDN", async () => {
-    renderGame();
+  it("stays quiet when the install already matches the CDN", async () => {
+    const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
-    expect(commands.updatePatch).not.toHaveBeenCalled();
+    expect(result.current.gameUpdatePop).toBeNull();
   });
 
-  it("does nothing when the game is not installed", async () => {
+  it("stays quiet when the game is not installed", async () => {
     commands.getStatus.mockResolvedValue(makeStatus({ exe_present: false }));
     commands.getVersions.mockResolvedValue(makeVersions({ local: null, remote: "6.0.3" }));
-    renderGame();
+    const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
-    expect(commands.updatePatch).not.toHaveBeenCalled();
+    expect(result.current.gameUpdatePop).toBeNull();
   });
 
-  it("does nothing when the CDN version is unavailable", async () => {
+  it("stays quiet when the CDN version is unavailable", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
-    renderGame();
+    const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
-    expect(commands.updatePatch).not.toHaveBeenCalled();
+    expect(result.current.gameUpdatePop).toBeNull();
   });
 });
 
-describe("updating flag", () => {
-  it("is raised for the duration of the patch so Launch can be disabled", async () => {
+describe("applyGameUpdate", () => {
+  it("raises the updating flag for the duration so Launch can be disabled", async () => {
     const patch = deferred<{ status: "ok"; data: string }>();
     commands.updatePatch.mockReturnValue(patch.promise);
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
 
     const { result } = renderGame();
+    await waitFor(() => expect(result.current.status).not.toBeNull());
+
+    let done: Promise<boolean>;
+    act(() => {
+      done = result.current.applyGameUpdate();
+    });
     await waitFor(() => expect(result.current.updating).toBe(true));
 
     await act(async () => {
       patch.resolve({ status: "ok", data: "6.0.3" });
-      await patch.promise;
+      await done;
     });
     await waitFor(() => expect(result.current.updating).toBe(false));
   });
 
-  it("is lowered again when the patch fails", async () => {
-    commands.updatePatch.mockResolvedValue({ status: "error", error: "connection reset" });
+  it("clears the popup once the patch lands", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    const { result } = renderGame();
+    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+
+    await act(async () => {
+      await result.current.applyGameUpdate();
+    });
+    expect(commands.updatePatch).toHaveBeenCalled();
+    expect(result.current.gameUpdatePop).toBeNull();
+  });
+
+  it("keeps the popup up and lowers the flag when the patch fails", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.updatePatch.mockResolvedValue({ status: "error", error: "connection reset" });
 
     const { result } = renderGame();
-    await waitFor(() => expect(commands.updatePatch).toHaveBeenCalled());
-    await waitFor(() => expect(result.current.updating).toBe(false));
+    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.applyGameUpdate();
+    });
+    expect(ok).toBe(false);
+    expect(result.current.updating).toBe(false);
+    expect(result.current.gameUpdatePop).toBe("6.0.3");
   });
 });
 
 describe("launcher self-update", () => {
-  it("opens the install dialog when the backend flags an update", async () => {
+  it("raises the corner popup when the backend flags an update", async () => {
     commands.getLauncherUpdate.mockResolvedValue({
       current: "3.0.2",
       remote: "3.1.0",
       update: true,
     });
     const { result } = renderGame();
-    await waitFor(() => expect(result.current.showUpdateModal).toBe(true));
+    await waitFor(() => expect(result.current.launcherUpdatePop).toBe(true));
   });
 
   it("stays quiet when the backend says the update was already taken", async () => {
@@ -168,7 +199,7 @@ describe("launcher self-update", () => {
     });
     const { result } = renderGame();
     await waitFor(() => expect(result.current.launcherInfo).not.toBeNull());
-    expect(result.current.showUpdateModal).toBe(false);
+    expect(result.current.launcherUpdatePop).toBe(false);
   });
 });
 
