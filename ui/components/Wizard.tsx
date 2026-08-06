@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
@@ -108,9 +110,7 @@ export function Wizard() {
             <h2>Welcome to Elemental Fracture</h2>
             <p>We’re so glad you’re here.</p>
             <div className="wizard-actions">
-              <button className="btn primary" onClick={() => setStep("game")}>
-                Next
-              </button>
+              <Button onClick={() => setStep("game")}>Next</Button>
             </div>
           </div>
         )}
@@ -123,12 +123,16 @@ export function Wizard() {
               done.
             </p>
             <div className="wizard-actions">
-              <button className="btn primary" disabled={gameBusy} onClick={onLocateGame}>
+              <Button disabled={gameBusy} onClick={onLocateGame}>
                 Yes, locate my install
-              </button>
-              <button className="btn subtle" disabled={gameBusy} onClick={() => setStep("token")}>
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={gameBusy}
+                onClick={() => setStep("token")}
+              >
                 No, not yet
-              </button>
+              </Button>
             </div>
             {gameResult && <p className="muted wizard-result">{gameResult}</p>}
           </div>
@@ -138,7 +142,7 @@ export function Wizard() {
           <div className="wizard-step">
             <h2>Authentication token</h2>
             <p className="muted">Your token identifies you on Elemental Fracture servers.</p>
-            <input
+            <Input
               type="password"
               placeholder="Paste your token…"
               value={token}
@@ -150,12 +154,16 @@ export function Wizard() {
               <a onClick={() => openLink(LINKS.guide)}>Here’s the guide</a>.
             </p>
             <div className="wizard-actions">
-              <button className="btn primary" disabled={tokenBusy} onClick={onTokenSave}>
+              <Button disabled={tokenBusy} onClick={onTokenSave}>
                 Save & continue
-              </button>
-              <button className="btn subtle" disabled={tokenBusy} onClick={() => setStep("done")}>
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={tokenBusy}
+                onClick={() => setStep("done")}
+              >
                 Skip for now
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -165,9 +173,7 @@ export function Wizard() {
             <h2>{doneTitle}</h2>
             <p className="muted">The Hollow Lands still beckon, breaker.</p>
             <div className="wizard-actions">
-              <button className="btn primary" onClick={() => finishWizard()}>
-                Enter the launcher
-              </button>
+              <Button onClick={() => finishWizard()}>Enter the launcher</Button>
             </div>
           </div>
         )}

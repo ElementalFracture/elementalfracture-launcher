@@ -1,4 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useUI } from "@/context/UIContext";
 import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
@@ -191,128 +202,156 @@ export function ModsView() {
 
   return (
     <section className={"view" + (view === "mods" ? " active" : "")}>
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Game</h3>
-          <div className="panel-actions">
-            <button className="btn subtle" disabled={installBusy} onClick={locateGame}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Game</CardTitle>
+          <CardAction className="panel-actions">
+            <Button variant="secondary" disabled={installBusy} onClick={locateGame}>
               Locate install
-            </button>
-            <button className="btn primary" disabled={installBusy} onClick={downloadGame}>
+            </Button>
+            <Button disabled={installBusy} onClick={downloadGame}>
               Download game…
-            </button>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="field">
+            <Label htmlFor="install-location">Install location</Label>
+            <div className="form-row">
+              <Input
+                id="install-location"
+                type="text"
+                readOnly
+                placeholder="Not set"
+                value={settings?.game_path ?? ""}
+              />
+              <Button variant="secondary" onClick={onBrowseGame}>
+                Browse…
+              </Button>
+            </div>
           </div>
-        </div>
-        <label className="field">
-          <span>Install location</span>
-          <div className="form-row">
-            <input type="text" readOnly placeholder="Not set" value={settings?.game_path ?? ""} />
-            <button className="btn subtle" onClick={onBrowseGame}>
-              Browse…
-            </button>
+          <div className="muted">{gameLine}</div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Auth token</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="muted">
+            Identifies you on Elemental Fracture. Only change this token when rotated by either
+            yourself on Discord or by a mod.
+          </p>
+          <div className="field">
+            <Label htmlFor="auth-token">Token</Label>
+            <Input
+              id="auth-token"
+              type="password"
+              placeholder="Paste your token…"
+              autoComplete="off"
+              spellCheck={false}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
           </div>
-        </label>
-        <div className="muted">{gameLine}</div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Auth token</h3>
-        </div>
-        <p className="muted">
-          Identifies you on Elemental Fracture. Only change this token when rotated by either
-          yourself on Discord or by a mod.
-        </p>
-        <label className="field">
-          <span>Token</span>
-          <input
-            type="password"
-            placeholder="Paste your token…"
-            autoComplete="off"
-            spellCheck={false}
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Confirm token</span>
-          <input
-            type="password"
-            placeholder="Re-enter your token…"
-            autoComplete="off"
-            spellCheck={false}
-            value={tokenConfirm}
-            onChange={(e) => setTokenConfirm(e.target.value)}
-          />
-        </label>
-        <div className="panel-actions">
-          <button className="btn primary" disabled={tokenBusy} onClick={onSaveToken}>
-            {tokenBusy ? "Saving…" : "Save token"}
-          </button>
-        </div>
-        <div className="muted">{tokenLine ?? signedInLine}</div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Mods</h3>
+          <div className="field">
+            <Label htmlFor="auth-token-confirm">Confirm token</Label>
+            <Input
+              id="auth-token-confirm"
+              type="password"
+              placeholder="Re-enter your token…"
+              autoComplete="off"
+              spellCheck={false}
+              value={tokenConfirm}
+              onChange={(e) => setTokenConfirm(e.target.value)}
+            />
+          </div>
           <div className="panel-actions">
-            <button className="btn subtle" onClick={refreshFiles}>
+            <Button disabled={tokenBusy} onClick={onSaveToken}>
+              {tokenBusy ? "Saving…" : "Save token"}
+            </Button>
+          </div>
+          <div className="muted">{tokenLine ?? signedInLine}</div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mods</CardTitle>
+          <CardAction className="panel-actions">
+            <Button variant="secondary" onClick={refreshFiles}>
               Verify
-            </button>
+            </Button>
             {outdated && (
-              <button className="btn subtle" disabled={updateBusy} onClick={onUpdate}>
+              <Button variant="secondary" disabled={updateBusy} onClick={onUpdate}>
                 {updateBusy ? "Updating…" : "Update game"}
-              </button>
+              </Button>
             )}
-            <button className="btn primary" disabled={modsBusy} onClick={onInstall}>
+            <Button disabled={modsBusy} onClick={onInstall}>
               {modsBusy ? "Installing…" : "Install / Update mods"}
-            </button>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          {versionLine && <div className="muted">{versionLine}</div>}
+
+          {status?.game_path && files ? (
+            <div className="mods-status">
+              <Badge
+                variant="secondary"
+                className={"badge " + (missing === 0 ? "ok" : "missing")}
+              >
+                {missing === 0 ? "INSTALLED" : "MISSING"}
+              </Badge>
+              <span>
+                {missing === 0
+                  ? "Mods are installed and ready."
+                  : missing === total
+                    ? "Mods are not installed."
+                    : "Some mod files are missing."}
+              </span>
+            </div>
+          ) : null}
+
+          <div className="muted">
+            {!status?.game_path
+              ? "Set the game folder first — use Locate or Download above."
+              : missing > 0
+                ? `${missing} of ${total} file(s) missing — run Install / Update mods.`
+                : ""}
           </div>
-        </div>
 
-        {versionLine && <div className="muted">{versionLine}</div>}
+          {log !== null && <pre className="log">{log}</pre>}
+        </CardContent>
+      </Card>
 
-        {status?.game_path && files ? (
-          <div className="mods-status">
-            <span className={"badge " + (missing === 0 ? "ok" : "missing")}>
-              {missing === 0 ? "INSTALLED" : "MISSING"}
-            </span>
-            <span>
-              {missing === 0
-                ? "Mods are installed and ready."
-                : missing === total
-                  ? "Mods are not installed."
-                  : "Some mod files are missing."}
-            </span>
-          </div>
-        ) : null}
-
-        <div className="muted">
-          {!status?.game_path
-            ? "Set the game folder first — use Locate or Download above."
-            : missing > 0
-              ? `${missing} of ${total} file(s) missing — run Install / Update mods.`
-              : ""}
-        </div>
-
-        {log !== null && <pre className="log">{log}</pre>}
-      </div>
-
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Game version</h3>
-          <div className="panel-actions">
-            <button className="btn subtle" disabled={checkingUpdates} onClick={onCheckGameUpdates}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Game version</CardTitle>
+          <CardAction className="panel-actions">
+            <Button
+              variant="secondary"
+              disabled={checkingUpdates}
+              onClick={onCheckGameUpdates}
+            >
               {checkingUpdates ? "Checking…" : "Check for game updates"}
-            </button>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="field">
+            <Label htmlFor="game-version">Version</Label>
+            <Input
+              id="game-version"
+              type="text"
+              readOnly
+              placeholder="unavailable"
+              value={gameVersionField}
+            />
           </div>
-        </div>
-        <label className="field">
-          <span>Version</span>
-          <input type="text" readOnly placeholder="unavailable" value={gameVersionField} />
-        </label>
-      </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }

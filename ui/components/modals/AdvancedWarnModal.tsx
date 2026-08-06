@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import "./Dialog.css";
 
@@ -26,12 +27,10 @@ export function AdvancedWarnModal({
             you know what you’re doing!
           </p>
           <div className="wizard-actions">
-            <button className="btn primary" onClick={onContinue}>
-              Continue
-            </button>
-            <button className="btn subtle" onClick={onBack}>
+            <Button onClick={onContinue}>Continue</Button>
+            <Button variant="secondary" onClick={onBack}>
               Back
-            </button>
+            </Button>
           </div>
         </div>
       </DialogContent>

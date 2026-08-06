@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useGame } from "@/context/GameContext";
 import "./Dialog.css";
@@ -36,9 +37,7 @@ export function AboutModal({
             donations only cover the website, game servers and CDN.
           </p>
           <div className="wizard-actions">
-            <button className="btn primary" onClick={onClose}>
-              Close
-            </button>
+            <Button onClick={onClose}>Close</Button>
           </div>
           <p className="about-made">Made with &lt;3 by Doobs</p>
         </div>

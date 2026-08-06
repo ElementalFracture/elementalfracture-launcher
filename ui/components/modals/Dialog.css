@@ -32,7 +32,7 @@
   font-size: 14px;
   margin-bottom: 6px;
 }
-.wizard-step input {
+.wizard-step [data-slot="input"] {
   margin-top: 10px;
   font-family: "Montserrat", "Segoe UI", sans-serif;
 }
@@ -46,8 +46,9 @@
 }
 
 /* Wizard buttons follow the social-banner scheme: flat cream text that
-   turns gold on hover (primary starts gold, brightens on hover). */
-.wizard-actions .btn {
+   turns gold on hover (primary starts gold, brightens on hover). The
+   surfaces the Button primitive carries elsewhere are stripped back here. */
+.wizard-actions [data-slot="button"] {
   background: none;
   border: none;
   border-radius: 0;
@@ -60,26 +61,26 @@
     color 0.15s,
     transform 0.1s;
 }
-.wizard-actions .btn:hover {
+.wizard-actions [data-slot="button"]:hover {
   filter: none;
 }
-.wizard-actions .btn:active {
+.wizard-actions [data-slot="button"]:active {
   transform: scale(0.97);
 }
-.wizard-actions .btn.subtle {
+.wizard-actions [data-slot="button"][data-variant="secondary"] {
   background: none;
   color: var(--cream);
   opacity: 0.85;
 }
-.wizard-actions .btn.subtle:hover {
+.wizard-actions [data-slot="button"][data-variant="secondary"]:hover {
   color: var(--gold);
   opacity: 1;
 }
-.wizard-actions .btn.primary {
+.wizard-actions [data-slot="button"][data-variant="default"] {
   background: none;
   color: var(--gold);
 }
-.wizard-actions .btn.primary:hover {
+.wizard-actions [data-slot="button"][data-variant="default"]:hover {
   color: var(--gold-bright);
 }
 

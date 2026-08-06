@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -224,7 +226,7 @@ function FriendList() {
   return (
     <>
       <div className="friend-add">
-        <input
+        <Input
           type="text"
           maxLength={20}
           spellCheck={false}
@@ -234,9 +236,13 @@ function FriendList() {
           onChange={(e) => setAddName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onAdd()}
         />
-        <button title="Send friend request" onClick={onAdd}>
+        <Button
+          variant="secondary"
+          title="Send friend request"
+          onClick={onAdd}
+        >
           Add
-        </button>
+        </Button>
       </div>
 
       {!friends ? (
@@ -463,7 +469,8 @@ export function TopBar() {
                 </div>
               </div>
               <FriendList />
-              <button
+              <Button
+                variant="secondary"
                 className="acct-link"
                 onClick={() => {
                   setAccountPopoverOpen(false);
@@ -471,7 +478,7 @@ export function TopBar() {
                 }}
               >
                 Change token
-              </button>
+              </Button>
             </PopoverContent>
           </Popover>
         ) : (

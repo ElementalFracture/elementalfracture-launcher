@@ -35,7 +35,9 @@ interface GameContextValue {
   checkGameUpdate: () => Promise<boolean>;
   /** Pull the pending game patch. Driven by the popup. */
   applyGameUpdate: () => Promise<boolean>;
-  provisionInstall: (report?: (msg: string, isError?: boolean) => void) => Promise<boolean>;
+  provisionInstall: (
+    report?: (msg: string, isError?: boolean) => void
+  ) => Promise<boolean>;
   locateGame: () => Promise<void>;
   downloadGame: () => Promise<void>;
 }
@@ -47,7 +49,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const [status, setStatus] = useState<GameStatus | null>(null);
   const [versions, setVersions] = useState<VersionInfo | null>(null);
-  const [launcherInfo, setLauncherInfo] = useState<LauncherUpdateInfo | null>(null);
+  const [launcherInfo, setLauncherInfo] = useState<LauncherUpdateInfo | null>(
+    null
+  );
   const [updating, setUpdating] = useState(false);
   const [installBusy, setInstallBusy] = useState(false);
   const [installNotice, setInstallNotice] = useState<string | null>(null);
@@ -114,7 +118,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       report("Installing updates & mods…");
       try {
         const ver = await rust.updatePatch();
-        report(ver && ver !== "unknown" ? `Install ready (v${ver})` : "Install ready");
+        report(
+          ver && ver !== "unknown" ? `Install ready (v${ver})` : "Install ready"
+        );
         return true;
       } catch (e) {
         report("Couldn't update the install: " + e, true);
@@ -151,12 +157,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [settings, saveSettings, refreshStatus, provisionInstall]);
 
   const downloadGame = useCallback(async () => {
-    const dest = await rust.pickGameDir("Choose where to install Spellbreak (approx. 25 GB needed)");
+    const dest = await rust.pickGameDir(
+      "Choose where to install Spellbreak (approx. 25 GB needed)"
+    );
     if (!dest) {
       return;
     }
     setInstallBusy(true);
-    setInstallNotice("Installing: this is a big download, leave the launcher open.");
+    setInstallNotice(
+      "Installing: this is a big download, leave the launcher open."
+    );
     try {
       const root = await rust.downloadGame(dest);
       toast("Game installed to " + root);
@@ -183,7 +193,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return false;
     }
     const st = statusRef.current;
-    const outdated = Boolean(v?.remote && st?.exe_present && v.local !== v.remote);
+    const outdated = Boolean(
+      v?.remote && st?.exe_present && v.local !== v.remote
+    );
     if (outdated) {
       setGameUpdatePop(v!.remote);
     }
@@ -194,7 +206,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setUpdating(true);
     try {
       const version = await rust.updatePatch();
-      toast(version && version !== "unknown" ? `Game updated to v${version}` : "Game updated");
+      toast(
+        version && version !== "unknown"
+          ? `Game updated to v${version}`
+          : "Game updated"
+      );
       setGameUpdatePop(null);
       return true;
     } catch (e) {

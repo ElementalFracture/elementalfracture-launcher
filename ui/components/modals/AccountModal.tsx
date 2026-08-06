@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useSettings } from "@/context/SettingsContext";
 import { openLink } from "@/lib/links";
 import { toast } from "@/lib/toast";
@@ -63,7 +65,7 @@ export function AccountModal({
             Identifies you on Elemental Fracture. Only change this token when
             rotated by either yourself on Discord or by a mod.
           </p>
-          <input
+          <Input
             type="password"
             placeholder="Paste your token…"
             value={token}
@@ -75,16 +77,16 @@ export function AccountModal({
             one.
           </p>
           <div className="wizard-actions">
-            <button className="btn primary" disabled={saving} onClick={save}>
+            <Button disabled={saving} onClick={save}>
               Save
-            </button>
-            <button
-              className="btn subtle"
+            </Button>
+            <Button
+              variant="secondary"
               disabled={saving}
               onClick={() => onOpenChange(false)}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </DialogContent>
