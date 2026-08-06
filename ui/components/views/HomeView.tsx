@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { InfoPopover } from "@/components/InfoPopover";
 import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
@@ -309,20 +310,16 @@ export function HomeView() {
             <div>
               <p className="muted">{installMsg}</p>
               <div className="install-actions">
-                <button
-                  className="btn subtle"
+                <Button
+                  variant="secondary"
                   disabled={installBusy}
                   onClick={locateGame}
                 >
                   Locate existing install
-                </button>
-                <button
-                  className="btn primary"
-                  disabled={installBusy}
-                  onClick={downloadGame}
-                >
+                </Button>
+                <Button disabled={installBusy} onClick={downloadGame}>
                   Download game…
-                </button>
+                </Button>
               </div>
             </div>
           )}

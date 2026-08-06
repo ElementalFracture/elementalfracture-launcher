@@ -1,4 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -240,237 +250,258 @@ export function SettingsView() {
 
   return (
     <section className={"view" + (view === "settings" ? " active" : "")}>
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Launcher</h3>
-        </div>
-        <label className="field">
-          <span>Game folder</span>
-          <div className="form-row">
-            <input
-              type="text"
-              readOnly
-              placeholder="Not set"
-              value={settings?.game_path ?? ""}
-            />
-            <button className="btn subtle" onClick={onBrowseGame}>
-              Browse…
-            </button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Launcher</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="field">
+            <Label htmlFor="game-folder">Game folder</Label>
+            <div className="form-row">
+              <Input
+                id="game-folder"
+                type="text"
+                readOnly
+                placeholder="Not set"
+                value={settings?.game_path ?? ""}
+              />
+              <Button variant="secondary" onClick={onBrowseGame}>
+                Browse…
+              </Button>
+            </div>
           </div>
-        </label>
-        <div className="switch-row">
-          <span className="switch-text">
-            <span>Minimize to taskbar when closing (X)</span>
-            <InfoPopover>
-              <p>
-                Pressing X hides the launcher to the taskbar instead of
-                quitting, so it stays running in the background. Quit it fully
-                from its tray/taskbar entry.
-              </p>
-            </InfoPopover>
-          </span>
-          <Switch
-            aria-label="Minimize to taskbar when closing (X)"
-            checked={minimizeOnClose}
-            onCheckedChange={setMinimizeOnClose}
-          />
-        </div>
-        <div className="switch-row">
-          <span className="switch-text">
-            <span>Close launcher when the game starts</span>
-            <InfoPopover>
-              <p>
-                Automatically closes the launcher a moment after the game
-                launches, to free up memory while you play.
-              </p>
-            </InfoPopover>
-          </span>
-          <Switch
-            aria-label="Close launcher when the game starts"
-            checked={closeOnLaunch}
-            onCheckedChange={setCloseOnLaunch}
-          />
-        </div>
-      </div>
+          <div className="switch-row">
+            <span className="switch-text">
+              <span>Minimize to taskbar when closing (X)</span>
+              <InfoPopover>
+                <p>
+                  Pressing X hides the launcher to the taskbar instead of
+                  quitting, so it stays running in the background. Quit it fully
+                  from its tray/taskbar entry.
+                </p>
+              </InfoPopover>
+            </span>
+            <Switch
+              aria-label="Minimize to taskbar when closing (X)"
+              checked={minimizeOnClose}
+              onCheckedChange={setMinimizeOnClose}
+            />
+          </div>
+          <div className="switch-row">
+            <span className="switch-text">
+              <span>Close launcher when the game starts</span>
+              <InfoPopover>
+                <p>
+                  Automatically closes the launcher a moment after the game
+                  launches, to free up memory while you play.
+                </p>
+              </InfoPopover>
+            </span>
+            <Switch
+              aria-label="Close launcher when the game starts"
+              checked={closeOnLaunch}
+              onCheckedChange={setCloseOnLaunch}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="panel">
-        <div className="panel-head">
-          <h3>Launcher version</h3>
-          <div className="panel-actions">
-            <button
-              className="btn subtle"
+      <Card>
+        <CardHeader>
+          <CardTitle>Launcher version</CardTitle>
+          <CardAction className="panel-actions">
+            <Button
+              variant="secondary"
               disabled={checkingUpdates}
               onClick={onCheckLauncherUpdates}
             >
               {checkingUpdates ? "Checking…" : "Check for launcher updates"}
-            </button>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="field">
+            <Label htmlFor="launcher-version">Version</Label>
+            <Input
+              id="launcher-version"
+              type="text"
+              readOnly
+              placeholder="unavailable"
+              value={launcherVersionField}
+            />
           </div>
-        </div>
-        <label className="field">
-          <span>Version</span>
-          <input
-            type="text"
-            readOnly
-            placeholder="unavailable"
-            value={launcherVersionField}
-          />
-        </label>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="panel">
-        <div className="switch-row">
-          <span className="switch-text">
-            <span>Show advanced options</span>
-            <InfoPopover>
-              <p>
-                Reveals developer and debug settings: launch wrapper, Wine
-                prefix, and the CDN / auth / players URLs. Only change these if
-                you know what you’re doing.
-              </p>
-            </InfoPopover>
-          </span>
-          {/* Reads as on while the warning is up; Back turns it off again. */}
-          <Switch
-            aria-label="Show advanced options"
-            checked={showAdvanced || advancedWarnOpen}
-            onCheckedChange={onToggleAdvanced}
-          />
-        </div>
-      </div>
+      <Card>
+        <CardContent>
+          <div className="switch-row">
+            <span className="switch-text">
+              <span>Show advanced options</span>
+              <InfoPopover>
+                <p>
+                  Reveals developer and debug settings: launch wrapper, Wine
+                  prefix, and the CDN / auth / players URLs. Only change these
+                  if you know what you’re doing.
+                </p>
+              </InfoPopover>
+            </span>
+            {/* Reads as on while the warning is up; Back turns it off again. */}
+            <Switch
+              aria-label="Show advanced options"
+              checked={showAdvanced || advancedWarnOpen}
+              onCheckedChange={onToggleAdvanced}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {showAdvanced && (
-        <div className="panel">
-          <div className="panel-head">
-            <h3>Advanced</h3>
-          </div>
-
-          {!isWindows && (
-            <label className="field">
-              <span>
-                Launch wrapper{" "}
-                <small>
-                  (Linux only; runs the game exe — Proton-GE recommended)
-                </small>
-              </span>
-              {/* The picker stays put once "Custom…" is chosen — the free-text
-                  box appears beside it rather than replacing it, so a detected
-                  wrapper can still be picked back up. */}
-              <div className="form-row">
-                {wrappers.length > 0 && (
-                  <Select
-                    value={
-                      wrapperMode === "custom" ? CUSTOM_WRAPPER : wrapperValue
-                    }
-                    onValueChange={(v) => {
-                      if (v === CUSTOM_WRAPPER) {
-                        setWrapperMode("custom");
-                        setWrapperValue("");
-                      } else {
-                        setWrapperMode("select");
-                        setWrapperValue(v);
+        <Card>
+          <CardHeader>
+            <CardTitle>Advanced</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!isWindows && (
+              <div className="field">
+                <Label htmlFor="launch-wrapper">
+                  Launch wrapper{" "}
+                  <small>
+                    (Linux only; runs the game exe — Proton-GE recommended)
+                  </small>
+                </Label>
+                {/* The picker stays put once "Custom…" is chosen — the free-text
+                    box appears beside it rather than replacing it, so a detected
+                    wrapper can still be picked back up. */}
+                <div className="form-row">
+                  {wrappers.length > 0 && (
+                    <Select
+                      value={
+                        wrapperMode === "custom" ? CUSTOM_WRAPPER : wrapperValue
                       }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wrappers.map((w) => (
-                        <SelectItem key={w.command} value={w.command}>
-                          {w.label}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={CUSTOM_WRAPPER}>Custom…</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                {(wrapperMode === "custom" || wrappers.length === 0) && (
-                  <input
+                      onValueChange={(v) => {
+                        if (v === CUSTOM_WRAPPER) {
+                          setWrapperMode("custom");
+                          setWrapperValue("");
+                        } else {
+                          setWrapperMode("select");
+                          setWrapperValue(v);
+                        }
+                      }}
+                    >
+                      {/* The label points at whichever control is the live
+                          one; on Custom… that's the box below, not this. */}
+                      <SelectTrigger
+                        id={
+                          wrapperMode === "custom" ? undefined : "launch-wrapper"
+                        }
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wrappers.map((w) => (
+                          <SelectItem key={w.command} value={w.command}>
+                            {w.label}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={CUSTOM_WRAPPER}>Custom…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {(wrapperMode === "custom" || wrappers.length === 0) && (
+                    <Input
+                      id="launch-wrapper"
+                      type="text"
+                      placeholder={
+                        wrappers.length
+                          ? "e.g. umu-run"
+                          : "e.g. umu-run (none detected; install Wine or umu)"
+                      }
+                      value={wrapperValue}
+                      onChange={(e) => setWrapperValue(e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!isWindows && (
+              <div className="field">
+                <Label htmlFor="wine-prefix">
+                  Wine prefix{" "}
+                  <small>
+                    (optional; passed as <code>WINEPREFIX</code>, empty = the
+                    launcher makes its own)
+                  </small>
+                </Label>
+                <div className="form-row">
+                  <Input
+                    id="wine-prefix"
                     type="text"
-                    placeholder={
-                      wrappers.length
-                        ? "e.g. umu-run"
-                        : "e.g. umu-run (none detected; install Wine or umu)"
-                    }
-                    value={wrapperValue}
-                    onChange={(e) => setWrapperValue(e.target.value)}
+                    placeholder="e.g. /home/you/.wineprefixes/spellbreak"
+                    value={winePrefix}
+                    onChange={(e) => setWinePrefix(e.target.value)}
                   />
-                )}
+                  <Button variant="secondary" onClick={onBrowsePrefix}>
+                    Browse…
+                  </Button>
+                </div>
               </div>
-            </label>
-          )}
+            )}
 
-          {!isWindows && (
-            <label className="field">
-              <span>
-                Wine prefix{" "}
+            <div className="field">
+              <Label htmlFor="cdn-base">CDN base</Label>
+              <Input
+                id="cdn-base"
+                type="text"
+                value={cdnBase}
+                onChange={(e) => setCdnBase(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <Label htmlFor="auth-url">
+                Auth URL{" "}
                 <small>
-                  (optional; passed as <code>WINEPREFIX</code>, empty = the
-                  launcher makes its own)
+                  (token validation endpoint; the game server host is derived
+                  from it)
                 </small>
-              </span>
-              <div className="form-row">
-                <input
-                  type="text"
-                  placeholder="e.g. /home/you/.wineprefixes/spellbreak"
-                  value={winePrefix}
-                  onChange={(e) => setWinePrefix(e.target.value)}
-                />
-                <button className="btn subtle" onClick={onBrowsePrefix}>
-                  Browse…
-                </button>
-              </div>
-            </label>
-          )}
-
-          <label className="field">
-            <span>CDN base</span>
-            <input
-              type="text"
-              value={cdnBase}
-              onChange={(e) => setCdnBase(e.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>
-              Auth URL{" "}
-              <small>
-                (token validation endpoint; the game server host is derived from
-                it)
-              </small>
-            </span>
-            <input
-              type="text"
-              placeholder="https://play.elefrac.com/auth"
-              value={authUrl}
-              onChange={(e) => setAuthUrl(e.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>
-              Players URL <small>(players sidecar endpoint)</small>
-            </span>
-            <input
-              type="text"
-              placeholder="http://play.elefrac.com:4950/players"
-              value={playersUrl}
-              onChange={(e) => setPlayersUrl(e.target.value)}
-            />
-          </label>
-        </div>
+              </Label>
+              <Input
+                id="auth-url"
+                type="text"
+                placeholder="https://play.elefrac.com/auth"
+                value={authUrl}
+                onChange={(e) => setAuthUrl(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <Label htmlFor="players-url">
+                Players URL <small>(players sidecar endpoint)</small>
+              </Label>
+              <Input
+                id="players-url"
+                type="text"
+                placeholder="http://play.elefrac.com:4950/players"
+                value={playersUrl}
+                onChange={(e) => setPlayersUrl(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="save-row">
-        <button
-          className={"btn danger" + (resetArmed ? " armed" : "")}
+        <Button
+          variant="destructive"
+          className={resetArmed ? "armed" : undefined}
           title="Clear all launcher settings and run first-time setup again"
           onClick={onReset}
         >
           {resetArmed ? "Click again to confirm reset" : "Reset configuration"}
-        </button>
-        <button className="btn primary" disabled={saving} onClick={onSave}>
+        </Button>
+        <Button disabled={saving} onClick={onSave}>
           Save settings
-        </button>
+        </Button>
       </div>
 
       <AdvancedWarnModal

@@ -211,34 +211,28 @@
   gap: 6px;
   margin: 10px 0 6px;
 }
-.friend-add input {
+/* The Input and Button primitives, at the smaller scale the popover uses. */
+.friend-add [data-slot="input"] {
   flex: 1;
   min-width: 0;
   padding: 7px 9px;
   font-size: 12px;
-  background: #00000026;
+  background-color: #00000026;
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.friend-add input:focus {
-  outline: none;
+.friend-add [data-slot="input"]:focus-visible {
   border-color: var(--gold);
 }
-.friend-add button {
+.friend-add [data-slot="button"] {
   padding: 7px 12px;
   font-size: 12px;
-  font-weight: 600;
-  background: #ffffff0d;
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
   transition:
     border-color 0.15s,
     filter 0.15s;
 }
-.friend-add button:hover {
+.friend-add [data-slot="button"]:hover {
   border-color: #d9b45b66;
   filter: brightness(1.1);
 }
@@ -325,7 +319,7 @@
   border-color: #ff6b6b66;
   background: #ff6b6b1a;
 }
-.acct-link {
+[data-slot="button"].acct-link {
   display: block;
   width: 100%;
   margin-top: 6px;
@@ -342,7 +336,7 @@
     border-color 0.15s,
     filter 0.15s;
 }
-.acct-link:hover {
+[data-slot="button"].acct-link:hover {
   border-color: #d9b45b66;
   filter: brightness(1.1);
 }
