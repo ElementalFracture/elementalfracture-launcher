@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeWrapperState } from "../SettingsView";
+import { computeWrapperState } from "../wrapper";
 
 const wrappers = [{ command: "umu-run" }, { command: "proton" }];
 

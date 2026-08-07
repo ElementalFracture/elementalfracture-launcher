@@ -5,8 +5,8 @@ import type { InstallProgress } from "@/lib/rust";
 export type { InstallProgress };
 
 // Isolated from the rest of the app state so rapid progress ticks during a
-// download only re-render whatever actually reads this (HomeView), not
-// Mods/Settings which share GameContext but never touch progress.
+// download only re-render whatever actually reads this (Home's InstallProgress),
+// not Mods/Settings which share GameContext but never touch progress.
 const ProgressContext = createContext<InstallProgress | null>(null);
 
 export function ProgressProvider({ children }: { children: ReactNode }) {

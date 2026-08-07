@@ -1,0 +1,34 @@
+/* The wrapper picker is the Select primitive, not a native <select>; size it
+   like the text inputs next to it so the Advanced rows stay on one rhythm.
+   The primitive draws its own chevron. */
+[data-slot="select-trigger"] {
+  height: auto;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background-color: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+[data-slot="select-trigger"]:focus-visible {
+  border-color: var(--gold);
+}
+/* The open popup list — keep it dark so the options stay legible. */
+[data-slot="select-content"] {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 14px 40px #000c;
+}
+[data-slot="select-item"] {
+  font-size: 13px;
+  padding: 7px 32px 7px 10px;
+  cursor: pointer;
+}
+.form-row [data-slot="select-trigger"] {
+  flex: 1;
+}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatEventTime, greeting, stageLabel } from "../HomeView";
+import { formatEventTime, greeting, stageLabel } from "../format";
 
 describe("greeting", () => {
   beforeEach(() => vi.useFakeTimers());

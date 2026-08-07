@@ -1,0 +1,60 @@
+/* ============ Home: greeting, and the card rows shared by its sections ============ */
+
+.greet {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 6px 0 14px;
+}
+.greet span {
+  color: var(--gold);
+}
+
+.row-head {
+  margin: 26px 0 12px;
+}
+.row-head h3 {
+  font-size: 17px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--ef-radius);
+  padding: 16px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.card:hover {
+  border-color: #d9b45b55;
+  transform: translateY(-2px);
+}
+.card h4 {
+  font-size: 15px;
+  margin-bottom: 6px;
+  color: var(--gold-bright);
+}
+.card p {
+  font-size: 13px;
+  color: var(--ef-muted);
+  line-height: 1.45;
+  max-height: 57px;
+  overflow: hidden;
+}
+
+.card .date {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #ffffff0d;
+  color: var(--ef-muted);
+}

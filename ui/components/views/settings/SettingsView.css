@@ -1,0 +1,36 @@
+/* ============ Settings: save row, and the switch rows its cards share ============ */
+
+/* Destructive action on the left, primary save on the right. */
+.save-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* Row label plus its "i" button, laid out inline. */
+.switch-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+[data-slot="switch"] {
+  background-color: var(--bg);
+}
+[data-slot="switch"][data-state="checked"] {
+  background-color: var(--gold-bright);
+}
+[data-slot="switch"] [data-slot="switch-thumb"] {
+  background-color: var(--ef-muted);
+}
+[data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
+  background-color: var(--bg);
+}

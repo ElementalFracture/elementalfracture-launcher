@@ -1,0 +1,80 @@
+.banner {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  overflow: hidden;
+  padding: 30px 34px;
+  min-height: 285px;
+  display: flex;
+  align-items: center;
+}
+
+.banner-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* Two gradient layers (EF purple / Classic warm) crossfade on a theme switch,
+   since a gradient background can't be transitioned in place. */
+.banner-shade::before,
+.banner-shade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.banner-shade::before {
+  background: linear-gradient(
+    90deg,
+    #0d0716f2 0%,
+    #0d0716cc 30%,
+    #0d071666 48%,
+    #0d071614 68%,
+    transparent 88%
+  );
+  opacity: 1;
+}
+.banner-shade::after {
+  background: linear-gradient(
+    90deg,
+    #171009f2 0%,
+    #171009cc 30%,
+    #17100966 48%,
+    #17100914 68%,
+    transparent 88%
+  );
+  opacity: 0;
+}
+body.classic .banner-shade::before {
+  opacity: 0;
+}
+body.classic .banner-shade::after {
+  opacity: 1;
+}
+
+.banner-text {
+  position: relative;
+  max-width: 560px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.banner-text h3 {
+  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 30px;
+  letter-spacing: 0.03em;
+  margin: 8px 0 6px;
+  color: var(--gold-bright);
+}
+
+.banner-text p {
+  color: var(--ef-muted);
+  font-size: 14px;
+  margin-bottom: 18px;
+}
