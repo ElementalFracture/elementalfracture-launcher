@@ -1,0 +1,130 @@
+/* ============ Topbar: shell and the pill primitives ============ */
+
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px 10px;
+  gap: 16px;
+}
+
+#topbar-logo {
+  height: 58px;
+  object-fit: contain;
+}
+
+.top-pills {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  position: relative;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 7px 13px;
+  font-size: 13px;
+  color: var(--text);
+}
+.pill-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+.pill-text small {
+  color: var(--ef-muted);
+  font-size: 11px;
+}
+.pill-icon {
+  width: 17px;
+  height: 17px;
+  fill: var(--ef-muted);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bad);
+  box-shadow: 0 0 6px var(--bad);
+}
+.dot.ok {
+  background: var(--good);
+  box-shadow: 0 0 6px var(--good);
+}
+.dot.warn {
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+
+.pill.account {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.pill.account:hover {
+  border-color: #d9b45b66;
+}
+
+.pill.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.pill.clickable:hover {
+  border-color: #d9b45b66;
+}
+
+/* Popover panels (in-game breakdown, account friend list) — positioned by
+   the popover primitive itself, this just supplies the look. */
+.popover-panel {
+  width: 300px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 14px 40px #000c;
+  padding: 12px 14px;
+  z-index: 40;
+  text-align: left;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #16102a;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+}
+
+/* Presence dot, shared by the account header and every friend row. */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 6px var(--good);
+}
+/* Presence colour per state; the bare dot keeps its --good default. */
+.status-dot[data-status="online"] {
+  background: var(--good);
+  box-shadow: 0 0 6px var(--good);
+}
+.status-dot[data-status="in_game"] {
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+.status-dot[data-status="offline"] {
+  background: var(--ef-muted);
+  box-shadow: none;
+}

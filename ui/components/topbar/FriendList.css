@@ -1,0 +1,116 @@
+/* ============ Friend list: add box, requests, and the rows ============ */
+
+/* Add-friend row. */
+.friend-add {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+/* The Input and Button primitives, at the smaller scale the popover uses. */
+.friend-add [data-slot="input"] {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  font-size: 12px;
+  background-color: #00000026;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.friend-add [data-slot="input"]:focus-visible {
+  border-color: var(--gold);
+}
+.friend-add [data-slot="button"] {
+  padding: 7px 12px;
+  font-size: 12px;
+  transition:
+    border-color 0.15s,
+    filter 0.15s;
+}
+.friend-add [data-slot="button"]:hover {
+  border-color: #d9b45b66;
+  filter: brightness(1.1);
+}
+
+.friend-subhead {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ef-muted);
+  padding: 8px 2px 4px;
+}
+.friend-empty {
+  font-size: 12px;
+  color: var(--ef-muted);
+  line-height: 1.5;
+  padding: 4px 2px;
+}
+#friend-list,
+#friend-requests {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+}
+.friend-row .status-dot {
+  flex: none;
+}
+.friend-row-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+.friend-row-meta strong {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.friend-row-meta small {
+  font-size: 11px;
+  color: var(--ef-muted);
+}
+.friend-pending {
+  font-style: italic;
+}
+.friend-row-actions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.friend-row-actions button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  line-height: 1;
+  background: #ffffff0d;
+  color: var(--ef-muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.friend-row-actions button.ok:hover {
+  color: var(--good);
+  border-color: #4cd97b66;
+  background: #4cd97b1a;
+}
+.friend-row-actions button.no:hover {
+  color: #ff6b6b;
+  border-color: #ff6b6b66;
+  background: #ff6b6b1a;
+}

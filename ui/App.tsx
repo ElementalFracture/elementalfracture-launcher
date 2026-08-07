@@ -7,7 +7,7 @@ import { FriendsProvider } from "@/context/FriendsContext";
 import { ProgressProvider } from "@/context/ProgressContext";
 import { UIProvider } from "@/context/UIContext";
 import { Sidebar } from "@/components/Sidebar";
-import { TopBar } from "@/components/TopBar";
+import { TopBar } from "@/components/topbar/TopBar";
 import { HomeView } from "@/components/views/HomeView";
 import { ModsView } from "@/components/views/ModsView";
 import { SettingsView } from "@/components/views/SettingsView";
