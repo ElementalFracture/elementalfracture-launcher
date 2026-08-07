@@ -97,7 +97,7 @@ const FRIEND_ERRORS = {
   no_pending_request: "No pending request from them.",
 };
 const friendError = (code) => FRIEND_ERRORS[code] || "Friend server unavailable - try again.";
-const statusText = (s) => (s === "in_game" ? "in game" : s === "online" ? "online" : "offline");
+const statusText = (s) => (s === "in_game" ? "in game" : s === "in_menu" ? "in menu" : s === "online" ? "online" : "offline");
 
 function renderAccountPopover() {
   const me = friendsData?.me?.username || settings.username?.trim() || "You";
@@ -181,7 +181,7 @@ function renderFriendList() {
     listBox.append(p);
   }
   // Sort in-game first, then online, then offline (server pre-sorts by name).
-  const rank = (s) => (s === "in_game" ? 0 : s === "online" ? 1 : 2);
+  const rank = (s) => (s === "in_game" ? 0 : s === "in_menu" ? 1 : s === "online" ? 2 : 3);
   for (const f of [...friends].sort((a, b) => rank(a.status) - rank(b.status))) {
     listBox.append(friendRow(f.username, f.status || "offline", [
       { label: "✕", title: "Remove friend", action: "remove", kind: "no" },

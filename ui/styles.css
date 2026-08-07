@@ -762,9 +762,10 @@ input[readonly]:focus { border-color: var(--line); }
 .acct-link:hover { border-color: #d9b45b66; filter: brightness(1.1); }
 
 /* Status dot colour by presence state (falls back to --good for the self row). */
-.status-dot[data-status="online"]  { background: var(--good);  box-shadow: 0 0 6px var(--good); }
-.status-dot[data-status="in_game"] { background: var(--gold);  box-shadow: 0 0 6px var(--gold); }
-.status-dot[data-status="offline"] { background: var(--muted); box-shadow: none; }
+.status-dot[data-status="in_game"] { background: var(--gold);   box-shadow: 0 0 6px var(--gold); }
+.status-dot[data-status="in_menu"] { background: var(--good);   box-shadow: 0 0 6px var(--good); }
+.status-dot[data-status="online"]  { background: #5bb8d9;       box-shadow: 0 0 6px #5bb8d9; }
+.status-dot[data-status="offline"] { background: var(--muted);  box-shadow: none; }
 
 /* Add-friend row. */
 .friend-add {
