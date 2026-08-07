@@ -6,7 +6,7 @@ import {
   playersByVariant,
   regionSplit,
   variantOf,
-} from "../TopBar";
+} from "../players";
 
 describe("modeLabel", () => {
   it("buckets a server by the mode named in its display name", () => {
