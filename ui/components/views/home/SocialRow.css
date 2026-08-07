@@ -1,0 +1,62 @@
+/* ============ Social row (6.1 launcher image buttons) ============ */
+
+.social-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.img-btn {
+  border: none;
+  background: var(--img) center / contain no-repeat;
+  cursor: pointer;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
+}
+.img-btn:hover {
+  background-image: var(--img-h);
+  filter: brightness(1.08);
+}
+.img-btn:active {
+  transform: scale(0.97);
+}
+.img-btn.h42 {
+  height: 34px;
+  aspect-ratio: 3 / 1;
+}
+.img-btn.h34 {
+  height: 27px;
+  aspect-ratio: 429 / 80;
+}
+.img-btn.h34.social-twitch,
+.img-btn.h34.social-youtube {
+  aspect-ratio: 612 / 80;
+}
+
+.img-btn.social-discord {
+  --img: url("../../../assets/social-discord.png");
+  --img-h: url("../../../assets/social-discord-hover.png");
+}
+.img-btn.social-donate {
+  --img: url("../../../assets/social-patreon.png");
+  --img-h: url("../../../assets/social-patreon.png");
+}
+.img-btn.social-patchnotes {
+  --img: url("../../../assets/social-patchnotes.png");
+  --img-h: url("../../../assets/social-patchnotes-hover.png");
+}
+.img-btn.social-x {
+  --img: url("../../../assets/social-x.png");
+  --img-h: url("../../../assets/social-x-hover.png");
+}
+.img-btn.social-twitch {
+  --img: url("../../../assets/social-twitch.png");
+  --img-h: url("../../../assets/social-twitch-hover.png");
+}
+.img-btn.social-youtube {
+  --img: url("../../../assets/social-youtube.png");
+  --img-h: url("../../../assets/social-youtube-hover.png");
+}

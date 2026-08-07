@@ -1,0 +1,25 @@
+.progress {
+  max-width: 460px;
+}
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ef-muted);
+  margin-bottom: 6px;
+}
+.progress-track {
+  height: 10px;
+  border-radius: 6px;
+  background: #ffffff14;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  transition: width 0.2s;
+}
