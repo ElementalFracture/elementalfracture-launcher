@@ -3,25 +3,18 @@
    The primitive draws its own chevron. */
 [data-slot="select-trigger"] {
   height: auto;
-  padding: 9px 12px;
+  padding: var(--spacing-control-y) var(--spacing-control-x);
   font-size: 13px;
-  color: var(--text);
-  background-color: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  outline: none;
+  background-color: var(--muted);
   transition: border-color 0.15s;
   cursor: pointer;
 }
 [data-slot="select-trigger"]:focus-visible {
-  border-color: var(--gold);
+  border-color: var(--primary);
 }
-/* The open popup list — keep it dark so the options stay legible. */
+/* The open popup list — a bordered panel, like the other popovers. */
 [data-slot="select-content"] {
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--border);
   box-shadow: 0 14px 40px #000c;
 }
 [data-slot="select-item"] {

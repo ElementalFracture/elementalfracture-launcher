@@ -2,11 +2,11 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--primary);
   margin-bottom: 6px;
 }
 .event-time.live {
-  color: var(--good);
+  color: var(--success);
   animation: live-pulse 1.6s ease-in-out infinite;
 }
 @keyframes live-pulse {

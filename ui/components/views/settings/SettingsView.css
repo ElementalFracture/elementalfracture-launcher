@@ -22,15 +22,19 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* Off reads as an empty well, on as the lit end of the gold ramp — the
+   primitive's own unchecked colour is the border token, which is too close
+   to the card behind it. */
 [data-slot="switch"] {
-  background-color: var(--bg);
+  background-color: var(--background);
 }
 [data-slot="switch"][data-state="checked"] {
-  background-color: var(--gold-bright);
+  background-color: var(--primary-bright);
 }
 [data-slot="switch"] [data-slot="switch-thumb"] {
-  background-color: var(--ef-muted);
+  background-color: var(--muted-foreground);
 }
 [data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
-  background-color: var(--bg);
+  background-color: var(--background);
 }

@@ -1,78 +1,104 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 @import "@fontsource-variable/inter";
 
+/* The launcher's global stylesheet: the theme (tokens, fonts, base layer),
+   then the reset, the app shell, and the primitives shared by more than one
+   view — panels, fields, inputs, buttons, badges. Component-scoped rules live
+   in a .css beside their .tsx.
+
+   Everything below the theme is deliberately unlayered, so it wins over the
+   utility classes the components/ui primitives carry. */
+
+@font-face {
+  font-family: "Friz Quadrata";
+  src: url("assets/fonts/FrizQuadrata-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("assets/fonts/Montserrat-VariableFont_wght.ttf")
+    format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+/* The primitives ship `dark:` utilities throughout. This app is dark already
+   and has no light mode to switch away from, so the variant is pinned to a
+   `.dark` ancestor that never exists — without it Tailwind would fall back to
+   prefers-color-scheme and light those rules up on a dark desktop. */
 @custom-variant dark (&:is(.dark *));
 
+/* Elemental Fracture (purple), the default palette. */
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+  --background: #0d0716;
+  --foreground: #ece6f6;
+  --card: #1b1030;
+  --card-foreground: var(--foreground);
+  --popover: #221540;
+  --popover-foreground: var(--foreground);
+  --primary: #d9b45b; /* gold */
+  --primary-bright: #f0d48a; /* the lit end of the gold ramp */
+  --primary-foreground: #16102a;
+  --secondary: var(--surface);
+  --secondary-foreground: var(--foreground);
+  --muted: #150c24; /* sunken surface: sidebar, inputs, logs */
+  --muted-foreground: #9c90b8;
+  --accent: var(--primary-tint);
+  --accent-foreground: var(--primary-bright);
+  --destructive: #e05c6e;
+  --success: #4cd97b;
+  --cream: #fbe9dc; /* pale peach of the social banner buttons */
+  --border: #2e1f52;
+  --input: var(--border);
+  --ring: var(--primary);
 
-  color: #0f0f0f;
+  /* Translucent shades of the above, so a hover tint or a hairline follows
+     the palette instead of pinning one hue. */
+  --primary-tint: color-mix(in srgb, var(--primary) 10%, transparent);
+  --primary-edge: color-mix(in srgb, var(--primary) 40%, transparent);
+  --primary-glow: color-mix(in srgb, var(--primary) 13%, transparent);
+  --surface: color-mix(in srgb, var(--foreground) 5%, transparent);
+  --separator: color-mix(in srgb, var(--foreground) 7%, transparent);
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.148 0.004 228.8);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.148 0.004 228.8);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.148 0.004 228.8);
-  --primary: oklch(0.491 0.27 292.581);
-  --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.963 0.002 197.1);
-  --muted-foreground: oklch(0.56 0.021 213.5);
-  --accent: oklch(0.963 0.002 197.1);
-  --accent-foreground: oklch(0.218 0.008 223.9);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.925 0.005 214.3);
-  --input: oklch(0.925 0.005 214.3);
-  --ring: oklch(0.723 0.014 214.4);
-  --chart-1: oklch(0.872 0.007 219.6);
-  --chart-2: oklch(0.56 0.021 213.5);
-  --chart-3: oklch(0.45 0.017 213.2);
-  --chart-4: oklch(0.378 0.015 216);
-  --chart-5: oklch(0.275 0.011 216.9);
-  --radius: 0.45rem;
-  --sidebar: oklch(0.987 0.002 197.1);
-  --sidebar-foreground: oklch(0.148 0.004 228.8);
-  --sidebar-primary: oklch(0.541 0.281 293.009);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.963 0.002 197.1);
-  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-  --sidebar-border: oklch(0.925 0.005 214.3);
-  --sidebar-ring: oklch(0.723 0.014 214.4);
+  --radius: 0.75rem;
+}
+
+/* Classic (original Spellbreak): the same palette in a warm tan hue. Toggled
+   by body.classic, which HomeView's useVariantTheme sets from the installed
+   pak. Matched on :root so the translucent shades above — which resolve
+   against the element they are declared on — recompute with it. */
+:root:has(body.classic) {
+  --background: #171009;
+  --foreground: #efe7d6;
+  --card: #291f12;
+  --popover: #342917;
+  --primary: #cdae7a;
+  --primary-bright: #ecd6a8;
+  --muted: #22190e;
+  --muted-foreground: #b3a487;
+  --cream: #f3e6d0;
+  --border: #4b3b20;
 }
 
 @theme inline {
+  --font-sans: "Segoe UI", "Inter Variable", "Noto Sans", system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+  --font-display:
+    "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-serif: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-body: "Montserrat", "Segoe UI", sans-serif;
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-separator: var(--separator);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-cream: var(--cream);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -80,6 +106,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-bright: var(--primary-bright);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
@@ -87,47 +114,24 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
 
-.dark {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.987 0.002 197.1);
-  --card: oklch(0.218 0.008 223.9);
-  --card-foreground: oklch(0.987 0.002 197.1);
-  --popover: oklch(0.218 0.008 223.9);
-  --popover-foreground: oklch(0.987 0.002 197.1);
-  --primary: oklch(0.432 0.232 292.759);
-  --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.275 0.011 216.9);
-  --muted-foreground: oklch(0.723 0.014 214.4);
-  --accent: oklch(0.275 0.011 216.9);
-  --accent-foreground: oklch(0.987 0.002 197.1);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.56 0.021 213.5);
-  --chart-1: oklch(0.872 0.007 219.6);
-  --chart-2: oklch(0.56 0.021 213.5);
-  --chart-3: oklch(0.45 0.017 213.2);
-  --chart-4: oklch(0.378 0.015 216);
-  --chart-5: oklch(0.275 0.011 216.9);
-  --sidebar: oklch(0.218 0.008 223.9);
-  --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.606 0.25 292.717);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.275 0.011 216.9);
-  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.56 0.021 213.5);
+  /* Corner radii, in the four steps the launcher actually draws. */
+  --radius-sm: 0.25rem; /* 4px — inline code */
+  --radius-md: 0.375rem; /* 6px — badges, chips, progress track */
+  --radius-lg: 0.5rem; /* 8px — inputs, selects, buttons */
+  --radius-xl: var(--radius); /* 12px — cards, popovers, nav buttons */
+  --radius-2xl: 1rem; /* 16px — banner, dialog, toast */
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 9999px; /* pills: badges, switch */
+
+  /* Padding the launcher lays out on. */
+  --spacing-control-y: 9px; /* inputs, selects, buttons */
+  --spacing-control-x: 12px;
+  --spacing-button-x: 16px;
+  --spacing-card: 18px; /* Card inset */
+  --spacing-popover-y: 12px; /* popover panels */
+  --spacing-popover-x: 14px;
+  --spacing-view: 28px; /* view gutter */
 }
 
 @layer base {
@@ -135,13 +139,300 @@
     @apply border-border outline-ring/50;
   }
   html {
-    @apply font-sans;
-    @apply h-full;
-    @apply w-full;
+    @apply h-full w-full font-sans;
+    font-size: 16px;
+    line-height: 24px;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-background text-foreground;
-    @apply h-full;
-    @apply w-full;
+    @apply h-full w-full bg-background text-foreground;
   }
+}
+
+/* ============ Reset ============ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* The hidden attribute must always win, even over display:grid/flex rules. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* The corner glows live on two crossfading pseudo-layers rather than on the
+   body background, since gradients themselves can't be transitioned. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+/* EF glow (purple) */
+body::before {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #2b1a52cc 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #23103fbb 0%, transparent 55%);
+  opacity: 1;
+}
+/* Classic glow (warm tan) */
+body::after {
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #4a3418cc 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #3a2a12bb 0%, transparent 55%);
+  opacity: 0;
+}
+body.classic::before {
+  opacity: 0;
+}
+body.classic::after {
+  opacity: 1;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ============ EF ⇄ Classic switch ============
+   Only what actually changes eases over, at the same 2.6s as the hero-art
+   crossfade: the banner copy fades out, swaps, and fades back in while every
+   recoloured surface transitions its colours. body.theming is only set for
+   the length of a switch, so normal hover feedback stays snappy. */
+.banner-text .eyebrow,
+.banner-text h3,
+.banner-text p {
+  transition: opacity 1.5s ease;
+}
+.banner-text .eyebrow.fading,
+.banner-text h3.fading,
+.banner-text p.fading {
+  opacity: 0;
+}
+
+/* Slow the recolour of every element — backgrounds, borders, text, icons —
+   uniformly, for the duration of the switch only. */
+body.theming,
+body.theming::before,
+body.theming::after,
+body.theming *,
+body.theming *::before,
+body.theming *::after {
+  transition-property:
+    background-color, color, border-color, fill, opacity !important;
+  transition-duration: 2.6s !important;
+  transition-timing-function: ease !important;
+}
+/* The banner copy still fades on its own 1.5s beat while colours take 2.6s. */
+body.theming .banner-text .eyebrow,
+body.theming .banner-text h3,
+body.theming .banner-text p {
+  transition-property: opacity, color !important;
+  transition-duration: 1.5s, 2.6s !important;
+}
+
+/* ============ App shell ============ */
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.view {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px var(--spacing-view) var(--spacing-view);
+}
+.view.active {
+  display: block;
+}
+
+.view::-webkit-scrollbar {
+  width: 10px;
+}
+/* Neutral and translucent: WebKit scrollbar parts can't transition, so a
+   theme-agnostic thumb reads right in both palettes instead of snapping. */
+.view::-webkit-scrollbar-thumb {
+  background: #ffffff26;
+  border-radius: 5px;
+}
+.view::-webkit-scrollbar-thumb:hover {
+  background: #ffffff3d;
+}
+
+/* ============ Panels (Mods / Settings) ============ */
+/* Panels are the Card primitive, which draws its edge as a ring (a box-shadow)
+   and spaces itself off --card-spacing. The EF look is a real border and the
+   tighter rhythm the views were laid out on. */
+
+[data-slot="card"] {
+  border: 1px solid var(--border);
+  box-shadow: none;
+  /* Horizontal padding: applied by the header/content rows themselves. */
+  --card-spacing: var(--spacing-card);
+  padding: var(--spacing-card);
+  gap: 12px;
+  font-size: inherit;
+  margin-bottom: 16px;
+}
+
+/* Title on the left, actions on the right — CardHeader already grids itself
+   that way once a CardAction is present; it just centres them here.
+   The action spans two rows so it can clear a description, and these panels
+   have none: that leaves an empty second row, so the gap has to be a column
+   gap only or every titled panel carries a phantom strip under its heading. */
+[data-slot="card-header"] {
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 0;
+}
+[data-slot="card-title"] {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+}
+.panel-actions {
+  display: flex;
+  align-self: center;
+  gap: 8px;
+}
+
+/* CardContent has no padding of its own top or bottom, so a leading margin
+   inside it escapes and lands on top of the card's own gap. It used to
+   collapse against the heading's; now it just doubles the space. */
+[data-slot="card-content"] > :first-child {
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+code {
+  background: var(--separator);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+/* Status badge, shared by the mods list and its summary row. The Badge
+   primitive sizes itself off its own height; the rows set the metrics. */
+[data-slot="badge"].badge {
+  height: auto;
+}
+.badge.ok {
+  background: color-mix(in srgb, var(--success) 13%, transparent);
+  color: var(--success);
+}
+.badge.missing {
+  background: color-mix(in srgb, var(--destructive) 13%, transparent);
+  color: var(--destructive);
+}
+
+/* ============ Forms ============ */
+
+/* A labelled control: the Label primitive stacked over its input. Label lays
+   itself out as a flex row, so it's put back on its own line here — the
+   caption's <small> and <code> then flow inline the way they read. */
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+.field > [data-slot="label"] {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: normal;
+  margin-bottom: 6px;
+}
+.field small {
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+
+/* Text boxes are the Input primitive, sized like the Select trigger beside
+   them. Its focus ring stays; only the border colour is EF's. */
+[data-slot="input"] {
+  height: auto;
+  padding: var(--spacing-control-y) var(--spacing-control-x);
+  font-size: 13px;
+  background-color: var(--muted);
+  transition: border-color 0.15s;
+  user-select: text;
+  -webkit-user-select: text;
+}
+[data-slot="input"]:focus-visible {
+  border-color: var(--primary);
+}
+[data-slot="input"][readonly] {
+  color: var(--muted-foreground);
+  cursor: default;
+}
+[data-slot="input"][readonly]:focus-visible {
+  border-color: var(--border);
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+.form-row [data-slot="input"] {
+  flex: 1;
+}
+
+/* Buttons are the Button primitive; the EF variants line up with its own —
+   default is the gold action, secondary the quiet one, destructive the
+   reset. Only the surfaces and sizing the theme can't carry are restated. */
+[data-slot="button"] {
+  height: auto;
+  padding: var(--spacing-control-y) var(--spacing-button-x);
+  font-size: 13px;
+  font-weight: 600;
+  border-color: var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s;
+}
+/* Square icon buttons (the toast's close) take their width from the
+   primitive's size utility; the ratio keeps them square now that the metrics
+   above have dropped the fixed height. */
+[data-slot="button"][data-size^="icon"] {
+  padding: 0;
+  aspect-ratio: 1;
+}
+[data-slot="button"]:hover {
+  filter: brightness(1.15);
+}
+/* A gradient, so it can't come from a token. */
+[data-slot="button"][data-variant="default"] {
+  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
+  border-color: var(--primary);
+}
+[data-slot="button"][data-variant="destructive"] {
+  border-color: color-mix(in srgb, var(--destructive) 33%, transparent);
+}
+[data-slot="button"][data-variant="destructive"].armed {
+  background: var(--destructive);
+  border-color: var(--destructive);
+  color: #fff;
+}
+[data-slot="button"]:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
