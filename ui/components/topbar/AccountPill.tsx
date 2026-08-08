@@ -56,7 +56,7 @@ export function AccountPill() {
             </button>
           </PopoverTrigger>
           <PopoverContent
-            className="popover-panel account-popover-panel"
+            className="account-popover-panel"
             align="end"
             sideOffset={8}
           >

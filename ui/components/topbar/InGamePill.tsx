@@ -46,7 +46,7 @@ export function InGamePill() {
           </div>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="popover-panel" align="end" sideOffset={8}>
+      <PopoverContent align="end" sideOffset={8}>
         {/* One heading per balance, each followed by its four mode rows
             (idle ones included, so the shape stays stable). The roster
             line only appears for a populated mode, keeping the two

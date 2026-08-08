@@ -6,11 +6,7 @@
   padding: var(--spacing-control-y) var(--spacing-control-x);
   font-size: 13px;
   background-color: var(--muted);
-  transition: border-color 0.15s;
   cursor: pointer;
-}
-[data-slot="select-trigger"]:focus-visible {
-  border-color: var(--primary);
 }
 /* The open popup list — a bordered panel, like the other popovers. */
 [data-slot="select-content"] {

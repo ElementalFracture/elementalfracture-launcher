@@ -56,21 +56,6 @@
   border-color: var(--primary-edge);
 }
 
-/* Popover panels (in-game breakdown, account friend list) — positioned by
-   the popover primitive itself, this just supplies the look. */
-.popover-panel {
-  width: 300px;
-  background: var(--popover);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 14px 40px #000c;
-  padding: var(--spacing-popover-y) var(--spacing-popover-x);
-  z-index: 40;
-  text-align: left;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
 .avatar {
   width: 28px;
   height: 28px;

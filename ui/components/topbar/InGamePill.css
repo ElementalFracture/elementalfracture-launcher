@@ -10,7 +10,7 @@
   padding: 9px 2px 3px;
   border-top: 1px solid var(--separator);
 }
-.popover-panel > div:first-child > .variant-head {
+[data-slot="popover-content"] > div:first-child > .variant-head {
   border-top: none;
   padding-top: 2px;
 }
