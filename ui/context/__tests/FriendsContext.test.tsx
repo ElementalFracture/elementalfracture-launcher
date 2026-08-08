@@ -20,7 +20,6 @@ const toast = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/toast", () => ({
   toast,
   toastOnce: vi.fn(),
-  useToastState: () => null,
 }));
 
 const ok = (data: unknown) => ({ status: "ok", data });

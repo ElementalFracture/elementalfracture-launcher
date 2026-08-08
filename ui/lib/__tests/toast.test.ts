@@ -1,105 +1,69 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Every spec needs the module's own state (the visible toast, the toastOnce
-// latch) fresh, so the module is re-imported per test rather than at the top.
+// The lib wrapper only translates our two-argument call into an options object
+// for the Base UI toast manager, so the manager is stubbed and inspected.
+const add = vi.hoisted(() => vi.fn(() => "toast-id"));
+vi.mock("@/components/ui/toast", () => ({ toast: { add } }));
+
+// The toastOnce latch is module state, so the module is re-imported per test.
 async function freshToast() {
   vi.resetModules();
   return await import("../toast");
 }
 
-describe("toast store", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
+beforeEach(() => add.mockClear());
 
-  it("publishes a message to a subscribed hook", async () => {
-    const { toast, useToastState } = await freshToast();
-    const { result } = renderHook(() => useToastState());
+describe("toast", () => {
+  it("adds an ordinary toast that dismisses after 2.6s", async () => {
+    const { toast } = await freshToast();
 
-    expect(result.current).toBeNull();
-    act(() => toast("Settings saved"));
-    expect(result.current).toMatchObject({ message: "Settings saved", isError: false });
+    toast("Settings saved");
+
+    expect(add).toHaveBeenCalledWith({
+      title: "Settings saved",
+      type: "info",
+      priority: "low",
+      timeout: 2600,
+    });
   });
 
-  it("hides an ordinary toast after 2.6s and an error after 5s", async () => {
-    const { toast, useToastState } = await freshToast();
-    const { result } = renderHook(() => useToastState());
+  it("adds an error toast announced urgently and held for 5s", async () => {
+    const { toast } = await freshToast();
 
-    act(() => toast("Launching Spellbreak…"));
-    act(() => void vi.advanceTimersByTime(2599));
-    expect(result.current).not.toBeNull();
-    act(() => void vi.advanceTimersByTime(1));
-    expect(result.current).toBeNull();
+    toast("Update failed", true);
 
-    act(() => toast("Update failed", true));
-    act(() => void vi.advanceTimersByTime(2600));
-    expect(result.current).toMatchObject({ isError: true });
-    act(() => void vi.advanceTimersByTime(2400));
-    expect(result.current).toBeNull();
+    expect(add).toHaveBeenCalledWith({
+      title: "Update failed",
+      type: "error",
+      priority: "high",
+      timeout: 5000,
+    });
   });
 
-  it("restarts the timer on a replacement rather than inheriting the old one", async () => {
-    const { toast, useToastState } = await freshToast();
-    const { result } = renderHook(() => useToastState());
+  it("returns the id the manager assigns", async () => {
+    const { toast } = await freshToast();
 
-    act(() => toast("first"));
-    act(() => void vi.advanceTimersByTime(2000));
-    act(() => toast("second"));
-    // The first toast's deadline would land here; the second must survive it.
-    act(() => void vi.advanceTimersByTime(600));
-    expect(result.current).toMatchObject({ message: "second" });
-    act(() => void vi.advanceTimersByTime(2000));
-    expect(result.current).toBeNull();
-  });
-
-  it("gives each toast a new key so an identical message re-animates", async () => {
-    const { toast, useToastState } = await freshToast();
-    const { result } = renderHook(() => useToastState());
-
-    act(() => toast("Mods installed"));
-    const first = result.current!.key;
-    act(() => toast("Mods installed"));
-    expect(result.current!.key).not.toBe(first);
-  });
-
-  it("stops notifying a hook once it unmounts", async () => {
-    const { toast, useToastState } = await freshToast();
-    const { result, unmount } = renderHook(() => useToastState());
-
-    act(() => toast("visible"));
-    unmount();
-    // Nothing to assert on the unmounted hook beyond it not throwing; the
-    // point is that the listener list shed it.
-    expect(() => act(() => toast("after unmount"))).not.toThrow();
-    expect(result.current).toMatchObject({ message: "visible" });
+    expect(toast("Mods installed")).toBe("toast-id");
   });
 });
 
 describe("toastOnce", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
   it("fires the first time only, for the lifetime of the app", async () => {
-    const { toastOnce, useToastState } = await freshToast();
-    const { result } = renderHook(() => useToastState());
+    const { toastOnce } = await freshToast();
 
-    act(() => toastOnce("Update available: v6.0.3"));
-    expect(result.current).toMatchObject({ message: "Update available: v6.0.3" });
+    toastOnce("Update available: v6.0.3");
+    toastOnce("Update available: v6.0.3");
 
-    act(() => void vi.advanceTimersByTime(3000));
-    expect(result.current).toBeNull();
-
-    act(() => toastOnce("Update available: v6.0.3"));
-    expect(result.current).toBeNull();
+    expect(add).toHaveBeenCalledTimes(1);
   });
 
   it("does not latch ordinary toasts", async () => {
-    const { toast, toastOnce, useToastState } = await freshToast();
-    const { result } = renderHook(() => useToastState());
+    const { toast, toastOnce } = await freshToast();
 
-    act(() => toastOnce("once"));
-    act(() => void vi.advanceTimersByTime(3000));
-    act(() => toast("regular"));
-    expect(result.current).toMatchObject({ message: "regular" });
+    toastOnce("once");
+    toast("regular");
+    toast("regular");
+
+    expect(add).toHaveBeenCalledTimes(3);
   });
 });

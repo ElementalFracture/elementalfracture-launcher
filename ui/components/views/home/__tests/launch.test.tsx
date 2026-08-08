@@ -27,7 +27,6 @@ vi.mock("@/generated/bindings", () => ({ commands }));
 vi.mock("@/lib/toast", () => ({
   toast: vi.fn(),
   toastOnce: vi.fn(),
-  useToastState: () => null,
 }));
 
 const Providers = ({ children }: { children: ReactNode }) => (

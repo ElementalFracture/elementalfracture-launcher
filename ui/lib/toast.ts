@@ -1,45 +1,15 @@
-import { useEffect, useState } from "react";
+import { toast as toastManager } from "@/components/ui/toast";
 
-export interface ToastState {
-  message: string;
-  isError: boolean;
-  key: number;
-}
-
-let state: ToastState | null = null;
-let listeners: Array<(s: ToastState | null) => void> = [];
-let hideTimer: ReturnType<typeof setTimeout> | undefined;
-let seq = 0;
-
-function emit() {
-  for (const l of listeners) {
-    l(state);
-  }
-}
+const TIMEOUT = 2600;
+const ERROR_TIMEOUT = 5000;
 
 export function toast(message: string, isError = false) {
-  seq += 1;
-  state = { message, isError, key: seq };
-  emit();
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(
-    () => {
-      state = null;
-      emit();
-    },
-    isError ? 5000 : 2600
-  );
-}
-
-export function useToastState() {
-  const [s, setS] = useState(state);
-  useEffect(() => {
-    listeners.push(setS);
-    return () => {
-      listeners = listeners.filter((l) => l !== setS);
-    };
-  }, []);
-  return s;
+  return toastManager.add({
+    title: message,
+    type: isError ? "error" : "info",
+    priority: isError ? "high" : "low",
+    timeout: isError ? ERROR_TIMEOUT : TIMEOUT,
+  });
 }
 
 let toastOnceDone = false;
