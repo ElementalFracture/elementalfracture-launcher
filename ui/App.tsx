@@ -13,7 +13,7 @@ import { ModsView } from "@/components/views/mods/ModsView";
 import { SettingsView } from "@/components/views/settings/SettingsView";
 import { Wizard } from "@/components/Wizard";
 import { UpdatePops } from "@/components/UpdatePops";
-import { Toast } from "@/components/Toast";
+import { Toaster } from "@/components/ui/toast";
 
 function App() {
   return (
@@ -34,7 +34,7 @@ function App() {
                 </div>
                 <Wizard />
                 <UpdatePops />
-                <Toast />
+                <Toaster />
               </UIProvider>
             </ProgressProvider>
           </FriendsProvider>
