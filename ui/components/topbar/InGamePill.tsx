@@ -2,7 +2,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/shadcn/popover";
 import { useLiveData } from "@/context/LiveDataContext";
 import { InGameIcon } from "@/assets/icons/InGameIcon";
 import {

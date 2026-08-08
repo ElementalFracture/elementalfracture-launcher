@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/shadcn/button";
 import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";

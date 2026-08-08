@@ -12,7 +12,7 @@ import { ModsView } from "@/components/views/mods/ModsView";
 import { SettingsView } from "@/components/views/settings/SettingsView";
 import { Wizard } from "@/components/Wizard";
 import { UpdatePops } from "@/components/UpdatePops";
-import { Toaster } from "@/components/ui/toast";
+import { Toaster } from "@/components/shadcn/toast";
 
 function App() {
   return (

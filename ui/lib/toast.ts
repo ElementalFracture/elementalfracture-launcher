@@ -1,4 +1,4 @@
-import { toast as toastManager } from "@/components/ui/toast";
+import { toast as toastManager } from "@/components/shadcn/toast";
 
 const TIMEOUT = 2600;
 const ERROR_TIMEOUT = 5000;

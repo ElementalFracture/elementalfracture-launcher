@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/shadcn/button";
+import { Dialog, DialogContent } from "@/components/shadcn/dialog";
+import { Input } from "@/components/shadcn/input";
 import { useSettings } from "@/context/SettingsContext";
 import { openLink } from "@/lib/links";
 import { toast } from "@/lib/toast";

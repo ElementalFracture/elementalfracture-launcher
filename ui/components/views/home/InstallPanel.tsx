@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/shadcn/button";
 import { useGame } from "@/context/GameContext";
 import "./InstallPanel.css";
 
