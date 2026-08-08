@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/shadcn/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/shadcn/popover";
 import { AccountModal } from "@/components/modals/AccountModal";
 import { statusText, useFriends } from "@/context/FriendsContext";
 import { useSettings } from "@/context/SettingsContext";

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent } from "@/components/shadcn/card";
+import { Switch } from "@/components/shadcn/switch";
 import { AdvancedWarnModal } from "@/components/modals/AdvancedWarnModal";
 import { InfoPopover } from "@/components/InfoPopover";
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // The lib wrapper only translates our two-argument call into an options object
 // for the Base UI toast manager, so the manager is stubbed and inspected.
 const add = vi.hoisted(() => vi.fn(() => "toast-id"));
-vi.mock("@/components/ui/toast", () => ({ toast: { add } }));
+vi.mock("@/components/shadcn/toast", () => ({ toast: { add } }));
 
 // The toastOnce latch is module state, so the module is re-imported per test.
 async function freshToast() {

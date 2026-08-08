@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/shadcn/button";
+import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import "./Dialog.css";
 
 export function AdvancedWarnModal({
