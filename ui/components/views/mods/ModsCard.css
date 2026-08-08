@@ -1,43 +1,14 @@
-/* ============ Mods card: install status, file list, log ============ */
-
-.file-list {
-  list-style: none;
-  margin-top: 10px;
-}
-.file-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 4px;
-  font-size: 13px;
-  border-bottom: 1px solid #ffffff0a;
-}
-.file-list li:last-child {
-  border-bottom: none;
-}
-.file-list .badge {
-  min-width: 64px;
-  text-align: center;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-.file-list .path {
-  color: var(--ef-muted);
-  font-size: 11px;
-  margin-left: auto;
-}
+/* ============ Mods card: install status and log ============ */
 
 .log {
   margin-top: 12px;
-  padding: 12px;
-  background: #0a0512;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: var(--spacing-popover-y);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   font-size: 12px;
   line-height: 1.6;
-  color: #bfb3da;
+  color: var(--muted-foreground);
   white-space: pre-wrap;
   user-select: text;
   -webkit-user-select: text;
@@ -57,5 +28,5 @@
   font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }

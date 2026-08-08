@@ -1,5 +1,4 @@
 import "./App.css";
-import "./styles.css";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
 import { LiveDataProvider } from "@/context/LiveDataContext";

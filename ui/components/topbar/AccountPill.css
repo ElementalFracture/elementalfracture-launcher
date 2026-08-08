@@ -8,7 +8,7 @@
 .acct-head {
   font-size: 13px;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--primary);
   padding: 2px 2px 8px;
 }
 .friend-self {
@@ -16,7 +16,7 @@
   align-items: center;
   gap: 11px;
   padding: 8px 2px;
-  border-bottom: 1px solid #ffffff12;
+  border-bottom: 1px solid var(--separator);
 }
 .friend-self .avatar {
   width: 36px;
@@ -30,34 +30,29 @@
 }
 .friend-meta strong {
   font-size: 14px;
-  color: var(--text);
 }
 .friend-meta small {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--ef-muted);
+  color: var(--muted-foreground);
 }
 
+/* The "manage account" link is the secondary Button, stretched to the panel
+   width — only the block layout and the tighter type are its own. */
 [data-slot="button"].acct-link {
   display: block;
   width: 100%;
   margin-top: 6px;
   padding: 8px;
   font-size: 12px;
-  font-weight: 600;
-  background: #ffffff0d;
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
   text-align: center;
   transition:
     border-color 0.15s,
     filter 0.15s;
 }
 [data-slot="button"].acct-link:hover {
-  border-color: #d9b45b66;
+  border-color: var(--primary-edge);
   filter: brightness(1.1);
 }

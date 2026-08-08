@@ -15,12 +15,12 @@
   position: relative;
   width: 240px;
   text-align: left;
-  background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
-  border: 1px solid var(--gold);
-  border-radius: 12px;
+  background: linear-gradient(180deg, var(--popover) 0%, var(--card) 100%);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-xl);
   box-shadow:
     0 12px 34px #000c,
-    0 0 22px #d9b45b22;
+    0 0 22px var(--primary-glow);
   padding: 13px 16px 14px;
   cursor: pointer;
   transition:
@@ -30,10 +30,10 @@
 }
 .update-pop:hover {
   transform: translateY(-1px);
-  border-color: var(--gold-bright);
+  border-color: var(--primary-bright);
   box-shadow:
     0 16px 40px #000d,
-    0 0 28px #d9b45b33;
+    0 0 28px var(--primary-tint);
 }
 .update-pop:active {
   transform: translateY(0);
@@ -47,15 +47,15 @@
 }
 
 .update-pop-title {
-  font-family: "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
-  color: var(--gold-bright);
+  color: var(--primary-bright);
   padding-right: 16px;
 }
 .update-pop-sub {
   font-size: 12px;
-  color: var(--ef-muted);
+  color: var(--muted-foreground);
   margin-top: 3px;
 }
 .update-pop-x {
@@ -65,7 +65,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--ef-muted);
+  color: var(--muted-foreground);
   font-size: 17px;
   line-height: 1;
   cursor: pointer;

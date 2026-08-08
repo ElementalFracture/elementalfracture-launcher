@@ -9,8 +9,8 @@
   gap: 6px;
   /* Solid rather than a gradient, so the EF ⇄ Classic recolour can transition
      it — gradient background-images don't animate. */
-  background: var(--bg-2);
-  border-right: 1px solid var(--line);
+  background: var(--muted);
+  border-right: 1px solid var(--border);
 }
 
 #sidebar nav {
@@ -33,7 +33,7 @@
   place-items: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   cursor: pointer;
   transition:
     background 0.15s,
@@ -43,38 +43,22 @@
   width: 21px;
   height: 21px;
   fill: none;
-  color: var(--ef-muted);
+  color: var(--muted-foreground);
   transition: color 0.15s;
 }
 .nav-btn svg.discord-icon {
-  fill: var(--ef-muted);
-}
-.nav-btn .nav-img {
-  width: 21px;
-  height: 21px;
-  object-fit: contain;
-  opacity: 0.55;
-  transition:
-    opacity 0.15s,
-    filter 0.15s;
+  fill: var(--muted-foreground);
 }
 .nav-btn:hover {
-  background: #ffffff0d;
+  background: var(--surface);
 }
 .nav-btn:hover svg {
-  color: var(--text);
-}
-.nav-btn:hover .nav-img {
-  opacity: 0.9;
+  color: var(--foreground);
 }
 .nav-btn.active {
-  background: #d9b45b1a;
-  border-color: #d9b45b40;
+  background: var(--primary-tint);
+  border-color: var(--primary-edge);
 }
 .nav-btn.active svg {
-  color: var(--gold);
-}
-.nav-btn.active .nav-img {
-  opacity: 1;
-  filter: sepia(1) saturate(3) hue-rotate(-15deg) brightness(1.05);
+  color: var(--primary);
 }
