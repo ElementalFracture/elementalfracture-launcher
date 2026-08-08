@@ -25,17 +25,7 @@
   border-color: var(--primary);
 }
 
-/* The attribute selector out-specifies the primitive's own utility classes,
-   which otherwise set the width and background. */
-.info-pop[data-slot="popover-content"] {
-  width: 300px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 14px 40px #000c;
-  padding: var(--spacing-popover-y) var(--spacing-popover-x);
-  z-index: 45;
-  text-align: left;
-}
+/* The panel skin is the shared one in App.css; only the note type is here. */
 .info-pop p {
   font-size: 12px;
   color: var(--muted-foreground);

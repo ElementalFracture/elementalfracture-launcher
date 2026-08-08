@@ -1,8 +1,7 @@
 /* ============ Account pill: the popover shell and its own header ============ */
 
-/* Friend list dropdown — anchored under the account pill, like the in-game
-   breakdown popover. */
-.account-popover-panel {
+/* Friend list dropdown — the shared popover panel, a little narrower. */
+[data-slot="popover-content"].account-popover-panel {
   width: 260px;
 }
 .acct-head {
@@ -48,11 +47,4 @@
   padding: 8px;
   font-size: 12px;
   text-align: center;
-  transition:
-    border-color 0.15s,
-    filter 0.15s;
-}
-[data-slot="button"].acct-link:hover {
-  border-color: var(--primary-edge);
-  filter: brightness(1.1);
 }
