@@ -76,10 +76,6 @@ const routes = {
     if (username === s.me?.username) {
       return { ok: false, error: "cannot_friend_self" };
     }
-    // One name that always 404s, so the error toast is reachable on demand.
-    if (username === "ghost") {
-      return { ok: false, error: "user_not_found" };
-    }
     if (s.outgoing.some((f) => f.username === username)) {
       return { ok: true, state: "exists", username };
     }
@@ -143,6 +139,18 @@ createServer((req, res) => {
       return send({ ok: false, error: "invalid_token" });
     }
     console.log(`${path}${body.username ? ` → ${body.username}` : ""}`);
+
+    /* Names listed in `reject` fail with the code they map to, whichever
+       endpoint they're aimed at — that's how you reach an error path on
+       demand instead of waiting for the real server to have a bad day. */
+    const reject = data().reject ?? {};
+    // hasOwn, or a player called "constructor" would reject on the prototype.
+    const rejection =
+      Object.hasOwn(reject, body.username ?? "") && reject[body.username];
+    if (rejection) {
+      console.log(`  rejected: ${rejection}`);
+      return send({ ok: false, error: rejection });
+    }
     send(route(data(), body));
   });
 }).listen(PORT, () => {

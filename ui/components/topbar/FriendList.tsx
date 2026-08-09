@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -51,12 +51,16 @@ function FriendRow({
   status,
   pending,
   actions,
+  error,
+  onError,
   onConfirm,
 }: {
   username: string;
   status?: FriendStatus;
   pending?: boolean;
   actions: RowAction[];
+  error?: string;
+  onError: (username: string, message: string | null) => void;
   onConfirm?: (username: string) => void;
 }) {
   const { runFriendAction } = useFriends();
@@ -64,13 +68,20 @@ function FriendRow({
   return (
     <div className="friend-row">
       <span className="status-dot" data-status={status} />
-      <div className="friend-row-meta">
-        <strong>{username}</strong>
-        {/* TODO verify if status is correct.
+      <div className="friend-row-main">
+        <div className="friend-row-meta">
+          <strong>{username}</strong>
+          {/* TODO verify if status is correct.
           I see online player in friend list but not in Online container
         */}
-        {statusText === "in game" && <small>{statusText}</small>}
-        {pending && <small className="friend-pending">requested</small>}
+          {statusText === "in game" && <small>{statusText}</small>}
+          {pending && <small className="friend-pending">requested</small>}
+        </div>
+        {error && (
+          <p className="friend-row-error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
       <div className="friend-row-actions">
         {actions.map((a) => (
@@ -79,11 +90,14 @@ function FriendRow({
             className={a.kind}
             title={a.title}
             aria-label={`${a.title}: ${username}`}
-            onClick={() =>
-              a.confirm && onConfirm
-                ? onConfirm(username)
-                : runFriendAction(a.action, username)
-            }
+            onClick={async () => {
+              if (a.confirm && onConfirm) {
+                onConfirm(username);
+                return;
+              }
+              // Null on success, which clears whatever was there before.
+              onError(username, await runFriendAction(a.action, username));
+            }}
           >
             {a.label}
           </button>
@@ -98,14 +112,35 @@ export function FriendList() {
   const { friends, runFriendAction } = useFriends();
   const [addName, setAddName] = useState("");
   const [userToRemove, setUserToRemove] = useState<string | null>(null);
+  const [addFriendError, setAddFriendError] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
-  const onAdd = () => {
+  const setRowError = useCallback(
+    (username: string, message: string | null) => {
+      setRowErrors((prev) => {
+        const next = { ...prev };
+        if (message) {
+          next[username] = message;
+        } else {
+          delete next[username];
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const onAdd = async () => {
     const name = addName;
     if (!name) {
       return;
     }
-    setAddName("");
-    runFriendAction("add", name);
+    // Nothing to say when it works: the request shows up in the list below.
+    const error = await runFriendAction("add", name);
+    setAddFriendError(error);
+    if (!error) {
+      setAddName("");
+    }
   };
 
   const incoming = friends?.incoming ?? [];
@@ -128,13 +163,23 @@ export function FriendList() {
           autoComplete="off"
           placeholder="Add a friend by username"
           value={addName}
-          onChange={(e) => setAddName(e.target.value)}
+          aria-invalid={addFriendError !== null}
+          aria-describedby={addFriendError ? "friend-add-error" : undefined}
+          onChange={(e) => {
+            setAddName(e.target.value);
+            setAddFriendError(null);
+          }}
           onKeyDown={(e) => e.key === "Enter" && onAdd()}
         />
         <Button variant="secondary" title="Send friend request" onClick={onAdd}>
           Add
         </Button>
       </div>
+      {addFriendError && (
+        <p className="friend-add-error" id="friend-add-error" role="alert">
+          {addFriendError}
+        </p>
+      )}
 
       {!friends ? (
         <p className="friend-empty">Loading…</p>
@@ -162,6 +207,8 @@ export function FriendList() {
                     username={f.username}
                     status={f.status ?? "offline"}
                     actions={FRIEND_ACTIONS}
+                    error={rowErrors[f.username]}
+                    onError={setRowError}
                     onConfirm={setUserToRemove}
                   />
                 ))
@@ -178,6 +225,8 @@ export function FriendList() {
                     key={r.username}
                     username={r.username}
                     actions={INCOMING_ACTIONS}
+                    error={rowErrors[r.username]}
+                    onError={setRowError}
                   />
                 ))}
                 {outgoing.map((o) => (
@@ -186,6 +235,8 @@ export function FriendList() {
                     username={o.username}
                     pending
                     actions={OUTGOING_ACTIONS}
+                    error={rowErrors[o.username]}
+                    onError={setRowError}
                   />
                 ))}
               </AccordionContent>
@@ -204,6 +255,8 @@ export function FriendList() {
                     username={f.username}
                     status="offline"
                     actions={FRIEND_ACTIONS}
+                    error={rowErrors[f.username]}
+                    onError={setRowError}
                     onConfirm={setUserToRemove}
                   />
                 ))
@@ -214,7 +267,7 @@ export function FriendList() {
       )}
 
       {/* One dialog for the whole list rather than one per row — only ever a
-          single pending removal, named by `removing`. */}
+          single pending removal, named by `userToRemove`. */}
       <Dialog
         open={userToRemove !== null}
         onOpenChange={(next) => !next && setUserToRemove(null)}
@@ -231,9 +284,10 @@ export function FriendList() {
             </p>
             <div className="wizard-actions">
               <Button
-                onClick={() => {
-                  runFriendAction("remove", userToRemove ?? "");
+                onClick={async () => {
+                  const name = userToRemove ?? "";
                   setUserToRemove(null);
+                  setRowError(name, await runFriendAction("remove", name));
                 }}
               >
                 Remove

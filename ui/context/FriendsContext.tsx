@@ -8,7 +8,6 @@ import {
 } from "react";
 import * as rust from "@/lib/rust";
 import type { FriendStatus, FriendsData } from "@/lib/rust";
-import { toast } from "@/lib/toast";
 import { useSettings } from "@/context/SettingsContext";
 
 /** Error codes the sidecar answers with, in the wording the popover shows. */
@@ -46,7 +45,12 @@ interface FriendsContextValue {
   /** Null until the first successful fetch — the popover shows "Loading…". */
   friends: FriendsData | null;
   refreshFriends: () => Promise<void>;
-  runFriendAction: (action: FriendAction, username: string) => Promise<void>;
+  /** Resolves to null when the action went through, or to the wording to put
+   *  in front of the player when it didn't. */
+  runFriendAction: (
+    action: FriendAction,
+    username: string
+  ) => Promise<string | null>;
 }
 
 const FriendsContext = createContext<FriendsContextValue | null>(null);
@@ -74,8 +78,10 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
+  /* Nothing is announced from here. Every failure goes back to the caller as
+     wording to render. */
   const runFriendAction = useCallback(
-    async (action: FriendAction, username: string) => {
+    async (action: FriendAction, username: string): Promise<string | null> => {
       try {
         const res =
           action === "accept"
@@ -84,22 +90,12 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
               ? await rust.friendAdd(username)
               : await rust.friendRemove(username);
         if (!res?.ok) {
-          toast(friendError(res?.error), true);
-          return;
-        }
-        if (action === "add") {
-          const who = res.username ?? username;
-          toast(
-            res.state === "accepted"
-              ? `You're now friends with ${who}.`
-              : res.state === "exists"
-                ? `Already sent, waiting on ${who}.`
-                : `Friend request sent to ${who}.`
-          );
+          return friendError(res?.error);
         }
         await refreshFriends();
+        return null;
       } catch (e) {
-        toast(String(e), true);
+        return String(e);
       }
     },
     [refreshFriends]

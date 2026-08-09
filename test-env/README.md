@@ -36,6 +36,7 @@ immediately. No restart.
 | `friends`        | Accepted friends — the Friends / Offline sections |
 | `incoming`       | Requests waiting on you, with accept + decline    |
 | `outgoing`       | Requests you've sent, with cancel                 |
+| `reject`         | Names that always fail, and how (see below)       |
 | `players.online` | The online count on the home view                 |
 | `events`         | The events list on the home view                  |
 
@@ -52,11 +53,33 @@ Emptying a list is the way to see each empty state; emptying `friends`,
 would, so the list reacts as you click. Those edits last until the process
 exits — or until you save `data.json`, which replaces them wholesale.
 
-Two names behave specially, so the error toasts are reachable on demand:
-adding **`ghost`** answers `user_not_found`, and adding **yourself** (the
-`me.username` value) answers `cannot_friend_self`. Adding someone already in
-`incoming` auto-accepts, as the real one does. The error codes it returns are
-the ones `FRIEND_ERRORS` in `ui/context/FriendsContext.tsx` has wording for.
+Adding someone already in `incoming` auto-accepts, as the real one does, and
+adding **yourself** (the `me.username` value) answers `cannot_friend_self`.
+
+## Rejecting names
+
+`reject` maps a username to the error code it always comes back with, so every
+failure path is reachable on demand rather than when the real server happens to
+have a bad day:
+
+```json
+"reject": {
+  "ghost": "user_not_found",
+}
+```
+
+It applies to whichever endpoint the name is aimed at, not just add — the
+`Dunmarrow` line above is a friend already in the list, so removing them fails
+too, which is how you reach the error toast on a row action. Matching is exact,
+so case matters.
+
+The codes `FRIEND_ERRORS` in `ui/context/FriendsContext.tsx` has wording for
+are `user_not_found`, `cannot_friend_self`, `invalid_token`,
+`username_required`, and `no_pending_request`. Anything else falls back to
+"Friend server unavailable, try again." — which is the more interesting case,
+since that's what a player sees when the sidecar grows a code the launcher
+hasn't learned yet. `blocked_by_user` above stands in for one of those: a
+refusal the server means, and the launcher can only report vaguely.
 
 ## What it doesn't do
 
