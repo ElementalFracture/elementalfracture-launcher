@@ -15,6 +15,7 @@
     "lint": "npm run lint-js && npm run lint-tauri",
     "format": "eslint ui --fix && prettier --write \"ui/**/*.{ts,tsx,css}\" \"*.{js,ts,json}\"",
     "format-check": "prettier --check \"ui/**/*.{ts,tsx,css}\" \"*.{js,ts,json}\"",
+    "test-env": "node test-env/server.mjs",
     "tauri-dev": "tauri dev",
     "build-release": "npm run tauri build"
   },
