@@ -15,9 +15,14 @@ export function AuthTokenCard() {
   const [tokenBusy, setTokenBusy] = useState(false);
   const [tokenLine, setTokenLine] = useState<string | null>(null);
 
-  const signedInLine = settings?.auth_token?.trim()
-    ? `Signed in as ${settings.username?.trim() || "you"}.`
-    : "No token set yet.";
+  /* A name only survives a lookup that succeeded, so a token with none behind
+     it was stored but never accepted — saying "signed in" there would be a
+     lie the launch would then quietly disagree with. */
+  const signedInLine = settings?.username?.trim()
+    ? `Signed in as ${settings.username.trim()}.`
+    : settings?.auth_token?.trim()
+      ? "Token saved, but it hasn’t been verified."
+      : "No token set yet.";
 
   /* Two-step entry: the token is write-only once saved, so a typo would
      otherwise only surface as a failed launch. */

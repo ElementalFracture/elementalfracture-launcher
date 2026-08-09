@@ -5,7 +5,6 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
-  DrawerFooter,
   DrawerHeader,
   DrawerTrigger,
 } from "@/components/shadcn/drawer";
@@ -17,9 +16,9 @@ import { FriendList } from "./FriendList";
 import "./AccountPill.css";
 
 /**
- * With a token set it opens the friend list in a drawer off
- * the right edge; without one it goes straight to the token modal, since there
- * is no account to show yet.
+ * With a verified account it opens the friend list in a drawer off the right
+ * edge; otherwise it goes straight to the token modal, since there is no
+ * account to show yet.
  */
 export function AccountPill() {
   const { settings } = useSettings();
@@ -27,8 +26,12 @@ export function AccountPill() {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
 
-  const registered = Boolean(settings?.auth_token?.trim());
   const name = settings?.username?.trim();
+  /* A stored token is not an account: apply_token keeps the token even when the
+     portal rejects it, so play still works offline. The name is what it clears
+     up front and only writes back on success */
+  const hasToken = Boolean(settings?.auth_token?.trim());
+  const registered = Boolean(name);
   const role = settings?.is_dev
     ? "Developer"
     : settings?.is_staff
@@ -67,6 +70,7 @@ export function AccountPill() {
                 <span className="avatar">{selfInitials}</span>
                 <div className="friend-meta">
                   <strong>{selfName}</strong>
+                  {role && <small>{role}</small>}
                 </div>
               </div>
               <DrawerClose
@@ -81,19 +85,6 @@ export function AccountPill() {
               <Separator />
               <FriendList />
             </div>
-
-            <DrawerFooter>
-              <Button
-                variant="secondary"
-                className="acct-link"
-                onClick={() => {
-                  setAccountDrawerOpen(false);
-                  setAccountModalOpen(true);
-                }}
-              >
-                Change token
-              </Button>
-            </DrawerFooter>
           </DrawerContent>
         </Drawer>
       ) : (
@@ -105,7 +96,7 @@ export function AccountPill() {
           <span className="avatar">{initials}</span>
           <div className="pill-text">
             <strong>Guest</strong>
-            <small>No token set</small>
+            <small>{hasToken ? "Token not verified" : "No token set"}</small>
           </div>
         </button>
       )}
