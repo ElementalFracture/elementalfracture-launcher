@@ -11,6 +11,11 @@
   ],
   "incoming": [{ "username": "Halvard" }, { "username": "Ilsabet" }],
   "outgoing": [{ "username": "Jorunn" }],
+  "reject": {
+    "ghost": "user_not_found",
+    "blocked": "blocked_by_user",
+    "Dunmarrow": "user_not_found"
+  },
   "players": { "online": 42 },
   "events": [
     {

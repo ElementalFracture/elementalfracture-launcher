@@ -113,20 +113,16 @@ describe("friend actions", () => {
     expect(commands.friendsList).toHaveBeenCalled();
   });
 
-  it("says a request was sent, and says so differently when it was reciprocal", async () => {
+  it("says nothing at all when an add goes through", async () => {
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
 
+    let error: string | null = "unset";
     await act(async () => {
-      await result.current.runFriendAction("add", "Breadman");
+      error = await result.current.runFriendAction("add", "Breadman");
     });
-    expect(toast).toHaveBeenLastCalledWith("Friend request sent to Breadman.");
-
-    commands.friendAdd.mockResolvedValue(ok({ ok: true, state: "accepted", username: "Breadman" }));
-    await act(async () => {
-      await result.current.runFriendAction("add", "Breadman");
-    });
-    expect(toast).toHaveBeenLastCalledWith("You're now friends with Breadman.");
+    expect(error).toBeNull();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it("turns a server error code into wording a player can act on", async () => {
@@ -134,10 +130,40 @@ describe("friend actions", () => {
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
 
+    let error: string | null = null;
     await act(async () => {
-      await result.current.runFriendAction("add", "Nobody");
+      error = await result.current.runFriendAction("add", "Nobody");
     });
-    expect(toast).toHaveBeenLastCalledWith("No player with that username.", true);
+    expect(error).toBe("No player with that username.");
+  });
+
+  it("hands every failure back rather than toasting it — the UI renders it in place", async () => {
+    commands.friendAdd.mockResolvedValue(ok({ ok: false, error: "user_not_found" }));
+    commands.friendRemove.mockResolvedValue(ok({ ok: false, error: "user_not_found" }));
+    const { result } = renderFriends();
+    await waitFor(() => expect(result.current.friends).not.toBeNull());
+
+    let addError: string | null = null;
+    let removeError: string | null = null;
+    await act(async () => {
+      addError = await result.current.runFriendAction("add", "Nobody");
+      removeError = await result.current.runFriendAction("remove", "Nobody");
+    });
+    expect(addError).toBe("No player with that username.");
+    expect(removeError).toBe("No player with that username.");
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("reports an unreachable server as the error, rather than throwing", async () => {
+    commands.friendRemove.mockRejectedValue(new Error("connection refused"));
+    const { result } = renderFriends();
+    await waitFor(() => expect(result.current.friends).not.toBeNull());
+
+    let error: string | null = null;
+    await act(async () => {
+      error = await result.current.runFriendAction("remove", "Doobs");
+    });
+    expect(error).toContain("connection refused");
   });
 
   it("falls back to a generic message for an error code it does not know", async () => {
@@ -145,10 +171,11 @@ describe("friend actions", () => {
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
 
+    let error: string | null = null;
     await act(async () => {
-      await result.current.runFriendAction("add", "Breadman");
+      error = await result.current.runFriendAction("add", "Breadman");
     });
-    expect(toast).toHaveBeenLastCalledWith("Friend server unavailable, try again.", true);
+    expect(error).toBe("Friend server unavailable, try again.");
   });
 
   it("leaves the graph alone when the action fails", async () => {

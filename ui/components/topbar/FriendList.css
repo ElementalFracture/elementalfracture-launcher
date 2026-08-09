@@ -18,6 +18,13 @@
   font-size: 12px;
 }
 
+.friend-add-error {
+  margin: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--destructive);
+}
+
 .friend-empty {
   font-size: 12px;
   color: var(--muted-foreground);
@@ -50,12 +57,21 @@
 .friend-row .status-dot {
   flex: none;
 }
+
+.friend-row-main {
+  flex: 1;
+  min-width: 0;
+}
 .friend-row-meta {
   display: flex;
   align-items: baseline;
   gap: 7px;
-  flex: 1;
   min-width: 0;
+}
+.friend-row-error {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--destructive);
 }
 .friend-row-meta strong {
   font-size: 13px;
