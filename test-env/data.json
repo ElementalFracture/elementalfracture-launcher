@@ -16,6 +16,15 @@
     "blocked": "blocked_by_user",
     "Dunmarrow": "user_not_found"
   },
+  "auth": {
+    "accounts": {
+      "dev": { "username": "Lytion", "is_dev": true },
+      "staff": { "username": "Marla", "is_staff": true },
+      "player": { "username": "Aurelith" },
+      "nameless": {}
+    },
+    "stall": ["stall"]
+  },
   "players": { "online": 42 },
   "events": [
     {

@@ -47,6 +47,28 @@ function data() {
   return state;
 }
 
+/* Returned by a route that should never answer, so the launcher's own 6s
+   client timeout is what ends the call. `send` is simply never reached and the
+   socket stays open until the request gives up. */
+const STALL = Symbol("stall");
+
+/* Who the sidecar takes you for. The real one resolves this from the token, so
+   signing in as one account and finding another in the drawer would be a
+   launcher bug — here it was just the fixture answering `me` from data.json no
+   matter who asked. Resolving it through the same account table /auth uses
+   keeps the pill and the drawer's account row agreeing.
+
+   Tokens /auth doesn't know still fall back to `me`, since the friend routes
+   deliberately accept any non-empty token — that's what keeps them usable
+   without going through token entry first. `status` stays data.json's, as
+   there's nowhere else for it to come from. */
+function self(s, token) {
+  const accounts = s.auth?.accounts ?? {};
+  // hasOwn, or a token of "constructor" would resolve on the prototype.
+  const account = Object.hasOwn(accounts, token) ? accounts[token] : null;
+  return account?.username ? { ...s.me, username: account.username } : s.me;
+}
+
 /** Drop a username from every list. Returns whether it was anywhere. */
 function drop(s, name) {
   const has = (list) => list.some((f) => f.username === name);
@@ -61,19 +83,45 @@ function drop(s, name) {
    {ok:false, error:"<code>"}, where the codes are the ones FRIEND_ERRORS in
    ui/context/FriendsContext.tsx has wording for. */
 const routes = {
-  "/friends": (s) => ({
+  /* Token validation, as apply_token in src-tauri/src/remote.rs expects it:
+     POST {token} → {ok, username, is_staff, is_dev}. It counts a token as
+     verified only when `ok` is true AND `username` is a string, so the two
+     halves are worth failing separately — hence a `nameless` account that
+     answers ok with no name. The token is stored either way, before the call
+     is even made, so it's the name coming back that decides whether the app
+     treats you as signed in. */
+  "/auth": (s, { token }) => {
+    const auth = s.auth ?? {};
+    if ((auth.stall ?? []).includes(token)) {
+      console.log("  stalling — no response, expect the 6s client timeout");
+      return STALL;
+    }
+    // hasOwn, or a token of "constructor" would resolve on the prototype.
+    const known = Object.hasOwn(auth.accounts ?? {}, token);
+    if (!known) {
+      console.log("  unknown token");
+      return { ok: false, error: "invalid_token" };
+    }
+    const account = auth.accounts[token];
+    console.log(`  → ${account.username ?? "(no username)"}`);
+    return { ok: true, ...account };
+  },
+
+  "/friends": (s, { token }) => ({
     ok: true,
-    me: s.me,
+    me: self(s, token),
     friends: s.friends,
     incoming: s.incoming,
     outgoing: s.outgoing,
   }),
 
-  "/friends/add": (s, { username }) => {
+  "/friends/add": (s, { username, token }) => {
     if (!username) {
       return { ok: false, error: "username_required" };
     }
-    if (username === s.me?.username) {
+    // Against who the token says you are, not data.json's `me` — otherwise
+    // signing in as one account refuses the wrong name here.
+    if (username === self(s, token)?.username) {
       return { ok: false, error: "cannot_friend_self" };
     }
     if (s.outgoing.some((f) => f.username === username)) {
@@ -151,9 +199,14 @@ createServer((req, res) => {
       console.log(`  rejected: ${rejection}`);
       return send({ ok: false, error: rejection });
     }
-    send(route(data(), body));
+    const answer = route(data(), body);
+    if (answer === STALL) {
+      return;
+    }
+    send(answer);
   });
 }).listen(PORT, () => {
   console.log(`test env on http://localhost:${PORT}`);
   console.log(`players URL → http://localhost:${PORT}/players`);
+  console.log(`auth URL    → http://localhost:${PORT}/auth`);
 });

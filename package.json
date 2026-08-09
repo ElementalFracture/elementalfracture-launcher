@@ -16,6 +16,8 @@
     "format": "eslint ui --fix && prettier --write \"ui/**/*.{ts,tsx,css}\" \"*.{js,ts,json}\"",
     "format-check": "prettier --check \"ui/**/*.{ts,tsx,css}\" \"*.{js,ts,json}\"",
     "test-env": "node test-env/server.mjs",
+    "dev-env": "./test-env/dev-profile.sh",
+    "reset-dev-env": "./test-env/dev-profile.sh fresh",
     "tauri-dev": "tauri dev",
     "build-release": "npm run tauri build"
   },

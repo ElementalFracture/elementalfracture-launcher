@@ -65,6 +65,42 @@ Stored as `settings.json` in the platform config dir:
 Key fields: `game_path`, `launch_command` (Linux wrapper), `auth_url`,
 `players_url`, `cdn_base`, `auth_token`, `username`, `onboarded`.
 
+`auth_url` and `players_url` default to the local test env in debug builds and
+to `play.elefrac.com` in release ones (`portal_base` in `settings.rs`), so
+`tauri dev` talks to the fixture without configuring anything. Both stay
+editable under Settings → Advanced if you want a dev build aimed at production.
+`play_base` and `cdn_base` are live in both — there's no fixture for downloads
+or the update feed.
+
+#### Dev profile
+
+Debug builds read and write a `dev/` subdir instead
+(`~/.config/com.elefrac.launcher/dev/settings.json`), so `tauri dev` never
+overwrites the settings — or the token — of the launcher you actually play
+with. The split is in `config_dir` in `settings.rs`; everything stored in the
+config dir follows it, which today is `settings.json` and the
+`launcher_version.txt` update marker.
+
+It also makes the states the app has no way back to safe to reach, since
+nothing clears a token or un-onboards: wreck the dev profile freely.
+`test-env/dev-profile.sh` seeds it for the two that are awkward by hand:
+
+```sh
+test-env/dev-profile.sh signed-out   # your real settings, minus the token
+test-env/dev-profile.sh fresh        # empty profile: the onboarding wizard
+test-env/dev-profile.sh keep         # leave it as-is, just run
+```
+
+`signed-out` copies your real `settings.json` with `auth_token` / `username` /
+`is_staff` / `is_dev` blanked, so game path, wrapper and players URL carry over
+and only the login differs — no re-onboarding to get to the Guest pill. The
+real profile is only ever read from. Linux only; Windows takes the config dir
+from `%APPDATA%`.
+
+To sign back in, run `npm run test-env` and use one of its tokens — a debug
+build already points at it, and it serves `/auth` from a token-to-account table.
+See `test-env/README.md`.
+
 ### Authentication handoff
 
 The token is entered once in the launcher and validated over HTTPS

@@ -64,8 +64,12 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
 
     let mut s = settings::load(&app);
     s.auth_token = token.clone();
-    // A new token means an as-yet-unverified identity — clear any stale role
-    // flags so a failed lookup can't leave an old staff/dev badge showing.
+    // A new token means an as-yet-unverified identity — clear the name and role
+    // flags so a failed lookup can't leave the previous account's badge, or its
+    // name, showing. Only the success path below fills them back in, which is
+    // what makes a non-empty `username` mean "this token was accepted": the
+    // token itself is stored either way, so it can't answer that on its own.
+    s.username.clear();
     s.is_staff = false;
     s.is_dev = false;
     settings::store(&app, &s)?;

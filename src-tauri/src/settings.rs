@@ -39,6 +39,23 @@ pub struct Settings {
     pub close_on_launch: bool,
 }
 
+/// Base the account endpoints hang off. Debug builds aim at the local test env
+/// (`npm run test-env`), which serves `/auth`, `/players` and the friend routes,
+/// so a fresh dev profile talks to the fixture without anyone hand-editing
+/// Settings → Advanced. Both are overridable there and the override sticks —
+/// this only decides where a profile starts.
+///
+/// `play_base` and `cdn_base` deliberately stay live even in debug: the test env
+/// has no downloads, patch notes or update feed to serve, and 404s from it would
+/// be less useful than the real thing.
+fn portal_base() -> &'static str {
+    if cfg!(debug_assertions) {
+        "http://localhost:8787"
+    } else {
+        "https://play.elefrac.com"
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -50,8 +67,8 @@ impl Default for Settings {
             wine_prefix: String::new(),
             play_base: "https://play.elefrac.com".into(),
             cdn_base: "https://cdn.elefrac.com".into(),
-            auth_url: "https://play.elefrac.com/auth".into(),
-            players_url: "https://play.elefrac.com/players".into(),
+            auth_url: format!("{}/auth", portal_base()),
+            players_url: format!("{}/players", portal_base()),
             username: String::new(),
             is_staff: false,
             is_dev: false,
@@ -64,10 +81,17 @@ impl Default for Settings {
 }
 
 pub fn config_dir(app: &tauri::AppHandle) -> PathBuf {
-    let dir = app
+    let mut dir = app
         .path()
         .app_config_dir()
         .expect("no app config dir available");
+    // Debug builds get their own profile under the same app dir, so `tauri dev`
+    // can't overwrite the settings — and the token — of the launcher you
+    // actually play with. It also makes states the app has no way back to
+    // (signed out, pre-onboarding) safe to reach: wreck the dev profile freely.
+    if cfg!(debug_assertions) {
+        dir.push("dev");
+    }
     let _ = fs::create_dir_all(&dir);
     dir
 }
@@ -170,6 +194,54 @@ fn host_open(url: &str) -> bool {
 #[cfg(not(target_os = "linux"))]
 fn host_open(_url: &str) -> bool {
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Which branch this checks depends on the profile it's built under —
+    /// `cargo test` is a debug build, `cargo test --release` isn't — so it
+    /// pins both. The dev half is the one a "tidy up the defaults" edit would
+    /// quietly undo; the release half is the one that must never ship pointing
+    /// at localhost.
+    #[test]
+    fn account_defaults_follow_the_build_profile() {
+        let s = Settings::default();
+        if cfg!(debug_assertions) {
+            assert_eq!(s.auth_url, "http://localhost:8787/auth");
+            assert_eq!(s.players_url, "http://localhost:8787/players");
+        } else {
+            assert_eq!(s.auth_url, "https://play.elefrac.com/auth");
+            assert_eq!(s.players_url, "https://play.elefrac.com/players");
+        }
+        // Downloads and the update feed have no fixture, so they stay live
+        // either way.
+        assert_eq!(s.play_base, "https://play.elefrac.com");
+        assert_eq!(s.cdn_base, "https://cdn.elefrac.com");
+    }
+
+    /// `signed-out` in test-env/dev-profile.sh seeds a profile by *omitting*
+    /// the URL keys rather than writing them, which only lands on the test env
+    /// because the struct carries `#[serde(default)]`.
+    #[test]
+    fn omitted_keys_fall_back_to_defaults() {
+        let json = r#"{"game_path":"/games/ef","onboarded":true}"#;
+        let s: Settings = serde_json::from_str(json).unwrap();
+        assert_eq!(s.game_path, "/games/ef");
+        assert!(s.onboarded);
+        assert_eq!(s.auth_url, Settings::default().auth_url);
+        assert_eq!(s.players_url, Settings::default().players_url);
+        assert_eq!(s.auth_token, "");
+    }
+
+    /// The in-game server host rides on the auth URL, so pointing that at the
+    /// test env moves the host too — localhost, here.
+    #[test]
+    fn game_host_follows_the_auth_url() {
+        assert_eq!(game_host("https://play.elefrac.com/auth"), "play.elefrac.com");
+        assert_eq!(game_host("http://localhost:8787/auth"), "localhost");
+    }
 }
 
 #[tauri::command]

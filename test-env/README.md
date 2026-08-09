@@ -2,8 +2,8 @@
 
 A local backend to run the launcher against, so you can drive the parts of the
 app that normally need the live services — and put them in states the live ones
-won't give you on demand. Right now that means managing the friend graph; the
-plan is for update flows and the rest to follow.
+won't give you on demand. Right now that means the friend graph and token
+validation; the plan is for update flows and the rest to follow.
 
 It serves the endpoints `src-tauri/src/remote.rs` calls, so nothing in the app
 is mocked or bypassed — the Tauri command, the HTTP call, `FriendsContext`, and
@@ -16,13 +16,36 @@ npm run test-env          # listens on 8787
 PORT=9000 npm run test-env
 ```
 
-Then point the launcher at it: **Settings → players URL** →
-`http://localhost:8787/players`. `sidecar_base()` in `remote.rs` strips the
-trailing `/players` to get the base the friend endpoints hang off.
+Debug builds already point here — `portal_base()` in `src-tauri/src/settings.rs`
+defaults the two account endpoints at this port, so `npm run tauri-dev` talks to
+the fixture with nothing to configure:
 
-Any non-empty account token works — the stub only checks that one is set, so
-whatever you already have saved is fine. Put the real URL back
-(`https://play.elefrac.com/players`) when you're done.
+| Setting     | Debug default                   | Release default                    |
+| ----------- | ------------------------------- | ---------------------------------- |
+| players URL | `http://localhost:8787/players` | `https://play.elefrac.com/players` |
+| auth URL    | `http://localhost:8787/auth`    | `https://play.elefrac.com/auth`    |
+
+`sidecar_base()` in `remote.rs` strips the trailing `/players` to get the base
+the friend endpoints hang off. The auth URL is used as-is.
+
+That's only where a profile _starts_. Both stay editable under **Settings →
+Advanced** and the change sticks, so a dev build can be aimed at production when
+that's what you want to test — and on a non-default `PORT` you'll have to, since
+the default hardcodes 8787. The flip side: a debug build with no test env
+running fails every account and friend call, which is its own state worth seeing
+but surprising the first time.
+
+The downloads and update feed (`play_base`, `cdn_base`) stay live even in debug.
+There's no fixture for them yet, and 404s from this server would tell you less
+than the real thing.
+
+The friend endpoints take any non-empty token — they only check that one is
+set, so whatever you already have saved is fine. `/auth` is the strict one, and
+it's the point of the next section.
+
+Note that the in-game server host is _derived_ from the auth URL
+(`game_host()` in `settings.rs`), so on a debug build that host is `localhost`.
+Fine for driving the UI, wrong for actually launching the game.
 
 ## Changing what it serves
 
@@ -30,15 +53,16 @@ Edit `data.json`. It's re-read whenever it changes, so a save shows up on the
 next request — the drawer polls every 60s, and reopening it refreshes
 immediately. No restart.
 
-| Field            | What it feeds                                     |
-| ---------------- | ------------------------------------------------- |
-| `me`             | The account row at the top of the drawer          |
-| `friends`        | Accepted friends — the Friends / Offline sections |
-| `incoming`       | Requests waiting on you, with accept + decline    |
-| `outgoing`       | Requests you've sent, with cancel                 |
-| `reject`         | Names that always fail, and how (see below)       |
-| `players.online` | The online count on the home view                 |
-| `events`         | The events list on the home view                  |
+| Field            | What it feeds                                                    |
+| ---------------- | ---------------------------------------------------------------- |
+| `me`             | Your status, and the account row for tokens `/auth` doesn't know |
+| `friends`        | Accepted friends — the Friends / Offline sections                |
+| `incoming`       | Requests waiting on you, with accept + decline                   |
+| `outgoing`       | Requests you've sent, with cancel                                |
+| `reject`         | Names that always fail, and how (see below)                      |
+| `auth`           | Which tokens validate, and as whom (see below)                   |
+| `players.online` | The online count on the home view                                |
+| `events`         | The events list on the home view                                 |
 
 `status` is `"in_game"`, `"online"`, or `"offline"` — it decides which section a
 friend lands in (in-game sorts above online). Pending requests carry no status.
@@ -47,6 +71,56 @@ Entries in `incoming` / `outgoing` are just `{ "username": "..." }`.
 Emptying a list is the way to see each empty state; emptying `friends`,
 `incoming`, and `outgoing` together gives the "No friends yet" case.
 
+## Token validation
+
+`apply_token` in `remote.rs` POSTs `{"token"}` to the auth URL and expects
+`{"ok", "username", "is_staff", "is_dev"}` back. It treats a token as verified
+only when `ok` is true **and** `username` is a string; anything else is a
+warning the UI shows as an error toast. Each token in `auth.accounts` is
+whatever you say it is:
+
+```json
+"auth": {
+  "accounts": {
+    "dev": { "username": "Lytion", "is_dev": true },
+    "staff": { "username": "Marla", "is_staff": true },
+    "player": { "username": "Aurelith" },
+    "nameless": {}
+  },
+  "stall": ["stall"]
+}
+```
+
+Paste the key — `dev`, `staff`, `player` — into the token field. Between them
+these reach every branch of the three places that call `applyToken`
+(`AccountModal`, `AuthTokenCard`, and the onboarding `Wizard`):
+
+| Token           | What comes back         | What you see                                             |
+| --------------- | ----------------------- | -------------------------------------------------------- |
+| `dev`           | ok, with `is_dev`       | "Welcome, Lytion (dev)!" — and the Developer subheading  |
+| `staff`         | ok, with `is_staff`     | "Welcome, Marla (staff)!" — the Staff subheading         |
+| `player`        | ok, no flags            | "Welcome, Aurelith!", no subheading on the pill          |
+| `nameless`      | `{"ok": true}`, no name | "doesn't recognize it" — the `username` half failing     |
+| _anything else_ | `{"ok": false}`         | "doesn't recognize it" — the `ok` half failing           |
+| `stall`         | no response at all      | "account lookup failed" once the 6s client timeout fires |
+
+Whichever you sign in with is who the friend endpoints then take you for: `me`
+is resolved through this same table, so the drawer's account row agrees with the
+pill and `cannot_friend_self` refuses the right name. A token `/auth` doesn't
+know falls back to `me` from `data.json`, since the friend routes accept any
+non-empty one.
+
+Two behaviours worth knowing while you poke at this. The token is stored
+**before** the lookup and kept even when it fails — deliberate, so play still
+works when the portal is unreachable. What a failed lookup does clear is the
+name and the role flags, so the previous account can't leave its badge or its
+name behind. That's also what the UI reads: a stored token with no name behind
+it is not an account, so the pill says "Token not verified" and the friend
+drawer stays shut rather than filling with `invalid_token` errors.
+
+Stopping the server entirely reaches the same place as `stall`, but takes the
+friend endpoints down with it; `stall` fails only the auth call.
+
 ## What the buttons do
 
 `add` / `accept` / `remove` mutate the in-memory copy, the way a real server
@@ -54,7 +128,8 @@ would, so the list reacts as you click. Those edits last until the process
 exits — or until you save `data.json`, which replaces them wholesale.
 
 Adding someone already in `incoming` auto-accepts, as the real one does, and
-adding **yourself** (the `me.username` value) answers `cannot_friend_self`.
+adding **yourself** — whoever the token you signed in with resolves to — answers
+`cannot_friend_self`.
 
 ## Rejecting names
 
@@ -81,7 +156,30 @@ since that's what a player sees when the sidecar grows a code the launcher
 hasn't learned yet. `blocked_by_user` above stands in for one of those: a
 refusal the server means, and the launcher can only report vaguely.
 
+## The signed-out and first-boot states
+
+`dev-profile.sh` here seeds the profile debug builds use, for the two states
+the app has no way back to on its own — nothing in it clears a token or
+un-onboards:
+
+```sh
+test-env/dev-profile.sh signed-out   # your real settings, minus the token
+test-env/dev-profile.sh fresh        # empty profile: the onboarding wizard
+test-env/dev-profile.sh keep         # leave it as-is, just run
+```
+
+Debug builds already keep their settings apart from the launcher you play with
+(`config_dir` in `src-tauri/src/settings.rs` adds a `dev/` subdir), so this
+only ever reads your real `settings.json` — the token in it is safe.
+`signed-out` copies it with `auth_token` / `username` / `is_staff` / `is_dev`
+blanked, so game path and wrapper carry over and only the login differs. It
+leaves the two URLs out of the copy rather than blanking them, so they fall
+back to the debug defaults and land here even if your real profile points at
+production. Then sign back in with one of the tokens above, as many times as
+you like.
+
 ## What it doesn't do
 
-Auth (any token passes), rate limits, TLS, persistence, and presence that
-changes on its own. It's a fixture with routes, not a server.
+Real auth (the tokens are a lookup table, and the friend endpoints accept any
+non-empty one), rate limits, TLS, persistence, and presence that changes on its
+own. It's a fixture with routes, not a server.
