@@ -1,0 +1,25 @@
+{
+  "me": { "username": "Lytion", "status": "in_game" },
+  "friends": [
+    { "username": "Aurelith", "status": "in_game" },
+    { "username": "Brambleforge", "status": "online" },
+    { "username": "Caskwyn", "status": "online" },
+    { "username": "Dunmarrow", "status": "offline" },
+    { "username": "Ellowyn", "status": "offline" },
+    { "username": "Fenwick", "status": "offline" },
+    { "username": "Grimsdottir_the_Unreasonably_Long", "status": "offline" }
+  ],
+  "incoming": [{ "username": "Halvard" }, { "username": "Ilsabet" }],
+  "outgoing": [{ "username": "Jorunn" }],
+  "players": { "online": 42 },
+  "events": [
+    {
+      "name": "Friday Night Fracture",
+      "start": "2026-08-14T19:00:00Z",
+      "status": "SCHEDULED",
+      "description": "Weekly casual lobbies, all ranks welcome.",
+      "location": "EU West",
+      "interested": 37
+    }
+  ]
+}
