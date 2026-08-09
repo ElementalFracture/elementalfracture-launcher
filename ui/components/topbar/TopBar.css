@@ -87,12 +87,12 @@
   box-shadow: 0 0 6px var(--success);
 }
 .dot.ok,
-.status-dot[data-status="online"] {
+.status-dot[data-status="online"],
+.status-dot[data-status="in_game"] {
   background: var(--success);
   box-shadow: 0 0 6px var(--success);
 }
-.dot.warn,
-.status-dot[data-status="in_game"] {
+.dot.warn {
   background: var(--primary);
   box-shadow: 0 0 6px var(--primary);
 }

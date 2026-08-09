@@ -1,21 +1,34 @@
-/* ============ Account pill: the popover shell and its own header ============ */
+/* ============ Account pill: the friend-list drawer and its own header ============ */
 
-/* Friend list dropdown — the shared popover panel, a little narrower. */
-[data-slot="popover-content"].account-popover-panel {
-  width: 260px;
+.account-drawer-head {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
 }
-.acct-head {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--primary);
-  padding: 2px 2px 8px;
+
+.account-drawer-head [data-slot="drawer-close"] {
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.account-drawer-head [data-slot="drawer-close"]:hover {
+  background: none;
+  color: var(--muted-foreground);
+}
+
+/* The scrolling middle of the drawer: header and footer stay put, the list
+   between them takes the rest of the height. */
+.account-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px;
 }
 .friend-self {
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 8px 2px;
-  border-bottom: 1px solid var(--separator);
 }
 .friend-self .avatar {
   width: 36px;

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { FriendsProvider, statusRank, statusText, useFriends } from "../FriendsContext";
+import { FriendsProvider, statusRank, getStatusText, useFriends } from "../FriendsContext";
 import { SettingsProvider } from "../SettingsContext";
 import { makeSettings } from "@/test/fixtures";
 
@@ -52,9 +52,9 @@ beforeEach(() => {
 
 describe("presence helpers", () => {
   it("spells in_game as two words", () => {
-    expect(statusText("in_game")).toBe("in game");
-    expect(statusText("online")).toBe("online");
-    expect(statusText(undefined)).toBe("offline");
+    expect(getStatusText("in_game")).toBe("in game");
+    expect(getStatusText("online")).toBe("online");
+    expect(getStatusText(undefined)).toBe("offline");
   });
 
   it("ranks in-game friends above online ones, and both above offline", () => {

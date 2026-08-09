@@ -21,11 +21,17 @@ const FRIEND_ERRORS: Record<string, string> = {
 };
 
 export function friendError(code?: string) {
-  return (code && FRIEND_ERRORS[code]) || "Friend server unavailable, try again.";
+  return (
+    (code && FRIEND_ERRORS[code]) || "Friend server unavailable, try again."
+  );
 }
 
-export function statusText(status?: FriendStatus) {
-  return status === "in_game" ? "in game" : status === "online" ? "online" : "offline";
+export function getStatusText(status?: FriendStatus) {
+  return status === "in_game"
+    ? "in game"
+    : status === "online"
+      ? "online"
+      : "offline";
 }
 
 /** In-game first, then online, then offline. The sidecar pre-sorts by name,
@@ -115,8 +121,14 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   }, [token, refreshFriends]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const value: FriendsContextValue = { friends, refreshFriends, runFriendAction };
-  return <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>;
+  const value: FriendsContextValue = {
+    friends,
+    refreshFriends,
+    runFriendAction,
+  };
+  return (
+    <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>
+  );
 }
 
 export function useFriends() {
