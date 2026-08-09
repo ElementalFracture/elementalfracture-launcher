@@ -1,14 +1,49 @@
 import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/shadcn/accordion";
 import { Button } from "@/components/shadcn/button";
+import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import {
   statusRank,
-  statusText,
+  getStatusText,
   useFriends,
   type FriendAction,
 } from "@/context/FriendsContext";
 import type { FriendStatus } from "@/lib/rust";
 import "./FriendList.css";
+
+interface RowAction {
+  label: string;
+  title: string;
+  action: FriendAction;
+  kind: "ok" | "no";
+  /** Ask before firing. Only unfriending does — declining or cancelling a
+   *  request costs nothing to redo, but a friendship has to be asked for
+   *  again from the other side. */
+  confirm?: boolean;
+}
+
+const FRIEND_ACTIONS: RowAction[] = [
+  {
+    label: "✕",
+    title: "Remove friend",
+    action: "remove",
+    kind: "no",
+    confirm: true,
+  },
+];
+const INCOMING_ACTIONS: RowAction[] = [
+  { label: "✓", title: "Accept", action: "accept", kind: "ok" },
+  { label: "✕", title: "Decline", action: "remove", kind: "no" },
+];
+const OUTGOING_ACTIONS: RowAction[] = [
+  { label: "✕", title: "Cancel request", action: "remove", kind: "no" },
+];
 
 /** One friend/request line: presence dot, name, and its actions. */
 function FriendRow({
@@ -16,18 +51,16 @@ function FriendRow({
   status,
   pending,
   actions,
+  onConfirm,
 }: {
   username: string;
   status?: FriendStatus;
   pending?: boolean;
-  actions: {
-    label: string;
-    title: string;
-    action: FriendAction;
-    kind: "ok" | "no";
-  }[];
+  actions: RowAction[];
+  onConfirm?: (username: string) => void;
 }) {
   const { runFriendAction } = useFriends();
+  const statusText = status ? getStatusText(status) : undefined;
   return (
     <div className="friend-row">
       <span className="status-dot" data-status={status} />
@@ -36,7 +69,7 @@ function FriendRow({
         {/* TODO verify if status is correct.
           I see online player in friend list but not in Online container
         */}
-        {status && <small>{statusText(status)}</small>}
+        {statusText === "in game" && <small>{statusText}</small>}
         {pending && <small className="friend-pending">requested</small>}
       </div>
       <div className="friend-row-actions">
@@ -45,7 +78,12 @@ function FriendRow({
             key={a.action}
             className={a.kind}
             title={a.title}
-            onClick={() => runFriendAction(a.action, username)}
+            aria-label={`${a.title}: ${username}`}
+            onClick={() =>
+              a.confirm && onConfirm
+                ? onConfirm(username)
+                : runFriendAction(a.action, username)
+            }
           >
             {a.label}
           </button>
@@ -59,9 +97,10 @@ function FriendRow({
 export function FriendList() {
   const { friends, runFriendAction } = useFriends();
   const [addName, setAddName] = useState("");
+  const [userToRemove, setUserToRemove] = useState<string | null>(null);
 
   const onAdd = () => {
-    const name = addName.trim();
+    const name = addName;
     if (!name) {
       return;
     }
@@ -71,9 +110,13 @@ export function FriendList() {
 
   const incoming = friends?.incoming ?? [];
   const outgoing = friends?.outgoing ?? [];
-  const accepted = [...(friends?.friends ?? [])].sort(
-    (a, b) => statusRank(a.status) - statusRank(b.status)
-  );
+  const accepted = friends?.friends ?? [];
+  // In-game first, then online; the offline ones get their own section below.
+  const online = accepted
+    .filter((f) => f.status && f.status !== "offline")
+    .sort((a, b) => statusRank(a.status) - statusRank(b.status));
+  const offline = accepted.filter((f) => !f.status || f.status === "offline");
+  const pending = incoming.length + outgoing.length;
 
   return (
     <>
@@ -95,74 +138,113 @@ export function FriendList() {
 
       {!friends ? (
         <p className="friend-empty">Loading…</p>
+      ) : accepted.length === 0 && pending === 0 ? (
+        <p className="friend-empty">
+          No friends yet, add someone by their username above.
+        </p>
       ) : (
-        <>
-          {incoming.length > 0 && (
-            <div id="friend-requests">
-              <div className="friend-subhead">Requests ({incoming.length})</div>
-              {incoming.map((r) => (
-                <FriendRow
-                  key={r.username}
-                  username={r.username}
-                  actions={[
-                    {
-                      label: "✓",
-                      title: "Accept",
-                      action: "accept",
-                      kind: "ok",
-                    },
-                    {
-                      label: "✕",
-                      title: "Decline",
-                      action: "remove",
-                      kind: "no",
-                    },
-                  ]}
-                />
-              ))}
-            </div>
+        /* Everything but the offline crowd starts open — that section is the
+           long one and the least worth scrolling past. */
+        <Accordion
+          className="friend-accordion"
+          multiple
+          defaultValue={["friends", "requests"]}
+        >
+          <AccordionItem value="friends">
+            <AccordionTrigger>Friends ({online.length})</AccordionTrigger>
+            <AccordionContent>
+              {online.length === 0 ? (
+                <p className="friend-empty">Nobody is online right now.</p>
+              ) : (
+                online.map((f) => (
+                  <FriendRow
+                    key={f.username}
+                    username={f.username}
+                    status={f.status ?? "offline"}
+                    actions={FRIEND_ACTIONS}
+                    onConfirm={setUserToRemove}
+                  />
+                ))
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
+          {pending > 0 && (
+            <AccordionItem value="requests">
+              <AccordionTrigger>Requests ({pending})</AccordionTrigger>
+              <AccordionContent>
+                {incoming.map((r) => (
+                  <FriendRow
+                    key={r.username}
+                    username={r.username}
+                    actions={INCOMING_ACTIONS}
+                  />
+                ))}
+                {outgoing.map((o) => (
+                  <FriendRow
+                    key={o.username}
+                    username={o.username}
+                    pending
+                    actions={OUTGOING_ACTIONS}
+                  />
+                ))}
+              </AccordionContent>
+            </AccordionItem>
           )}
 
-          <div id="friend-list">
-            <div className="friend-subhead">Friends ({accepted.length})</div>
-            {accepted.length === 0 && outgoing.length === 0 && (
-              <p className="friend-empty">
-                No friends yet, add someone by their username above.
-              </p>
-            )}
-            {accepted.map((f) => (
-              <FriendRow
-                key={f.username}
-                username={f.username}
-                status={f.status ?? "offline"}
-                actions={[
-                  {
-                    label: "✕",
-                    title: "Remove friend",
-                    action: "remove",
-                    kind: "no",
-                  },
-                ]}
-              />
-            ))}
-            {outgoing.map((o) => (
-              <FriendRow
-                key={o.username}
-                username={o.username}
-                pending
-                actions={[
-                  {
-                    label: "✕",
-                    title: "Cancel request",
-                    action: "remove",
-                    kind: "no",
-                  },
-                ]}
-              />
-            ))}
-          </div>
-        </>
+          <AccordionItem value="offline">
+            <AccordionTrigger>Offline ({offline.length})</AccordionTrigger>
+            <AccordionContent>
+              {offline.length === 0 ? (
+                <p className="friend-empty">No offline friends.</p>
+              ) : (
+                offline.map((f) => (
+                  <FriendRow
+                    key={f.username}
+                    username={f.username}
+                    status="offline"
+                    actions={FRIEND_ACTIONS}
+                    onConfirm={setUserToRemove}
+                  />
+                ))
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       )}
+
+      {/* One dialog for the whole list rather than one per row — only ever a
+          single pending removal, named by `removing`. */}
+      <Dialog
+        open={userToRemove !== null}
+        onOpenChange={(next) => !next && setUserToRemove(null)}
+      >
+        <DialogContent
+          className="wizard-panel"
+          showCloseButton={false}
+          showOverlay={false}
+        >
+          <div className="wizard-step">
+            <h2>Remove {userToRemove} ?</h2>
+            <p className="muted">
+              This will remove {userToRemove} from your friends list.
+            </p>
+            <div className="wizard-actions">
+              <Button
+                onClick={() => {
+                  runFriendAction("remove", userToRemove ?? "");
+                  setUserToRemove(null);
+                }}
+              >
+                Remove
+              </Button>
+              <Button variant="secondary" onClick={() => setUserToRemove(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

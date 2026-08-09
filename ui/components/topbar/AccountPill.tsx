@@ -1,25 +1,31 @@
 import { useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/shadcn/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/shadcn/popover";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTrigger,
+} from "@/components/shadcn/drawer";
+import { Separator } from "@/components/shadcn/separator";
 import { AccountModal } from "@/components/modals/AccountModal";
-import { statusText, useFriends } from "@/context/FriendsContext";
+import { useFriends } from "@/context/FriendsContext";
 import { useSettings } from "@/context/SettingsContext";
 import { FriendList } from "./FriendList";
 import "./AccountPill.css";
 
 /**
- * The account pill. With a token set it opens the friend list; without one it
- * goes straight to the token modal, since there is no account to show yet.
+ * With a token set it opens the friend list in a drawer off
+ * the right edge; without one it goes straight to the token modal, since there
+ * is no account to show yet.
  */
 export function AccountPill() {
   const { settings } = useSettings();
   const { friends, refreshFriends } = useFriends();
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [accountPopoverOpen, setAccountPopoverOpen] = useState(false);
+  const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
 
   const registered = Boolean(settings?.auth_token?.trim());
   const name = settings?.username?.trim();
@@ -32,58 +38,64 @@ export function AccountPill() {
 
   const selfName = friends?.me?.username || name || "You";
   const selfInitials = selfName.slice(0, 2).toUpperCase();
-  const selfStatus = friends?.me?.status ?? "online";
 
   return (
     <>
       {registered ? (
-        <Popover
-          open={accountPopoverOpen}
+        <Drawer
+          open={accountDrawerOpen}
+          modal={false}
+          swipeDirection="right"
           onOpenChange={(open) => {
-            setAccountPopoverOpen(open);
+            setAccountDrawerOpen(open);
             if (open) {
               refreshFriends();
             }
           }}
         >
-          <PopoverTrigger asChild>
-            <button className="pill account" title="Account">
-              <span className="avatar">{initials}</span>
-              <div className="pill-text">
-                <strong>{name || "Guest"}</strong>
-                {role && <small>{role}</small>}
-              </div>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="account-popover-panel"
-            align="end"
-            sideOffset={8}
-          >
-            <div className="acct-head">Friend List</div>
-            <div className="friend-self">
-              <span className="avatar">{selfInitials}</span>
-              <div className="friend-meta">
-                <strong>{selfName}</strong>
-                <small>
-                  <span className="status-dot" data-status={selfStatus} />{" "}
-                  {statusText(selfStatus)}
-                </small>
-              </div>
+          <DrawerTrigger className="pill account" title="Account">
+            <span className="avatar">{initials}</span>
+            <div className="pill-text">
+              <strong>{name || "Guest"}</strong>
+              {role && <small>{role}</small>}
             </div>
-            <FriendList />
-            <Button
-              variant="secondary"
-              className="acct-link"
-              onClick={() => {
-                setAccountPopoverOpen(false);
-                setAccountModalOpen(true);
-              }}
-            >
-              Change token
-            </Button>
-          </PopoverContent>
-        </Popover>
+          </DrawerTrigger>
+
+          <DrawerContent className="account-drawer">
+            <DrawerHeader className="account-drawer-head">
+              <div className="friend-self">
+                <span className="avatar">{selfInitials}</span>
+                <div className="friend-meta">
+                  <strong>{selfName}</strong>
+                </div>
+              </div>
+              <DrawerClose
+                render={<Button variant="ghost" size="icon-sm" />}
+                aria-label="Close friend list"
+              >
+                <ArrowRight aria-hidden="true" />
+              </DrawerClose>
+            </DrawerHeader>
+
+            <div className="account-drawer-body">
+              <Separator />
+              <FriendList />
+            </div>
+
+            <DrawerFooter>
+              <Button
+                variant="secondary"
+                className="acct-link"
+                onClick={() => {
+                  setAccountDrawerOpen(false);
+                  setAccountModalOpen(true);
+                }}
+              >
+                Change token
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       ) : (
         <button
           className="pill account"
