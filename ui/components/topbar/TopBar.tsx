@@ -1,6 +1,4 @@
 import logoFull from "@/assets/logo-full.png";
-import { StatusPill } from "./StatusPill";
-import { OnlinePill } from "./OnlinePill";
 import { InGamePill } from "./InGamePill";
 import { AccountPill } from "./AccountPill";
 import "./TopBar.css";
@@ -11,8 +9,6 @@ export function TopBar() {
     <header id="topbar">
       <img src={logoFull} alt="Elemental Fracture" id="topbar-logo" />
       <div className="top-pills">
-        <StatusPill />
-        <OnlinePill />
         <InGamePill />
         <AccountPill />
       </div>
