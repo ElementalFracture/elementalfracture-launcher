@@ -1,0 +1,992 @@
+<!doctype html>
+<!--
+  The test env's dashboard, served at http://localhost:8787/ by server.mjs.
+
+  It's a view of the same in-memory state the friend routes mutate, so the
+  launcher and this page are always looking at the same thing: change a status
+  here and the next poll in the drawer shows it; accept a request in the
+  launcher and the row moves here.
+
+  Every control is one call to /admin/patch — a path into the state and a value
+  — which is why this file can edit parts of data.json server.mjs has never
+  heard of, and why adding a field to the fixture only ever means adding a
+  control here.
+
+  No build step and no dependencies: it's opened straight off disk by a 200-line
+  node server, and it should stay something you can read in one sitting.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>test env</title>
+    <style>
+      :root {
+        --bg: #0e1013;
+        --card: #16191e;
+        --line: #262b33;
+        --text: #e6e8ec;
+        --dim: #8b93a1;
+        --accent: #7aa2f7;
+        --bad: #f7768e;
+        --good: #9ece6a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.45 ui-sans-serif,
+          system-ui,
+          "Inter",
+          sans-serif;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: color-mix(in srgb, var(--bg) 92%, transparent);
+        backdrop-filter: blur(8px);
+        z-index: 2;
+      }
+      header h1 {
+        font-size: 15px;
+        margin: 0;
+        letter-spacing: 0.02em;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--good);
+        display: inline-block;
+        margin-right: 6px;
+      }
+      .dot.off {
+        background: var(--bad);
+      }
+      main {
+        display: grid;
+        /* min(), or a column narrower than the track overflows the page
+           instead of the track shrinking with it. */
+        grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+        gap: 14px;
+        align-items: start;
+        padding: 16px 20px 60px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px 14px;
+        /* Grid and flex items refuse to go below their content's width unless
+           told to. Without this every card is as wide as its widest row. */
+        min-width: 0;
+      }
+      .card.wide {
+        grid-column: 1 / -1;
+      }
+      .card h2 {
+        font-size: 13px;
+        margin: 0 0 10px;
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 2px 8px;
+      }
+      .card h2 > * {
+        min-width: 0;
+      }
+      /* A second heading inside a card — Servers, under the online count. */
+      .card h2.sub {
+        margin: 14px 0 8px;
+      }
+      .hint {
+        color: var(--dim);
+        font-weight: 400;
+        font-size: 11.5px;
+      }
+      ul.rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      /* Rows wrap rather than run off the card: at 340px a server row can't
+         hold a region, a count, a name list and a delete button side by side,
+         and the narrow window is the one worth surviving. */
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        min-width: 0;
+      }
+      .row > * {
+        min-width: 0;
+      }
+      .row.stack {
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      /* A row of its own inside a stacked one — the second line of a server
+         or an event. */
+      .row.line {
+        flex: 1 1 100%;
+      }
+      input,
+      select,
+      textarea,
+      button {
+        font: inherit;
+        color: inherit;
+        background: #1d2128;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px 7px;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+        outline-offset: -1px;
+      }
+      /* An input's automatic minimum size comes from its `size` attribute —
+         about 170px — which is what pushes a row past the card. Letting them
+         shrink is what keeps three of them on one line. */
+      input,
+      select,
+      textarea {
+        min-width: 0;
+        max-width: 100%;
+      }
+      .text {
+        flex: 1 1 110px;
+      }
+      .num {
+        flex: 0 0 auto;
+        width: 78px;
+      }
+      textarea {
+        flex: 1 1 100%;
+        width: 100%;
+        resize: vertical;
+        min-height: 34px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      .x {
+        color: var(--dim);
+        padding: 3px 8px;
+      }
+      .x:hover {
+        color: var(--bad);
+        border-color: var(--bad);
+      }
+      .field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .field > span {
+        color: var(--dim);
+        font-size: 11.5px;
+        flex: 0 0 auto;
+      }
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--dim);
+        font-size: 12px;
+        user-select: none;
+      }
+      .toggle input {
+        accent-color: var(--accent);
+        margin: 0;
+      }
+      .adder {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .empty {
+        color: var(--dim);
+        margin: 2px 0 0;
+        font-size: 12.5px;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      details {
+        color: var(--dim);
+        font-size: 12px;
+      }
+      pre {
+        background: #0b0d10;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        overflow: auto;
+        max-height: 340px;
+        color: var(--text);
+      }
+      #toast {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        translate: -50% 0;
+        background: var(--card);
+        border: 1px solid var(--bad);
+        color: var(--text);
+        padding: 8px 14px;
+        border-radius: 8px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        pointer-events: none;
+        z-index: 3;
+      }
+      #toast.up {
+        opacity: 1;
+      }
+      #toast.ok {
+        border-color: var(--good);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>test env</h1>
+      <span class="hint" id="where"></span>
+      <span class="spacer"></span>
+      <span class="hint"
+        ><span class="dot" id="live"></span
+        ><span id="livetext">connected</span></span
+      >
+      <button id="copy">Copy JSON</button>
+      <button id="reset">Reset to data.json</button>
+    </header>
+    <main id="app"></main>
+    <div id="toast"></div>
+
+    <datalist id="codes"></datalist>
+
+    <script>
+      const STATUSES = ["in_game", "online", "offline"];
+      const EVENT_STATUSES = ["SCHEDULED", "ACTIVE", "COMPLETED", "CANCELED"];
+      const REGIONS = ["NA", "EU"];
+      /* The codes FRIEND_ERRORS in ui/context/FriendsContext.tsx has wording
+         for, plus one it doesn't — the interesting case, since that's what a
+         player sees when the sidecar grows a code the launcher hasn't learned. */
+      const CODES = [
+        "user_not_found",
+        "cannot_friend_self",
+        "invalid_token",
+        "username_required",
+        "no_pending_request",
+        "blocked_by_user",
+      ];
+
+      const app = document.getElementById("app");
+
+      /* ── plumbing ─────────────────────────────────────────────────────── */
+
+      function el(tag, props = {}, ...kids) {
+        const node = document.createElement(tag);
+        for (const [key, value] of Object.entries(props)) {
+          if (key === "dataset") Object.assign(node.dataset, value);
+          else if (key === "attrs")
+            for (const [name, v] of Object.entries(value))
+              node.setAttribute(name, v);
+          else node[key] = value;
+        }
+        for (const kid of kids.flat(Infinity)) {
+          if (kid !== null && kid !== undefined && kid !== false)
+            node.append(kid);
+        }
+        return node;
+      }
+
+      let toastTimer = 0;
+      function toast(message, ok = false) {
+        const node = document.getElementById("toast");
+        node.textContent = message;
+        node.classList.toggle("ok", ok);
+        node.classList.add("up");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => node.classList.remove("up"), 2600);
+      }
+
+      function connected(yes) {
+        document.getElementById("live").classList.toggle("off", !yes);
+        document.getElementById("livetext").textContent = yes
+          ? "connected"
+          : "server not answering";
+      }
+
+      /** One patch, or a list of them applied in order. */
+      async function patch(body) {
+        try {
+          const res = await fetch("/admin/patch", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const answer = await res.json();
+          connected(true);
+          if (!answer.ok) return toast(answer.error || "rejected");
+          render(answer.state);
+        } catch {
+          connected(false);
+          toast("test env isn't answering — still running?");
+        }
+      }
+
+      const set = (path, value) => patch({ path, value });
+      const push = (path, value) => patch({ path, push: value });
+      const drop = (path) => patch({ path, remove: true });
+
+      /* ── controls ─────────────────────────────────────────────────────── */
+
+      /* Text applies on Enter or on the way out, not per keystroke: a rename
+         shouldn't reach the server letter by letter. */
+      function text(key, value, apply, placeholder = "") {
+        return el("input", {
+          className: "text",
+          value: value ?? "",
+          placeholder,
+          spellcheck: false,
+          dataset: { key },
+          onchange: (e) => apply(e.target.value.trim()),
+        });
+      }
+
+      function number(key, value, apply) {
+        return el("input", {
+          className: "num",
+          type: "number",
+          min: 0,
+          value: value ?? 0,
+          dataset: { key },
+          onchange: (e) => apply(Number(e.target.value) || 0),
+        });
+      }
+
+      /* A value data.json holds that isn't one of the options keeps its place
+         at the top of the list, rather than being quietly rewritten. */
+      function choice(key, value, options, apply) {
+        const all = options.includes(value)
+          ? options
+          : [value ?? "", ...options];
+        const node = el(
+          "select",
+          { dataset: { key }, onchange: (e) => apply(e.target.value) },
+          all.map((option) =>
+            el("option", { value: option, textContent: option })
+          )
+        );
+        node.value = value ?? "";
+        return node;
+      }
+
+      const toggle = (key, caption, checked, apply) =>
+        el(
+          "label",
+          { className: "toggle" },
+          el("input", {
+            type: "checkbox",
+            checked: !!checked,
+            dataset: { key },
+            onchange: (e) => apply(e.target.checked),
+          }),
+          caption
+        );
+
+      const field = (caption, control) =>
+        el(
+          "label",
+          { className: "field" },
+          el("span", { textContent: caption }),
+          control
+        );
+
+      const remover = (apply) =>
+        el("button", {
+          className: "x",
+          title: "Remove",
+          textContent: "×",
+          onclick: apply,
+        });
+
+      /* What's half-typed in an add box isn't in the server's state, so it
+         would be lost the moment anything else changed it. Parked here by key
+         and put back on the next render. */
+      const drafts = {};
+
+      function adder(key, placeholder, submit, extras = []) {
+        const input = el("input", {
+          className: "text",
+          placeholder,
+          value: drafts[key] ?? "",
+          spellcheck: false,
+          dataset: { key },
+          oninput: (e) => (drafts[key] = e.target.value),
+        });
+        return el(
+          "form",
+          {
+            className: "adder",
+            onsubmit: (e) => {
+              e.preventDefault();
+              const value = input.value.trim();
+              if (!value) return input.focus();
+              drafts[key] = "";
+              input.value = "";
+              submit(value);
+            },
+          },
+          input,
+          extras,
+          el("button", { type: "submit", textContent: "Add" })
+        );
+      }
+
+      const card = (title, hint, ...kids) =>
+        el(
+          "section",
+          { className: "card" },
+          el(
+            "h2",
+            {},
+            title,
+            hint && el("span", { className: "hint", textContent: hint })
+          ),
+          kids
+        );
+
+      const rows = (items, empty) =>
+        items.length
+          ? el("ul", { className: "rows" }, items)
+          : el("p", { className: "empty", textContent: empty });
+
+      /* ── sections ─────────────────────────────────────────────────────── */
+
+      function account(s) {
+        const me = s.me ?? {};
+        return card(
+          "You",
+          "a token /auth knows overrides the name",
+          el(
+            "div",
+            { className: "grid" },
+            field(
+              "Username",
+              text("me.username", me.username, (v) =>
+                set(["me", "username"], v)
+              )
+            ),
+            field(
+              "Status",
+              choice("me.status", me.status, STATUSES, (v) =>
+                set(["me", "status"], v)
+              )
+            )
+          )
+        );
+      }
+
+      function friends(s) {
+        const list = s.friends ?? [];
+        return card(
+          "Friends",
+          "in-game sorts above online",
+          rows(
+            list.map((friend, i) =>
+              el(
+                "li",
+                { className: "row" },
+                text(`friends.${i}.username`, friend.username, (v) =>
+                  set(["friends", i, "username"], v)
+                ),
+                choice(`friends.${i}.status`, friend.status, STATUSES, (v) =>
+                  set(["friends", i, "status"], v)
+                ),
+                remover(() => drop(["friends", i]))
+              )
+            ),
+            "No friends — with incoming and outgoing empty too, that's the “No friends yet” state."
+          ),
+          (() => {
+            const status = choice(
+              "add.friend.status",
+              "online",
+              STATUSES,
+              () => {}
+            );
+            return adder(
+              "add.friend",
+              "username",
+              (username) =>
+                push(["friends"], { username, status: status.value }),
+              [status]
+            );
+          })()
+        );
+      }
+
+      function pending(s, key, title, hint) {
+        const list = s[key] ?? [];
+        return card(
+          title,
+          hint,
+          rows(
+            list.map((request, i) =>
+              el(
+                "li",
+                { className: "row" },
+                text(`${key}.${i}.username`, request.username, (v) =>
+                  set([key, i, "username"], v)
+                ),
+                key === "incoming" &&
+                  el("button", {
+                    textContent: "Accept",
+                    title: "Move to friends, as the drawer's accept would",
+                    onclick: () =>
+                      patch([
+                        { path: [key, i], remove: true },
+                        {
+                          path: ["friends"],
+                          push: {
+                            username: request.username,
+                            status: "online",
+                          },
+                        },
+                      ]),
+                  }),
+                remover(() => drop([key, i]))
+              )
+            ),
+            "none"
+          ),
+          adder(`add.${key}`, "username", (username) =>
+            push([key], { username })
+          )
+        );
+      }
+
+      function tokens(s) {
+        const accounts = s.auth?.accounts ?? {};
+        const stall = s.auth?.stall ?? [];
+        // Stall is a list of its own, and the fixture's `stall` token has no
+        // account behind it — so the rows are the union, not just the accounts.
+        const names = [...new Set([...Object.keys(accounts), ...stall])];
+
+        const row = (token) => {
+          const has = Object.hasOwn(accounts, token);
+          const held = has ? accounts[token] : null;
+          const stalled = stall.indexOf(token);
+          const path = ["auth", "accounts", token];
+
+          const rename = (next) => {
+            if (!next || next === token) return;
+            if (Object.hasOwn(accounts, next))
+              return toast(`${next} already exists`);
+            const ops = [];
+            if (has)
+              ops.push(
+                { path, remove: true },
+                { path: [...path.slice(0, 2), next], value: held }
+              );
+            if (stalled !== -1)
+              ops.push(
+                { path: ["auth", "stall", stalled], remove: true },
+                { path: ["auth", "stall"], push: next }
+              );
+            patch(ops);
+          };
+
+          return el(
+            "li",
+            { className: "row stack" },
+            text(`auth.${token}`, token, rename),
+            text(
+              `auth.${token}.username`,
+              held?.username,
+              (v) =>
+                v
+                  ? set([...path, "username"], v)
+                  : held?.username !== undefined && drop([...path, "username"]),
+              has
+                ? "no username → “doesn't recognize it”"
+                : "not an account → invalid_token"
+            ),
+            el(
+              "div",
+              { className: "row line" },
+              toggle(`auth.${token}.dev`, "dev", held?.is_dev, (on) =>
+                set([...path, "is_dev"], on)
+              ),
+              toggle(`auth.${token}.staff`, "staff", held?.is_staff, (on) =>
+                set([...path, "is_staff"], on)
+              ),
+              toggle(
+                `auth.${token}.stall`,
+                "stall (no reply)",
+                stalled !== -1,
+                (on) =>
+                  on
+                    ? push(["auth", "stall"], token)
+                    : drop(["auth", "stall", stalled])
+              ),
+              el("span", { className: "spacer" }),
+              remover(() =>
+                patch([
+                  ...(has ? [{ path, remove: true }] : []),
+                  ...(stalled !== -1
+                    ? [{ path: ["auth", "stall", stalled], remove: true }]
+                    : []),
+                ])
+              )
+            )
+          );
+        };
+
+        return card(
+          "Tokens",
+          "paste the token itself into the launcher's token field",
+          rows(
+            names.map(row),
+            "no tokens — every sign-in fails with invalid_token"
+          ),
+          adder("add.token", "token", (token) =>
+            set(["auth", "accounts", token], {})
+          )
+        );
+      }
+
+      function rejections(s) {
+        const reject = s.reject ?? {};
+        const names = Object.keys(reject);
+
+        const rename = (name, next) => {
+          if (!next || next === name) return;
+          patch([
+            { path: ["reject", name], remove: true },
+            { path: ["reject", next], value: reject[name] },
+          ]);
+        };
+
+        return card(
+          "Rejections",
+          "these names always fail, on whichever endpoint",
+          rows(
+            names.map((name) =>
+              el(
+                "li",
+                { className: "row" },
+                text(`reject.${name}`, name, (v) => rename(name, v)),
+                text(
+                  `reject.${name}.code`,
+                  reject[name],
+                  (v) => v && set(["reject", name], v),
+                  "error code"
+                ),
+                remover(() => drop(["reject", name]))
+              )
+            ),
+            "none — every name succeeds"
+          ),
+          (() => {
+            const code = el("input", {
+              className: "text",
+              placeholder: "user_not_found",
+              value: drafts["add.reject.code"] ?? "",
+              spellcheck: false,
+              dataset: { key: "add.reject.code" },
+              attrs: { list: "codes" },
+              oninput: (e) => (drafts["add.reject.code"] = e.target.value),
+            });
+            return adder(
+              "add.reject",
+              "username",
+              (name) => {
+                const value = code.value.trim() || "user_not_found";
+                drafts["add.reject.code"] = "";
+                code.value = "";
+                set(["reject", name], value);
+              },
+              [code]
+            );
+          })()
+        );
+      }
+
+      function home(s) {
+        const players = s.players ?? {};
+        const servers = players.servers ?? [];
+        return card(
+          "Home view",
+          "the online count and the in-game breakdown",
+          el(
+            "div",
+            { className: "grid" },
+            field(
+              "Online",
+              number("players.online", players.online, (n) =>
+                set(["players", "online"], n)
+              )
+            )
+          ),
+          el(
+            "h2",
+            { className: "sub" },
+            "Servers",
+            el("span", {
+              className: "hint",
+              textContent:
+                "vsolo/vduo… or “Classic …” read as the classic variant",
+            })
+          ),
+          rows(
+            servers.map((server, i) =>
+              el(
+                "li",
+                { className: "row stack" },
+                text(
+                  `servers.${i}.display_name`,
+                  server.display_name,
+                  (v) => set(["players", "servers", i, "display_name"], v),
+                  "display name (Solos NA 1)"
+                ),
+                text(
+                  `servers.${i}.name`,
+                  server.name,
+                  (v) => set(["players", "servers", i, "name"], v),
+                  "container name"
+                ),
+                el(
+                  "div",
+                  { className: "row line" },
+                  choice(`servers.${i}.region`, server.region, REGIONS, (v) =>
+                    set(["players", "servers", i, "region"], v)
+                  ),
+                  number(`servers.${i}.players`, server.players, (n) =>
+                    set(["players", "servers", i, "players"], n)
+                  ),
+                  text(
+                    `servers.${i}.names`,
+                    (server.names ?? []).join(", "),
+                    (v) =>
+                      set(
+                        ["players", "servers", i, "names"],
+                        v
+                          ? v
+                              .split(",")
+                              .map((name) => name.trim())
+                              .filter(Boolean)
+                          : []
+                      ),
+                    "who's in there, comma separated"
+                  ),
+                  remover(() => drop(["players", "servers", i]))
+                )
+              )
+            ),
+            "none — the in-game pill has nothing to break down"
+          ),
+          adder("add.server", "Solos NA 1", (display_name) =>
+            push(["players", "servers"], {
+              display_name,
+              name: display_name.toLowerCase().replace(/\s+/g, ""),
+              region: "NA",
+              players: 0,
+              names: [],
+            })
+          )
+        );
+      }
+
+      function events(s) {
+        const list = s.events ?? [];
+        const path = (i, key) => ["events", i, key];
+        return card(
+          "Events",
+          "the events list on the home view",
+          rows(
+            list.map((event, i) =>
+              el(
+                "li",
+                { className: "row stack" },
+                text(
+                  `events.${i}.name`,
+                  event.name,
+                  (v) => set(path(i, "name"), v),
+                  "name"
+                ),
+                choice(
+                  `events.${i}.status`,
+                  event.status,
+                  EVENT_STATUSES,
+                  (v) => set(path(i, "status"), v)
+                ),
+                el(
+                  "div",
+                  { className: "row line" },
+                  text(
+                    `events.${i}.start`,
+                    event.start,
+                    (v) => set(path(i, "start"), v),
+                    "2026-08-14T19:00:00Z"
+                  ),
+                  text(
+                    `events.${i}.location`,
+                    event.location,
+                    (v) => set(path(i, "location"), v),
+                    "location"
+                  ),
+                  field(
+                    "Interested",
+                    number(`events.${i}.interested`, event.interested, (n) =>
+                      set(path(i, "interested"), n)
+                    )
+                  ),
+                  remover(() => drop(["events", i]))
+                ),
+                el("textarea", {
+                  value: event.description ?? "",
+                  placeholder: "description",
+                  spellcheck: false,
+                  dataset: { key: `events.${i}.description` },
+                  onchange: (e) => set(path(i, "description"), e.target.value),
+                })
+              )
+            ),
+            "none — the home view shows its empty state"
+          ),
+          adder("add.event", "Friday Night Fracture", (name) =>
+            push(["events"], {
+              name,
+              // Tomorrow, so it lands in the upcoming list rather than the past.
+              start: new Date(Date.now() + 864e5)
+                .toISOString()
+                .replace(/\.\d+Z$/, "Z"),
+              status: "SCHEDULED",
+              description: "",
+              location: "EU West",
+              interested: 0,
+            })
+          )
+        );
+      }
+
+      /* ── rendering ────────────────────────────────────────────────────── */
+
+      let state = null;
+      let shown = "";
+
+      function render(next) {
+        state = next;
+        const json = JSON.stringify(next);
+        // Nothing moved — leave the DOM (and whatever is half-typed) alone.
+        // This is what makes a 2s poll harmless to type through.
+        if (json === shown) return;
+        shown = json;
+
+        /* Rebuilding throws focus away, and the control that just changed is
+           usually the one you're still in. Put it back by key, caret and all. */
+        const active = document.activeElement;
+        const key = active?.dataset?.key;
+        const from = active?.selectionStart;
+        const to = active?.selectionEnd;
+
+        app.replaceChildren(
+          account(next),
+          tokens(next),
+          friends(next),
+          pending(next, "incoming", "Incoming", "requests waiting on you"),
+          pending(next, "outgoing", "Outgoing", "requests you've sent"),
+          rejections(next),
+          home(next),
+          events(next)
+        );
+
+        if (key) {
+          const back = app.querySelector(`[data-key="${CSS.escape(key)}"]`);
+          if (back) {
+            back.focus();
+            try {
+              back.setSelectionRange(from, to);
+            } catch {
+              /* number inputs and selects have no caret to restore */
+            }
+          }
+        }
+      }
+
+      async function poll() {
+        try {
+          const res = await fetch("/admin/state");
+          const answer = await res.json();
+          connected(true);
+          render(answer.state);
+        } catch {
+          connected(false);
+        }
+      }
+
+      document.getElementById("reset").onclick = async () => {
+        if (!confirm("Throw away every change since the server started?"))
+          return;
+        await fetch("/admin/reload", { method: "POST" });
+        shown = "";
+        poll();
+        toast("back to data.json", true);
+      };
+
+      document.getElementById("copy").onclick = async () => {
+        const json = JSON.stringify(state, null, 2);
+        try {
+          await navigator.clipboard.writeText(json);
+          toast("copied — paste it into data.json to keep it", true);
+        } catch {
+          // No clipboard permission: fall back to something selectable.
+          const box = el("pre", { textContent: json });
+          app.prepend(el("section", { className: "card wide" }, box));
+          getSelection().selectAllChildren(box);
+        }
+      };
+
+      document
+        .getElementById("codes")
+        .append(...CODES.map((code) => el("option", { value: code })));
+      document.getElementById("where").textContent =
+        `on ${location.host} · edits live in the server's memory`;
+
+      poll();
+      setInterval(poll, 2000);
+    </script>
+  </body>
+</html>

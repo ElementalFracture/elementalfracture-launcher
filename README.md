@@ -1,4 +1,4 @@
-# Elemental Fracture Launcher
+bb# Elemental Fracture Launcher
 
 The official launcher for [Elemental Fracture](https://elefrac.com) — the
 community revival of Spellbreak. It installs and patches the game, manages the
@@ -46,14 +46,14 @@ Static `index.html` + `styles.css` + `app.js`, loaded by the webview with
 
 ### Rust core (`src-tauri/src/`)
 
-| Module | Responsibility |
-|---|---|
-| `main.rs` | Registers the Tauri command handlers. |
+| Module        | Responsibility                                                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `main.rs`     | Registers the Tauri command handlers.                                                                                        |
 | `settings.rs` | Persisted config (`settings.json` in the OS config dir), folder picker, external-link opener, `game_host()` URL→host helper. |
-| `game.rs` | Locate/launch the game, EF↔Classic pak toggle, write the hidden `.ef_auth` handoff file, read local `version.txt`. |
-| `download.rs` | Segmented base-game download, patch application, `version.txt` bump, update check. |
-| `mods.rs` | Install/verify the loader + mod DLLs from `mod.zip`. |
-| `remote.rs` | Player counts, live events, patch-notes RSS, and token validation. |
+| `game.rs`     | Locate/launch the game, EF↔Classic pak toggle, write the hidden `.ef_auth` handoff file, read local `version.txt`.           |
+| `download.rs` | Segmented base-game download, patch application, `version.txt` bump, update check.                                           |
+| `mods.rs`     | Install/verify the loader + mod DLLs from `mod.zip`.                                                                         |
+| `remote.rs`   | Player counts, live events, patch-notes RSS, and token validation.                                                           |
 
 ### Settings
 
@@ -99,7 +99,9 @@ from `%APPDATA%`.
 
 To sign back in, run `npm run test-env` and use one of its tokens — a debug
 build already points at it, and it serves `/auth` from a token-to-account table.
-See `test-env/README.md`.
+Its dashboard on <http://localhost:8787/> is where you set the tokens, the
+friend graph and the rest of what it serves without editing JSON. See
+`test-env/README.md`.
 
 ### Authentication handoff
 
@@ -111,7 +113,7 @@ At launch the launcher hands the token and server host to the game through a
 hidden **`.ef_auth`** file in the game root (line 1 = token, line 2 = server),
 which the in-game `auth_injector` reads. This resolves identically on Windows
 and under Wine/Proton, where per-process environment and `%APPDATA%` do not.
-The in-game server host is *derived* from `auth_url`, so there's a single
+The in-game server host is _derived_ from `auth_url`, so there's a single
 address to configure.
 
 ---
@@ -121,17 +123,17 @@ address to configure.
 The launcher is a client of a few services (their code lives in the
 `spellbreak_game_server` and `elefrac-docusaurus` repos):
 
-| Endpoint | Purpose |
-|---|---|
-| `POST {auth_url}` → `{ok, username, is_staff, is_dev}` | Validate a token → account. |
-| `GET  {players_url}` → `{online, connected, servers:[{display_name, state, map, players, names}]}` | In-game and online (presence) counts + per-server breakdown. |
-| `GET  {players_url%/players}/events` → `{events:[…]}` | Live Discord scheduled events. |
-| `https://docs.elefrac.com/patchnotes/rss.xml` | "What's new" cards. |
-| `GET  {cdn}/game/elefracbase.zip` | Base game (range-request friendly). |
-| `GET  {cdn}/patch/latest.zip` | Balance paks → `g3/Content/Paks`. |
-| `GET  {cdn}/patch/mod/mod.zip` | Mod loader + DLL package. |
-| `GET  {cdn}/launcher/config.ini` | Single remote config: `GameVersion`, `LauncherVersion`, plus any future settings (`key=value`, `[sections]` and `;`/`#` comments allowed, UTF-8 or UTF-16LE). |
-| `GET  {cdn}/launcher/ef-launcher.exe` | Launcher self-update binary (`ef-launcher` on Linux). |
+| Endpoint                                                                                           | Purpose                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST {auth_url}` → `{ok, username, is_staff, is_dev}`                                             | Validate a token → account.                                                                                                                                   |
+| `GET  {players_url}` → `{online, connected, servers:[{display_name, state, map, players, names}]}` | In-game and online (presence) counts + per-server breakdown.                                                                                                  |
+| `GET  {players_url%/players}/events` → `{events:[…]}`                                              | Live Discord scheduled events.                                                                                                                                |
+| `https://docs.elefrac.com/patchnotes/rss.xml`                                                      | "What's new" cards.                                                                                                                                           |
+| `GET  {cdn}/game/elefracbase.zip`                                                                  | Base game (range-request friendly).                                                                                                                           |
+| `GET  {cdn}/patch/latest.zip`                                                                      | Balance paks → `g3/Content/Paks`.                                                                                                                             |
+| `GET  {cdn}/patch/mod/mod.zip`                                                                     | Mod loader + DLL package.                                                                                                                                     |
+| `GET  {cdn}/launcher/config.ini`                                                                   | Single remote config: `GameVersion`, `LauncherVersion`, plus any future settings (`key=value`, `[sections]` and `;`/`#` comments allowed, UTF-8 or UTF-16LE). |
+| `GET  {cdn}/launcher/ef-launcher.exe`                                                              | Launcher self-update binary (`ef-launcher` on Linux).                                                                                                         |
 
 "Online" is server-side **presence** — the game's pre-auth server tracks every
 authenticated client (menu included) via a launch-time ping and a 60 s

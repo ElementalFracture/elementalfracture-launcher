@@ -25,7 +25,32 @@
     },
     "stall": ["stall"]
   },
-  "players": { "online": 42 },
+  "players": {
+    "online": 42,
+    "servers": [
+      {
+        "display_name": "Solos NA 1",
+        "name": "solos1",
+        "region": "NA",
+        "players": 1,
+        "names": ["Aurelith"]
+      },
+      {
+        "display_name": "Duos EU 1",
+        "name": "duos1",
+        "region": "EU",
+        "players": 1,
+        "names": ["Lytion"]
+      },
+      {
+        "display_name": "Classic Squads NA 1",
+        "name": "vsquad1",
+        "region": "NA",
+        "players": 0,
+        "names": []
+      }
+    ]
+  },
   "events": [
     {
       "name": "Friday Night Fracture",
