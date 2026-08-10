@@ -32,14 +32,40 @@ export function modeLabel(server: PlayerServer) {
   return serverName || "Other";
 }
 
-/** Regions the split leads with, in order; anything else trails them. */
+/** Regions the breakdown leads with, in order; anything else trails them. */
 const REGION_ORDER: readonly string[] = ["NA", "EU"];
 
-/** How many players are in one mode, who they are, and where they're playing. */
+/** Where a server with no region reported is filed, so it still shows up. */
+const NO_REGION = "Other";
+
+export function regionOf(server: PlayerServer): string {
+  return server.region || NO_REGION;
+}
+
+/**
+ * The regions the breakdown gets a tab for: the ones the sidecar reports,
+ * NA/EU first and the rest alphabetical. Falls back to the known regions when
+ * nothing is reported, so an unreachable sidecar leaves an empty breakdown
+ * rather than no tabs at all.
+ */
+export function regionsOf(servers: readonly PlayerServer[]): string[] {
+  const rank = (region: string) => {
+    const index = REGION_ORDER.indexOf(region);
+    return index === -1 ? REGION_ORDER.length : index;
+  };
+  const seen = new Set(servers.map(regionOf));
+  if (seen.size === 0) {
+    return [...REGION_ORDER];
+  }
+  return [...seen].sort(
+    (a, b) => rank(a) - rank(b) || a.localeCompare(b, "en")
+  );
+}
+
+/** How many players are in one mode, and who they are. */
 export interface ModePlayers {
   count: number;
   names: string[];
-  byRegion: Map<string, number>;
 }
 
 /**
@@ -54,7 +80,7 @@ export function playersByMode(
   const byMode = new Map<string, ModePlayers>(
     MODE_MATCHERS.map(([, label]): [string, ModePlayers] => [
       label,
-      { count: 0, names: [], byRegion: new Map() },
+      { count: 0, names: [] },
     ])
   );
 
@@ -62,19 +88,12 @@ export function playersByMode(
     const label = modeLabel(server);
     let players = byMode.get(label);
     if (!players) {
-      players = { count: 0, names: [], byRegion: new Map() };
+      players = { count: 0, names: [] };
       byMode.set(label, players);
     }
-    const count = server.players ?? 0;
-    players.count += count;
+    players.count += server.players ?? 0;
     if (Array.isArray(server.names)) {
       players.names.push(...server.names);
-    }
-    if (server.region) {
-      players.byRegion.set(
-        server.region,
-        (players.byRegion.get(server.region) ?? 0) + count
-      );
     }
   }
 
@@ -95,37 +114,32 @@ export function playersByVariant(
   };
 }
 
-/**
- * One mode's per-region breakdown, e.g. "NA 12 · EU 4". Regions nobody is in
- * are left out, so an empty EU doesn't pad every row.
- */
-export function regionSplit(players: ModePlayers): string {
-  const rank = (region: string) => {
-    const index = REGION_ORDER.indexOf(region);
-    return index === -1 ? REGION_ORDER.length : index;
-  };
-  return [...players.byRegion]
-    .filter(([, count]) => count > 0)
-    .sort(([a], [b]) => rank(a) - rank(b))
-    .map(([region, count]) => `${region} ${count}`)
-    .join(" · ");
+/** Everyone across one game variant: the figure on its section head. */
+export function variantTotal(byMode: Map<string, ModePlayers>): number {
+  let total = 0;
+  for (const players of byMode.values()) {
+    total += players.count;
+  }
+  return total;
 }
 
-/**
- * Whether a second region is actually reporting. Until the peer merge is live
- * only NA answers, and a split would just restate each mode's total — so the
- * popover holds it back and stays clean.
- */
-export function hasMultipleRegions(servers: readonly PlayerServer[]): boolean {
-  let seen: string | undefined;
-  for (const server of servers) {
-    if (!server.region) {
-      continue;
-    }
-    if (seen && server.region !== seen) {
-      return true;
-    }
-    seen = server.region;
-  }
-  return false;
+/** Everyone in one region, both game variant together: the figure on its tab. */
+export function totalPlayers(
+  byVariant: Record<GameVariant, Map<string, ModePlayers>>
+): number {
+  return Object.values(byVariant).reduce(
+    (total, byMode) => total + variantTotal(byMode),
+    0
+  );
+}
+
+export function playersByRegion(
+  servers: readonly PlayerServer[]
+): Map<string, Record<GameVariant, Map<string, ModePlayers>>> {
+  return new Map(
+    regionsOf(servers).map((region) => [
+      region,
+      playersByVariant(servers.filter((s) => regionOf(s) === region)),
+    ])
+  );
 }

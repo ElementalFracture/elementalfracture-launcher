@@ -100,3 +100,24 @@
   background: var(--muted-foreground);
   box-shadow: none;
 }
+
+/* Section heads, shared by the topbar's two accordions: the friend drawer's
+   and the in-game breakdown's. They sit back in muted until pointed at, which
+   lights them rather than underlining them the way the primitive would. */
+.friend-accordion [data-slot="accordion-trigger"],
+.region-tabs [data-slot="accordion-trigger"] {
+  align-items: center;
+  gap: 8px;
+  padding: 8px 2px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.friend-accordion [data-slot="accordion-trigger"]:hover,
+.region-tabs [data-slot="accordion-trigger"]:hover {
+  color: var(--foreground);
+  text-decoration: none;
+}
