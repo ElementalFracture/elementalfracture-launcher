@@ -10,6 +10,10 @@
  * Today it covers the players sidecar: friends, the online count, and events.
  * Everything it serves comes from data.json next to this file. Edit that and
  * the next request picks it up — no restart. See README.md.
+ *
+ * http://localhost:8787/ is a dashboard over the same data, for setting a
+ * scenario up without leaving the keyboard on JSON. Its edits are in-memory,
+ * exactly like the ones the friend routes make.
  */
 import { createServer } from "node:http";
 import { readFileSync, statSync } from "node:fs";
@@ -17,6 +21,7 @@ import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.PORT || 8787);
 const DATA = fileURLToPath(new URL("./data.json", import.meta.url));
+const DASHBOARD = fileURLToPath(new URL("./dashboard.html", import.meta.url));
 
 /* data.json is the starting point, not the live state: add/accept/remove
    mutate what's in memory, the way a real server would. Re-reading on mtime
@@ -77,6 +82,98 @@ function drop(s, name) {
     s[key] = s[key].filter((f) => f.username !== name);
   }
   return hit;
+}
+
+/* ── The dashboard's side of the wire ──────────────────────────────────────
+   One write, whatever it is you're changing: a path into the state, and what
+   to do at the end of it. `{path, value}` sets, `{path, push}` appends to a
+   list, `{path, remove: true}` takes the last segment out. A friend's status
+   is ["friends", 2, "status"]; a token is ["auth", "accounts", "dev"]; the
+   online count is ["players", "online"] — which is why there's no endpoint
+   per field, and why the page can edit parts of data.json this file has never
+   heard of. */
+
+/** Read a key without going through the prototype, arrays included. */
+function at(node, key) {
+  if (Array.isArray(node)) {
+    return node[key];
+  }
+  // hasOwn, or a token called "constructor" would resolve on the prototype.
+  return Object.hasOwn(node, key) ? node[key] : undefined;
+}
+
+/** Write one, likewise: plain assignment to "__proto__" would set the
+ *  prototype instead of storing a player by that name, and a fixture whose
+ *  whole job is awkward inputs should be able to hold one. */
+function put(node, key, value) {
+  if (Array.isArray(node)) {
+    node[key] = value;
+    return;
+  }
+  Object.defineProperty(node, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
+}
+
+/** Walk to `keys`, creating what isn't there on the way — data.json needn't
+ *  already carry an `auth` for the dashboard to add an account. A missing
+ *  level is shaped after the key that follows it, or after `leaf` at the end. */
+function walk(root, keys, leaf) {
+  let node = root;
+  keys.forEach((key, i) => {
+    let next = at(node, key);
+    if (next === undefined) {
+      const last = i === keys.length - 1;
+      next = last ? leaf : typeof keys[i + 1] === "number" ? [] : {};
+      put(node, key, next);
+    }
+    if (next === null || typeof next !== "object") {
+      const where = keys.slice(0, i + 1).join(".");
+      throw new Error(`${where} holds a value, not a list or an object`);
+    }
+    node = next;
+  });
+  return node;
+}
+
+/** Apply one patch, returning a line for the log. */
+function patch(s, { path: keys, value, push, remove }) {
+  if (!Array.isArray(keys) || !keys.length) {
+    throw new Error("patch needs a path");
+  }
+  const where = keys.join(".");
+  const label = (v) =>
+    typeof v === "object" && v !== null ? JSON.stringify(v) : String(v);
+
+  if (push !== undefined) {
+    const list = walk(s, keys, []);
+    if (!Array.isArray(list)) {
+      throw new Error(`${where} is not a list`);
+    }
+    list.push(push);
+    return `${where} += ${label(push)}`;
+  }
+
+  const last = keys.at(-1);
+  const parent = walk(s, keys.slice(0, -1), typeof last === "number" ? [] : {});
+
+  if (remove) {
+    if (Array.isArray(parent)) {
+      if (typeof last !== "number" || !(last in parent)) {
+        throw new Error(`${where} is not a row of that list`);
+      }
+      parent.splice(last, 1);
+    } else {
+      delete parent[last];
+    }
+    return `${where} removed`;
+  }
+
+  put(parent, last, value);
+  return `${where} = ${label(value)}`;
 }
 
 /* The friend endpoints, answering as the real sidecar does: {ok:true, ...} or
@@ -150,12 +247,68 @@ const routes = {
   "/friends/remove": (s, { username }) => ({ ok: drop(s, username), username }),
 };
 
-createServer((req, res) => {
+/** The JSON body of a request. Anything unparseable reads as {} — the
+ *  launcher always sends JSON, so anything else is a hand-rolled curl. */
+function body(req) {
+  return new Promise((resolve) => {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(raw || "{}"));
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
+createServer(async (req, res) => {
   const path = new URL(req.url, "http://localhost").pathname;
-  const send = (body) => {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify(body));
+  const send = (payload, code = 200) => {
+    res.writeHead(code, { "content-type": "application/json" });
+    res.end(JSON.stringify(payload));
   };
+
+  /* The dashboard and the two routes behind it. Deliberately outside the
+     endpoints the launcher calls: no token, and `reject` doesn't apply — it's
+     the thing that sets those up, not something they should be able to fail. */
+  if (req.method === "GET" && path === "/") {
+    try {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      return res.end(readFileSync(DASHBOARD));
+    } catch (e) {
+      res.writeHead(500, { "content-type": "text/plain" });
+      return res.end(`dashboard.html: ${e.message}`);
+    }
+  }
+  if (req.method === "GET" && path === "/admin/state") {
+    return send({ ok: true, state: data() });
+  }
+  if (req.method === "POST" && path === "/admin/patch") {
+    const sent = await body(req);
+    // One patch, or a list of them applied in order — renaming a token is a
+    // remove and a set, and half of that is a lost account. They go onto a
+    // copy that only replaces the real state once every one of them lands.
+    const patches = Array.isArray(sent) ? sent : [sent];
+    const next = structuredClone(data());
+    try {
+      const log = patches.map((one) => patch(next, one));
+      state = next;
+      log.forEach((line) => console.log(`admin: ${line}`));
+    } catch (e) {
+      console.error(`admin: ${e.message}`);
+      return send({ ok: false, error: e.message }, 400);
+    }
+    return send({ ok: true, state: data() });
+  }
+  if (req.method === "POST" && path === "/admin/reload") {
+    // Back to the file, throwing away everything the dashboard and the friend
+    // routes have done since. `data()` reloads on the next call now.
+    state = null;
+    console.log("admin: reset to data.json");
+    return send({ ok: true, state: data() });
+  }
 
   // The two GETs that hang off the same base. They keep the home view from
   // going blank while players_url points here.
@@ -172,41 +325,33 @@ createServer((req, res) => {
     return;
   }
 
-  let raw = "";
-  req.on("data", (chunk) => (raw += chunk));
-  req.on("end", () => {
-    let body = {};
-    try {
-      body = JSON.parse(raw || "{}");
-    } catch {
-      /* the launcher always sends JSON; anything else is a hand-rolled curl */
-    }
-    // remote.rs won't even call without a stored token, so an empty one here
-    // means you're testing the guest path.
-    if (!String(body.token || "").trim()) {
-      return send({ ok: false, error: "invalid_token" });
-    }
-    console.log(`${path}${body.username ? ` → ${body.username}` : ""}`);
+  const sent = await body(req);
+  // remote.rs won't even call without a stored token, so an empty one here
+  // means you're testing the guest path.
+  if (!String(sent.token || "").trim()) {
+    return send({ ok: false, error: "invalid_token" });
+  }
+  console.log(`${path}${sent.username ? ` → ${sent.username}` : ""}`);
 
-    /* Names listed in `reject` fail with the code they map to, whichever
-       endpoint they're aimed at — that's how you reach an error path on
-       demand instead of waiting for the real server to have a bad day. */
-    const reject = data().reject ?? {};
-    // hasOwn, or a player called "constructor" would reject on the prototype.
-    const rejection =
-      Object.hasOwn(reject, body.username ?? "") && reject[body.username];
-    if (rejection) {
-      console.log(`  rejected: ${rejection}`);
-      return send({ ok: false, error: rejection });
-    }
-    const answer = route(data(), body);
-    if (answer === STALL) {
-      return;
-    }
-    send(answer);
-  });
+  /* Names listed in `reject` fail with the code they map to, whichever
+     endpoint they're aimed at — that's how you reach an error path on
+     demand instead of waiting for the real server to have a bad day. */
+  const reject = data().reject ?? {};
+  // hasOwn, or a player called "constructor" would reject on the prototype.
+  const rejection =
+    Object.hasOwn(reject, sent.username ?? "") && reject[sent.username];
+  if (rejection) {
+    console.log(`  rejected: ${rejection}`);
+    return send({ ok: false, error: rejection });
+  }
+  const answer = route(data(), sent);
+  if (answer === STALL) {
+    return;
+  }
+  send(answer);
 }).listen(PORT, () => {
   console.log(`test env on http://localhost:${PORT}`);
+  console.log(`dashboard   → http://localhost:${PORT}/`);
   console.log(`players URL → http://localhost:${PORT}/players`);
   console.log(`auth URL    → http://localhost:${PORT}/auth`);
 });

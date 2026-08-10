@@ -16,6 +16,11 @@ npm run test-env          # listens on 8787
 PORT=9000 npm run test-env
 ```
 
+<http://localhost:8787/> is a dashboard over everything it serves — friends,
+tokens, the online count, events — so a scenario is a few clicks rather than a
+hand-edit. The next section is what it's a front end for; the two are
+interchangeable and you can use both at once.
+
 Debug builds already point here — `portal_base()` in `src-tauri/src/settings.rs`
 defaults the two account endpoints at this port, so `npm run tauri-dev` talks to
 the fixture with nothing to configure:
@@ -49,20 +54,28 @@ Fine for driving the UI, wrong for actually launching the game.
 
 ## Changing what it serves
 
-Edit `data.json`. It's re-read whenever it changes, so a save shows up on the
-next request — the drawer polls every 60s, and reopening it refreshes
-immediately. No restart.
+Edit `data.json`, or use the dashboard — both end up in the same place. The
+file is re-read whenever it changes, so a save shows up on the next request:
+the drawer polls every 60s, and reopening it refreshes immediately. No restart.
 
-| Field            | What it feeds                                                    |
-| ---------------- | ---------------------------------------------------------------- |
-| `me`             | Your status, and the account row for tokens `/auth` doesn't know |
-| `friends`        | Accepted friends — the Friends / Offline sections                |
-| `incoming`       | Requests waiting on you, with accept + decline                   |
-| `outgoing`       | Requests you've sent, with cancel                                |
-| `reject`         | Names that always fail, and how (see below)                      |
-| `auth`           | Which tokens validate, and as whom (see below)                   |
-| `players.online` | The online count on the home view                                |
-| `events`         | The events list on the home view                                 |
+| Field             | What it feeds                                                    |
+| ----------------- | ---------------------------------------------------------------- |
+| `me`              | Your status, and the account row for tokens `/auth` doesn't know |
+| `friends`         | Accepted friends — the Friends / Offline sections                |
+| `incoming`        | Requests waiting on you, with accept + decline                   |
+| `outgoing`        | Requests you've sent, with cancel                                |
+| `reject`          | Names that always fail, and how (see below)                      |
+| `auth`            | Which tokens validate, and as whom (see below)                   |
+| `players.online`  | The online count on the home view                                |
+| `players.servers` | The in-game pill's per-mode, per-region breakdown                |
+| `events`          | The events list on the home view                                 |
+
+A server's mode comes from its name — `MODE_MATCHERS` in
+`ui/components/topbar/players.ts` reads "solo" / "duo" / "squad" /
+"arena|tdm|capture" out of `display_name`, and a `vsolo…` container name or a
+"Classic …" display name puts it on the classic side of the breakdown. Two
+regions have to be reporting before the split shows at all, which is why the
+seeded servers span NA and EU.
 
 `status` is `"in_game"`, `"online"`, or `"offline"` — it decides which section a
 friend lands in (in-game sorts above online). Pending requests carry no status.
@@ -70,6 +83,37 @@ Entries in `incoming` / `outgoing` are just `{ "username": "..." }`.
 
 Emptying a list is the way to see each empty state; emptying `friends`,
 `incoming`, and `outgoing` together gives the "No friends yet" case.
+
+## The dashboard
+
+<http://localhost:8787/> is the same state with controls on it: friends and
+their statuses, pending requests either way, tokens and their flags,
+rejections, the online count, the servers behind the in-game pill, and events.
+It polls every 2s, so it and the launcher agree — accept a request in the
+drawer and the row moves here on its own.
+
+Its edits are **in memory**, exactly like the ones `add` / `accept` / `remove`
+make: `data.json` is never written. So a scenario lasts until the server exits,
+or until you save `data.json` and replace it wholesale. **Copy JSON** in the
+header puts the current state on the clipboard for pasting back into
+`data.json` when a scenario is worth keeping; **Reset to data.json** throws
+everything away and re-reads the file.
+
+Under it are two routes, if you'd rather script a scenario than click one:
+
+```sh
+curl localhost:8787/admin/state
+curl localhost:8787/admin/patch -d '{"path":["friends",0,"status"],"value":"offline"}'
+curl localhost:8787/admin/patch -d '{"path":["friends"],"push":{"username":"Kestrel","status":"online"}}'
+curl localhost:8787/admin/patch -d '{"path":["incoming",0],"remove":true}'
+curl -X POST localhost:8787/admin/reload
+```
+
+A patch is a path into the state and one of `value`, `push` or `remove`;
+missing levels along the way are created, so `["auth","accounts","new"]` works
+on a `data.json` with no `auth` at all. Send a list of them to have them land
+together or not at all — that's what a rename is. Both routes answer with the
+whole state, which is what the page re-renders from.
 
 ## Token validation
 
