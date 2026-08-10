@@ -8,3 +8,8 @@ node_modules/
 
 # tauri-specta TypeScript bindings, regenerated on every debug run
 ui/generated/
+
+# Editor and agent state, personal to whoever's working here. Claude Code's
+# settings.json is shared on purpose; only the local overrides are ignored.
+.idea/
+.claude/
