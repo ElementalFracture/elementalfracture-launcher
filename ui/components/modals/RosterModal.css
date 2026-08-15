@@ -1,0 +1,93 @@
+/* ============ The roster dialog: who is in one mode ============ */
+
+/* The dialog's own padding would park the scroll track a full step in from
+   the edge. The list reclaims that padding and hands it back to the rows, so
+   the track rides the edge while the names stay in line with the title. */
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  /* No gap: the rows carry their own spacing as padding, so the pointer never
+     crosses a strip that belongs to no row and blinks the hover off. */
+  gap: 0;
+  max-height: 260px;
+  margin: 0 -12px;
+  padding: 0 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+.roster-list::-webkit-scrollbar {
+  width: 6px;
+}
+.roster-list::-webkit-scrollbar-thumb {
+  background: #ffffff26;
+  border-radius: 4px;
+}
+.roster-list::-webkit-scrollbar-thumb:hover {
+  background: #ffffff3d;
+}
+.roster-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* The rhythm between names lives here rather than in a list gap, so every
+     pixel between two rows still belongs to one of them. */
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* The row still lights up under the pointer, so it reads as one target. */
+.roster-row:hover {
+  background: var(--muted);
+}
+.roster-row-error {
+  margin: 2px 0 0;
+  color: var(--destructive);
+  font-size: 11px;
+  font-weight: 500;
+}
+/* Where the account already stands with the player, in place of the button. */
+.roster-tag {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+}
+/* Always on: the roster is a short list, and a request being available at all
+   is worth reading off it without hunting row by row. */
+.roster-row .roster-add {
+  display: inline-flex;
+  /* Padded out to a proper target, then pulled back by the same amount so a
+     row is still only as tall as its name. */
+  padding: 5px;
+  margin: -5px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+.roster-row .roster-add:hover,
+.roster-row .roster-add:focus-visible {
+  background: var(--background);
+  color: var(--primary);
+}
+.roster-add svg {
+  width: 18px;
+  height: 18px;
+}
+/* Sized like the button's icon so a friend's row is no taller than any other,
+   and the only thing in the column that carries a colour before it is
+   hovered — which is what picks the friends out of the list. */
+.roster-friend {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+.roster-empty {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}

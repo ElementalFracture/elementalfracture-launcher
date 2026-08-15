@@ -114,6 +114,18 @@ export function playersByVariant(
   };
 }
 
+// Show the player list. Friends first, alphabetically sorted.
+export function rosterOf(
+  names: readonly string[],
+  isFriend: (player: string) => boolean = () => false
+): string[] {
+  return [...new Set(names)].sort(
+    (a, b) =>
+      Number(isFriend(b)) - Number(isFriend(a)) ||
+      a.localeCompare(b, "en", { sensitivity: "base" })
+  );
+}
+
 /** Everyone across one game variant: the figure on its section head. */
 export function variantTotal(byMode: Map<string, ModePlayers>): number {
   let total = 0;
