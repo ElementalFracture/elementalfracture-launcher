@@ -1,0 +1,10 @@
+/* ============ Footer: the social strip under the views ============ */
+
+#footer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--footer-h);
+  padding: 0 12px;
+  border-top: 1px solid var(--border);
+}

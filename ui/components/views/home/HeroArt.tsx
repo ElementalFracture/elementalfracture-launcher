@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import art1 from "@/assets/art/art-1.jpg";
 import art2 from "@/assets/art/art-2.jpg";
 import art3 from "@/assets/art/art-3.jpg";
+import art4 from "@/assets/art/art-4.jpg";
 import art5 from "@/assets/art/art-5.jpg";
 import art6 from "@/assets/art/art-6.jpg";
 import "./HeroArt.css";
 
-/** art-0 and art-4 are left out: neither frames well behind the hero copy. */
-const HERO_ART = [art1, art2, art3, art5, art6];
+const HERO_ART = [art1, art2, art3, art4, art5, art6];
 
 /** The rotating promo art behind the hero: two layers that crossfade. */
 export function HeroArt() {
