@@ -1,31 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { InGamePill } from "../InGamePill";
-import type { FriendsData, PlayersData } from "@/lib/rust";
+import type { PlayersData } from "@/lib/rust";
 
 const live = vi.hoisted(() => ({
   playersData: null as PlayersData | null,
   refreshPlayers: vi.fn(),
 }));
 const game = vi.hoisted(() => ({ variant: "ef" as string }));
-const account = vi.hoisted(() => ({
-  token: "tok" as string,
-  friends: null as FriendsData | null,
-  runFriendAction: vi.fn(async (): Promise<string | null> => null),
-}));
 
 vi.mock("@/context/LiveDataContext", () => ({ useLiveData: () => live }));
 vi.mock("@/context/GameContext", () => ({
   useGame: () => ({ status: { variant: game.variant } }),
-}));
-vi.mock("@/context/SettingsContext", () => ({
-  useSettings: () => ({ settings: { auth_token: account.token } }),
-}));
-vi.mock("@/context/FriendsContext", () => ({
-  useFriends: () => ({
-    friends: account.friends,
-    runFriendAction: account.runFriendAction,
-  }),
 }));
 
 /* Two regions, both balances, and one mode nobody is in — enough shape to
@@ -81,15 +67,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   live.playersData = { online: 10, servers: SERVERS };
   game.variant = "ef";
-  account.token = "tok";
-  // One of each standing the roster can find a listed player in, so only
-  // "ash" is left to be asked.
-  account.friends = {
-    me: { username: "me" },
-    friends: [{ username: "briar" }],
-    outgoing: [{ username: "cinder" }],
-  };
-  account.runFriendAction.mockResolvedValue(null);
 });
 
 describe("InGamePill", () => {
@@ -145,51 +122,5 @@ describe("InGamePill", () => {
   it("refreshes the figures when the breakdown is opened", () => {
     open();
     expect(live.refreshPlayers).toHaveBeenCalled();
-  });
-
-  /** The roster button on a mode row, if the row has one. */
-  const rosterButton = (label: string) =>
-    modeRow(label).querySelector(".game-mode-players") as HTMLElement | null;
-
-  it("offers a roster only on the modes somebody is in", () => {
-    open();
-    expect(rosterButton("Solos")).not.toBeNull();
-    expect(rosterButton("Duos")).toBeNull();
-  });
-
-  /* What the roster does with the names is RosterModal's own spec; what the
-     pill owes it is the mode that was clicked and nobody else's players. */
-  it("hands the clicked mode's players to the roster", () => {
-    open();
-    fireEvent.click(rosterButton("Solos")!);
-
-    const dialog = screen.getByRole("dialog");
-    expect(dialog.textContent).toContain("Solos");
-    expect(dialog.textContent).toContain("Elemental Fracture · NA");
-    for (const player of ["ash", "briar", "cinder"]) {
-      expect(dialog.textContent).toContain(player);
-    }
-    // The EU crowd is in another region's tab, and stays out of this list.
-    expect(dialog.textContent).not.toContain("dusk");
-  });
-
-  it("keeps the balances' rosters apart", () => {
-    open();
-    // Classic solos carry a head count but no names from the sidecar.
-    fireEvent.click(screen.getByRole("button", { name: /^Classic/ }));
-    fireEvent.click(rosterButton("Solos")!);
-    const dialog = screen.getByRole("dialog");
-    expect(dialog.textContent).toContain("Classic · NA");
-    expect(dialog.textContent).toContain("No names reported");
-  });
-
-  // Queried off the DOM rather than by role: the modal roster hides whatever
-  // is behind it from the accessibility tree, popover included.
-  it("keeps the breakdown open behind the roster", () => {
-    open();
-    fireEvent.click(rosterButton("Solos")!);
-    expect(
-      document.querySelector('[data-slot="popover-content"]')
-    ).not.toBeNull();
   });
 });

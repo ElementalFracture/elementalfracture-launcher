@@ -32,11 +32,6 @@
   font-size: 13px;
   font-weight: 600;
 }
-.game-mode-row-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 .mode-row .game-mode-count {
   color: var(--primary);
   font-size: 12px;
@@ -45,31 +40,4 @@
 .mode-row.idle,
 .mode-row.idle .game-mode-count {
   color: var(--muted-foreground);
-}
-
-/* The roster button rides along with the count, and only surfaces once the
-   row is under the pointer (or reached by keyboard). */
-.mode-row .game-mode-players {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 100ms ease,
-    color 100ms ease;
-}
-.mode-row:hover .game-mode-players,
-.mode-row .game-mode-players:focus-visible {
-  opacity: 1;
-}
-.mode-row .game-mode-players:hover {
-  color: var(--primary);
-}
-.game-mode-players svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
 }
