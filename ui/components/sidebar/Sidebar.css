@@ -5,7 +5,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 0;
+  /* No bottom padding to align with footer */
+  padding: 14px 0 0;
   gap: 6px;
   /* Solid rather than a gradient, so the EF ⇄ Classic recolour can transition
      it — gradient background-images don't animate. */
@@ -19,11 +20,21 @@
   gap: 6px;
 }
 
+/* The sidebar's half of the bottom band. Same height as the footer, down to
+   the transparent line standing in for its top border — that is what puts
+   About's centre on the social row's. */
 .sidebar-foot {
   margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--footer-h);
+  border-top: 1px solid transparent;
+}
+/* A shade smaller than the nav above it, so the band has room to hold it. */
+.sidebar-foot .nav-btn {
+  width: 40px;
+  height: 40px;
 }
 
 .nav-btn {
@@ -45,9 +56,6 @@
   fill: none;
   color: var(--muted-foreground);
   transition: color 0.15s;
-}
-.nav-btn svg.discord-icon {
-  fill: var(--muted-foreground);
 }
 .nav-btn:hover {
   background: var(--surface);

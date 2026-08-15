@@ -132,6 +132,11 @@
   --spacing-popover-y: 12px; /* popover panels */
   --spacing-popover-x: 14px;
   --spacing-view: 28px; /* view gutter */
+
+  /* The bottom band, top border included. The footer is one half of it and
+     the sidebar's foot the other, so the About button and the social row sit
+     on the same centre line — change it in one place or they part company. */
+  --footer-h: 42px;
 }
 
 @layer base {

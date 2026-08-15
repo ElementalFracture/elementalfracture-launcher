@@ -7,6 +7,7 @@ import { ProgressProvider } from "@/context/ProgressContext";
 import { UIProvider } from "@/context/UIContext";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { TopBar } from "@/components/topbar/TopBar";
+import { Footer } from "@/components/footer/Footer";
 import { HomeView } from "@/components/views/home/HomeView";
 import { ModsView } from "@/components/views/mods/ModsView";
 import { SettingsView } from "@/components/views/settings/SettingsView";
@@ -29,6 +30,9 @@ function App() {
                     <HomeView />
                     <ModsView />
                     <SettingsView />
+                    {/* After the views, so the scroller above it keeps the
+                        height and the strip stays on screen. */}
+                    <Footer />
                   </main>
                 </div>
                 <Wizard />

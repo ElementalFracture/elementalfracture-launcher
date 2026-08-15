@@ -1,0 +1,87 @@
+/* ============ Social row (footer buttons) ============ */
+
+.social-row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.social-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* One box and one set of feedback for every way out, whether its mark comes
+   from a file or from Lucide, and whether or not it says a word. The padding
+   is what makes a 21px mark worth aiming at. */
+.social-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    transform 0.1s;
+}
+.social-btn:hover {
+  color: var(--foreground);
+}
+.social-btn:active {
+  transform: scale(0.97);
+}
+.social-btn:focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+.social-icon {
+  width: 21px;
+  height: 21px;
+  background: currentColor;
+  -webkit-mask-image: var(--icon);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-image: var(--icon);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+.social-icon.social-discord {
+  --icon: url("../../assets/icons/discord-brands-solid-full.svg");
+}
+.social-icon.social-donate {
+  --icon: url("../../assets/icons/patreon-brands-solid-full.svg");
+}
+.social-icon.social-x {
+  --icon: url("../../assets/icons/square-x-twitter-brands-solid-full.svg");
+}
+.social-icon.social-twitch {
+  --icon: url("../../assets/icons/twitch-brands-solid-full.svg");
+}
+.social-icon.social-youtube {
+  --icon: url("../../assets/icons/youtube-brands-solid-full.svg");
+}
+
+/* Lucide draws itself and inherits the button's colour. */
+.social-btn svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+}
+
+/* No transition so all icons (lucid and svg) change at the same time */
+body.theming .social-btn * {
+  transition: none !important;
+}
