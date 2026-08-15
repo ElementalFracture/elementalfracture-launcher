@@ -43,7 +43,8 @@
 .pill-icon {
   width: 17px;
   height: 17px;
-  fill: var(--muted-foreground);
+  fill: none;
+  color: var(--muted-foreground);
 }
 
 .pill.account,
