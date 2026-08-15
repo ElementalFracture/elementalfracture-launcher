@@ -19,8 +19,7 @@ import {
 import { RosterModal, type Roster } from "@/components/modals/RosterModal";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
-import { InGameIcon } from "@/assets/icons/InGameIcon";
-import { PlayersIcon } from "@/assets/icons/PlayersIcon";
+import { Swords, Users } from "lucide-react";
 import { GAME_VARIANTS, toGameVariant } from "@/lib/gameVariant";
 import { playersByRegion, totalPlayers, variantTotal } from "./players";
 import "./InGamePill.css";
@@ -67,7 +66,7 @@ export function InGamePill() {
             className="pill clickable"
             title="Players in game: click for a breakdown"
           >
-            <InGameIcon className="pill-icon" />
+            <Swords className="pill-icon" />
             <div className="pill-text">
               <strong>{inGame ?? "–"}</strong>
               <small>in game</small>
@@ -127,7 +126,7 @@ export function InGamePill() {
                                     })
                                   }
                                 >
-                                  <PlayersIcon aria-hidden="true" />
+                                  <Users aria-hidden="true" />
                                 </button>
                               )}
                               <span className="game-mode-count">
