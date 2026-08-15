@@ -20,8 +20,7 @@
 
 @font-face {
   font-family: "Montserrat";
-  src: url("assets/fonts/Montserrat-VariableFont_wght.ttf")
-    format("truetype-variations");
+  src: url("assets/fonts/Montserrat-VariableFont_wght.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
 }
@@ -89,7 +88,6 @@
   --font-heading: var(--font-sans);
   --font-display:
     "Friz Quadrata", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-serif: "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --font-body: "Montserrat", "Segoe UI", sans-serif;
 
   --color-ring: var(--ring);
@@ -215,12 +213,10 @@ body.classic::after {
    The 1.6s recolour and 0.9s copy fade are half of useVariantTheme.ts pair
    of timeouts, which hold the class on and swap the words at the midpoint —
    the two files have to be changed together. */
-.banner-text .eyebrow,
 .banner-text h3,
 .banner-text p {
   transition: opacity 0.9s ease;
 }
-.banner-text .eyebrow.fading,
 .banner-text h3.fading,
 .banner-text p.fading {
   opacity: 0;
@@ -240,7 +236,6 @@ body.theming *::after {
   transition-timing-function: ease !important;
 }
 /* The banner copy still fades on its own 0.9s beat while colours take 1.6s. */
-body.theming .banner-text .eyebrow,
 body.theming .banner-text h3,
 body.theming .banner-text p {
   transition-property: opacity, color !important;
