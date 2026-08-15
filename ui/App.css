@@ -202,14 +202,18 @@ body.classic::after {
 }
 
 /* ============ EF ⇄ Classic switch ============
-   Only what actually changes eases over, at the same 2.6s as the hero-art
-   crossfade: the banner copy fades out, swaps, and fades back in while every
-   recoloured surface transitions its colours. body.theming is only set for
-   the length of a switch, so normal hover feedback stays snappy. */
+   Only what actually changes eases over: the banner copy fades out, swaps, and
+   fades back in while every recoloured surface transitions its colours.
+   body.theming is only set for the length of a switch, so normal hover
+   feedback stays snappy.
+
+   The 1.6s recolour and 0.9s copy fade are half of useVariantTheme.ts pair
+   of timeouts, which hold the class on and swap the words at the midpoint —
+   the two files have to be changed together. */
 .banner-text .eyebrow,
 .banner-text h3,
 .banner-text p {
-  transition: opacity 1.5s ease;
+  transition: opacity 0.9s ease;
 }
 .banner-text .eyebrow.fading,
 .banner-text h3.fading,
@@ -227,15 +231,15 @@ body.theming *::before,
 body.theming *::after {
   transition-property:
     background-color, color, border-color, fill, opacity !important;
-  transition-duration: 2.6s !important;
+  transition-duration: 1.6s !important;
   transition-timing-function: ease !important;
 }
-/* The banner copy still fades on its own 1.5s beat while colours take 2.6s. */
+/* The banner copy still fades on its own 0.9s beat while colours take 1.6s. */
 body.theming .banner-text .eyebrow,
 body.theming .banner-text h3,
 body.theming .banner-text p {
   transition-property: opacity, color !important;
-  transition-duration: 1.5s, 2.6s !important;
+  transition-duration: 0.9s, 1.6s !important;
 }
 
 /* ============ App shell ============ */

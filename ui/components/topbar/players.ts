@@ -1,3 +1,4 @@
+import type { GameVariant } from "@/lib/gameVariant";
 import type { PlayerServer } from "@/lib/rust";
 
 /** Server-name pattern → the mode bucket it belongs in. */
@@ -7,8 +8,6 @@ const MODE_MATCHERS: readonly (readonly [RegExp, string])[] = [
   [/squad/i, "Squads"],
   [/arena|tdm|capture/i, "Arena/TDM"],
 ];
-
-export type GameVariant = "ef" | "classic";
 
 /**
  * Which balance a server runs. Classic servers are the manager's dynamic

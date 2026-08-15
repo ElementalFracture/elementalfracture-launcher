@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toGameVariant, type GameVariant } from "@/lib/gameVariant";
 
 /** Hero copy per balance: EF sells the community edition, Classic the preserved one. */
 const HERO_TEXT = {
@@ -14,10 +15,15 @@ const HERO_TEXT = {
   },
 } as const;
 
-/** How long the theme recolour runs — matched to the hero-art crossfade. */
-const THEME_MS = 2600;
+/* Both of these are the JS half of a duration the stylesheet also carries:
+   they say how long to hold `body.theming` and when to swap the words, while
+   App.css ("EF ⇄ Classic switch") says how long the transitions themselves
+   run. Change one and change the other, or the class comes off mid-fade. */
+
+/** How long the theme recolour runs. */
+const THEME_MS = 1600;
 /** Midpoint of the copy fade: text is swapped while it's invisible. */
-const COPY_SWAP_MS = 1500;
+const COPY_SWAP_MS = 900;
 
 /**
  * Drive the EF ⇄ Classic look off the installed variant: `body.classic` carries
@@ -33,13 +39,13 @@ export function useVariantTheme(variant: string | undefined) {
   const [fading, setFading] = useState(false);
   // Which theme is on screen. Null until the first status arrives, which is
   // what tells a fresh load (apply instantly) from a real toggle (animate).
-  const applied = useRef<"ef" | "classic" | null>(null);
+  const applied = useRef<GameVariant | null>(null);
 
   useEffect(() => {
     if (!variant) {
       return;
     }
-    const theme = variant === "classic" ? "classic" : "ef";
+    const theme = toGameVariant(variant);
     if (applied.current === theme) {
       return;
     }

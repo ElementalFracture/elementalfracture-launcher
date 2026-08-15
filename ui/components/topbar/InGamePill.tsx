@@ -21,19 +21,9 @@ import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { InGameIcon } from "@/assets/icons/InGameIcon";
 import { PlayersIcon } from "@/assets/icons/PlayersIcon";
-import {
-  playersByRegion,
-  totalPlayers,
-  variantTotal,
-  type GameVariant,
-} from "./players";
+import { GAME_VARIANTS, toGameVariant } from "@/lib/gameVariant";
+import { playersByRegion, totalPlayers, variantTotal } from "./players";
 import "./InGamePill.css";
-
-/** The two balance variants, in the order the breakdown lists them. */
-const VARIANTS: readonly (readonly [GameVariant, string])[] = [
-  ["ef", "Elemental Fracture"],
-  ["classic", "Classic"],
-];
 
 /** Players in game, with a per-region, per-balance breakdown behind a click. */
 export function InGamePill() {
@@ -52,10 +42,8 @@ export function InGamePill() {
   // region that was picked, and the strip has to land somewhere real.
   const [region, setRegion] = useState<string | null>(null);
   const activeRegion = region && regions.includes(region) ? region : regions[0];
-  // The balance this install runs is the one worth reading first; anything
-  // else the backend reports ("unknown", missing) falls back to EF.
-  const installed: GameVariant =
-    status?.variant === "classic" ? "classic" : "ef";
+  // Show the installed game variant when opening the popover
+  const installed = toGameVariant(status?.variant);
 
   return (
     <>
@@ -107,16 +95,16 @@ export function InGamePill() {
             {[...byRegion].map(([name, byVariant]) => (
               <TabsContent key={name} value={name}>
                 <Accordion key={installed} defaultValue={[installed]}>
-                  {VARIANTS.map(([variant, variantLabel]) => (
-                    <AccordionItem key={variant} value={variant}>
+                  {GAME_VARIANTS.map(({ id, label: variantLabel }) => (
+                    <AccordionItem key={id} value={id}>
                       <AccordionTrigger>
                         <span className="variant-title">{variantLabel}</span>
                         <span className="variant-count">
-                          ({variantTotal(byVariant[variant])})
+                          ({variantTotal(byVariant[id])})
                         </span>
                       </AccordionTrigger>
                       <AccordionContent>
-                        {[...byVariant[variant]].map(([label, players]) => (
+                        {[...byVariant[id]].map(([label, players]) => (
                           <div
                             key={label}
                             className={

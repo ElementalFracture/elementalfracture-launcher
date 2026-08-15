@@ -3,7 +3,6 @@ import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
-import { VariantPicker } from "./VariantPicker";
 import "./LaunchPanel.css";
 
 /** The banner's call to action once the game is installed. */
@@ -33,7 +32,6 @@ export function LaunchPanel() {
 
   return (
     <div>
-      <VariantPicker />
       <button
         className="launch-img"
         title={updating ? "Updating the game…" : "Launch Spellbreak"}
