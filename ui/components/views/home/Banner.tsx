@@ -17,7 +17,6 @@ export function Banner() {
       <HeroArt />
       <div className="banner-shade" aria-hidden="true" />
       <div className="banner-text">
-        <span className={"eyebrow" + fadeClass}>{copy.eyebrow}</span>
         <h3 className={fadeClass.trim()}>{copy.title}</h3>
         <p className={fadeClass.trim()}>{copy.sub}</p>
 

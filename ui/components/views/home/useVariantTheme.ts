@@ -4,12 +4,10 @@ import { toGameVariant, type GameVariant } from "@/lib/gameVariant";
 /** Hero copy per balance: EF sells the community edition, Classic the preserved one. */
 const HERO_TEXT = {
   ef: {
-    eyebrow: "Elemental Fracture",
     title: "The Hollow Lands still beckon, breaker",
     sub: "Community servers, restored battles, new balance. Spellbreak lives on.",
   },
   classic: {
-    eyebrow: "Spellbreak Classic",
     title: "The Hollow Lands, as they were before.",
     sub: "Community servers, restored battles, the original balance. Spellbreak, preserved.",
   },
