@@ -5,6 +5,7 @@ import {
   playersByRegion,
   playersByVariant,
   regionsOf,
+  rosterOf,
   totalPlayers,
   variantTotal,
   variantOf,
@@ -37,7 +38,12 @@ describe("modeLabel", () => {
 describe("playersByMode", () => {
   it("lists every known mode even when no server reports one", () => {
     const byMode = playersByMode([]);
-    expect([...byMode.keys()]).toEqual(["Solos", "Duos", "Squads", "Arena/TDM"]);
+    expect([...byMode.keys()]).toEqual([
+      "Solos",
+      "Duos",
+      "Squads",
+      "Arena/TDM",
+    ]);
     expect(byMode.get("Solos")).toEqual({ count: 0, names: [] });
   });
 
@@ -68,8 +74,16 @@ describe("playersByMode", () => {
   });
 
   it("appends modes the matchers don't know, after the known ones", () => {
-    const byMode = playersByMode([{ display_name: "Practice Range", players: 1 }]);
-    expect([...byMode.keys()]).toEqual(["Solos", "Duos", "Squads", "Arena/TDM", "Practice Range"]);
+    const byMode = playersByMode([
+      { display_name: "Practice Range", players: 1 },
+    ]);
+    expect([...byMode.keys()]).toEqual([
+      "Solos",
+      "Duos",
+      "Squads",
+      "Arena/TDM",
+      "Practice Range",
+    ]);
     expect(byMode.get("Practice Range")?.count).toBe(1);
   });
 
@@ -122,12 +136,36 @@ describe("regionsOf", () => {
 
   it("files a region-less server under Other", () => {
     expect(
-      regionsOf([{ display_name: "NA Solos", region: "NA" }, { display_name: "Duos" }])
+      regionsOf([
+        { display_name: "NA Solos", region: "NA" },
+        { display_name: "Duos" },
+      ])
     ).toEqual(["NA", "Other"]);
   });
 
   it("falls back to the known regions when nothing is reported", () => {
     expect(regionsOf([])).toEqual(["NA", "EU"]);
+  });
+});
+
+describe("rosterOf", () => {
+  it("lists each player once, sorted by name", () => {
+    expect(rosterOf(["cinder", "ash", "Briar", "ash"])).toEqual([
+      "ash",
+      "Briar",
+      "cinder",
+    ]);
+  });
+
+  it("is empty when the mode reports no names", () => {
+    expect(rosterOf([])).toEqual([]);
+  });
+
+  it("leads with the friends, each side alphabetical", () => {
+    const friends = new Set(["dusk", "ash"]);
+    expect(
+      rosterOf(["cinder", "ash", "briar", "dusk"], (p) => friends.has(p))
+    ).toEqual(["ash", "dusk", "briar", "cinder"]);
   });
 });
 
@@ -175,7 +213,12 @@ describe("playersByRegion", () => {
     const byRegion = playersByRegion([
       { display_name: "NA Duos", players: 4, region: "NA" },
       { display_name: "EU Duos", players: 6, region: "EU" },
-      { name: "vduos-1", display_name: "Classic Duos 1", players: 3, region: "NA" },
+      {
+        name: "vduos-1",
+        display_name: "Classic Duos 1",
+        players: 3,
+        region: "NA",
+      },
     ]);
     expect(byRegion.get("NA")?.ef.get("Duos")?.count).toBe(4);
     expect(byRegion.get("NA")?.classic.get("Duos")?.count).toBe(3);
@@ -184,7 +227,9 @@ describe("playersByRegion", () => {
   });
 
   it("keeps every mode row in every region section", () => {
-    const byRegion = playersByRegion([{ display_name: "NA Solos", players: 1, region: "NA" }]);
+    const byRegion = playersByRegion([
+      { display_name: "NA Solos", players: 1, region: "NA" },
+    ]);
     expect([...byRegion.get("NA")!.classic.keys()]).toEqual([
       "Solos",
       "Duos",
@@ -207,20 +252,34 @@ describe("variantOf", () => {
   });
 
   it("treats everything else as Elemental Fracture", () => {
-    expect(variantOf({ name: "solo-1", display_name: "NA Solos #1" })).toBe("ef");
+    expect(variantOf({ name: "solo-1", display_name: "NA Solos #1" })).toBe(
+      "ef"
+    );
     expect(variantOf({})).toBe("ef");
   });
 
   it("does not mistake an EF server whose name merely starts with v", () => {
-    expect(variantOf({ name: "vault-arena", display_name: "Vault Arena" })).toBe("ef");
+    expect(
+      variantOf({ name: "vault-arena", display_name: "Vault Arena" })
+    ).toBe("ef");
   });
 });
 
 describe("playersByVariant", () => {
   it("keeps both sections listing every mode, populated or not", () => {
     const split = playersByVariant([]);
-    expect([...split.ef.keys()]).toEqual(["Solos", "Duos", "Squads", "Arena/TDM"]);
-    expect([...split.classic.keys()]).toEqual(["Solos", "Duos", "Squads", "Arena/TDM"]);
+    expect([...split.ef.keys()]).toEqual([
+      "Solos",
+      "Duos",
+      "Squads",
+      "Arena/TDM",
+    ]);
+    expect([...split.classic.keys()]).toEqual([
+      "Solos",
+      "Duos",
+      "Squads",
+      "Arena/TDM",
+    ]);
   });
 
   it("counts a mode against the balance its server runs", () => {
@@ -235,7 +294,12 @@ describe("playersByVariant", () => {
   it("keeps the rosters apart", () => {
     const split = playersByVariant([
       { display_name: "NA Duos", players: 1, names: ["Lytion"] },
-      { name: "vduos-1", display_name: "Classic Duos 1", players: 1, names: ["Doobs"] },
+      {
+        name: "vduos-1",
+        display_name: "Classic Duos 1",
+        players: 1,
+        names: ["Doobs"],
+      },
     ]);
     expect(split.ef.get("Duos")?.names).toEqual(["Lytion"]);
     expect(split.classic.get("Duos")?.names).toEqual(["Doobs"]);
