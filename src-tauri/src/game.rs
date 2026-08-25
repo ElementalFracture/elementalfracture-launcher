@@ -269,6 +269,62 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         assert_eq!(detect_variant(tmp.path()), "unknown");
     }
+
+    /// An executable at a path with a space in it — the shape that used to be
+    /// torn in half at the space and reported as "isn't installed".
+    fn spaced_wine() -> (tempfile::TempDir, String) {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("test space").join("bin");
+        fs::create_dir_all(&dir).unwrap();
+        let exe = dir.join("wine");
+        fs::write(&exe, b"#!/bin/sh\nexit 0\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&exe, fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let path = exe.to_string_lossy().into_owned();
+        (tmp, path)
+    }
+
+    #[test]
+    fn wrapper_path_with_spaces_stays_whole() {
+        let (_tmp, path) = spaced_wine();
+        assert_eq!(parse_wrapper(&path), std::slice::from_ref(&path));
+        // Leading/trailing slack must not turn it into a word list either.
+        assert_eq!(parse_wrapper(&format!("  {path}  ")), [path]);
+    }
+
+    #[test]
+    fn multi_word_wrappers_still_split() {
+        assert_eq!(
+            parse_wrapper("flatpak run org.winehq.Wine"),
+            ["flatpak", "run", "org.winehq.Wine"]
+        );
+        assert_eq!(
+            parse_wrapper("steam steam://rungameid/18150169937639899136"),
+            ["steam", "steam://rungameid/18150169937639899136"]
+        );
+        assert_eq!(parse_wrapper("umu-run"), ["umu-run"]);
+        // An absolute path that isn't there falls back to the word split
+        // rather than claiming to be a program.
+        assert_eq!(parse_wrapper("/no/such/wine --foo"), ["/no/such/wine", "--foo"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn availability_survives_spaces_and_quotes() {
+        let (_tmp, path) = spaced_wine();
+        assert!(wrapper_available(&path), "spaced path should resolve: {path}");
+        assert!(wrapper_available("sh"));
+        // A value carrying shell syntax must fail the check, not execute.
+        let canary = tempfile::tempdir().unwrap();
+        let target = canary.path().join("CANARY");
+        fs::write(&target, b"x").unwrap();
+        let evil = format!(r#"x" ; rm -f "{}" ; ""#, target.display());
+        assert!(!wrapper_available(&evil));
+        assert!(target.exists(), "injected command ran");
+    }
 }
 
 #[derive(Serialize, specta::Type)]
@@ -341,17 +397,32 @@ pub fn detect_wrappers() -> Vec<WrapperOption> {
     found
 }
 
+/// Split the configured wrapper into argv. An absolute path that exists on
+/// disk is the whole program, spaces and all — never a word list, or a wine
+/// under "/opt/my wine/bin" gets torn in half. Everything else keeps the word
+/// split, so multi-word wrappers ("flatpak run org.winehq.Wine") still work.
+fn parse_wrapper(command: &str) -> Vec<String> {
+    let trimmed = command.trim();
+    if trimmed.starts_with('/') && Path::new(trimmed).is_file() {
+        return vec![trimmed.to_string()];
+    }
+    trimmed.split_whitespace().map(str::to_string).collect()
+}
+
 /// Check the launch wrapper exists where the game will actually run
 /// (on the host when the launcher itself lives in a container).
 fn wrapper_available(prog: &str) -> bool {
-    let check = format!("command -v {prog} >/dev/null 2>&1");
+    // `prog` rides in as an argument rather than spliced into the script text:
+    // nothing user-controlled reaches the shell parser, so a path with spaces
+    // survives and a path with quotes can't break out. "_" fills $0.
+    const CHECK: &str = r#"command -v "$1" >/dev/null 2>&1"#;
     let mut cmd = if settings::in_container() {
         let mut c = std::process::Command::new("distrobox-host-exec");
-        c.args(["sh", "-c", &check]);
+        c.args(["sh", "-c", CHECK, "_", prog]);
         c
     } else {
         let mut c = std::process::Command::new("sh");
-        c.args(["-c", &check]);
+        c.args(["-c", CHECK, "_", prog]);
         c
     };
     cmd.stdout(std::process::Stdio::null())
@@ -399,7 +470,12 @@ fn detect_proton_path() -> Option<String> {
 /// that don't inherit our WINEDLLOVERRIDES env var. Best-effort and idempotent
 /// (guarded by a marker), and only after the prefix is initialized so we never
 /// block or corrupt first-run prefix creation.
-fn ensure_prefix_override(wrapper: &str, prefix: &str, is_proton: bool, proton_path: Option<&str>) {
+fn ensure_prefix_override(
+    wrapper: &[String],
+    prefix: &str,
+    is_proton: bool,
+    proton_path: Option<&str>,
+) {
     if prefix.is_empty() {
         return;
     }
@@ -428,7 +504,7 @@ fn ensure_prefix_override(wrapper: &str, prefix: &str, is_proton: bool, proton_p
             argv.push(format!("PROTONPATH={proton}"));
         }
     }
-    argv.extend(wrapper.split_whitespace().map(str::to_string));
+    argv.extend(wrapper.iter().cloned());
     for a in [
         "reg", "add", r"HKEY_CURRENT_USER\Software\Wine\DllOverrides",
         "/v", "xinput1_3", "/d", "native,builtin", "/f",
@@ -475,10 +551,12 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
         // missing (e.g. the default "wine" on a box that only has Proton),
         // fall back to umu-run instead of dead-ending on an error.
         let mut launch_command = s.launch_command.trim().to_string();
-        let wrapper = launch_command.split_whitespace().next().unwrap().to_string();
+        let mut wrapper_argv = parse_wrapper(&launch_command);
+        let wrapper = wrapper_argv[0].clone();
         if !wrapper_available(&wrapper) {
             if wrapper != "umu-run" && wrapper_available("umu-run") {
                 launch_command = "umu-run".into();
+                wrapper_argv = vec!["umu-run".into()];
             } else {
                 return Err(format!(
                     "'{wrapper}' isn't installed{}. Set a different Launch wrapper in Settings \
@@ -546,7 +624,7 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
         // back to its builtin xinput1_3, silently dropping the mod loader.
         // Once it's in the registry the override sticks regardless. Best-effort
         // and once per prefix.
-        ensure_prefix_override(&launch_command, prefix, is_proton, proton_path.as_deref());
+        ensure_prefix_override(&wrapper_argv, prefix, is_proton, proton_path.as_deref());
 
         // Force the app-local xinput1_3.dll — the EF mod loader — to load.
         // Wine and Proton default xinput1_3 to their own builtin, which
@@ -563,7 +641,7 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
 
         argv.push("env".into());
         argv.extend(envs);
-        argv.extend(launch_command.split_whitespace().map(str::to_string));
+        argv.extend(wrapper_argv.iter().cloned());
     }
     argv.push(exe.to_string_lossy().into_owned());
 
