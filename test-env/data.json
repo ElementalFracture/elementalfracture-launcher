@@ -1,16 +1,51 @@
 {
-  "me": { "username": "Lytion", "status": "in_game" },
+  "me": {
+    "username": "Lytion",
+    "status": "in_game"
+  },
   "friends": [
-    { "username": "Aurelith", "status": "in_game" },
-    { "username": "Brambleforge", "status": "online" },
-    { "username": "Caskwyn", "status": "online" },
-    { "username": "Dunmarrow", "status": "offline" },
-    { "username": "Ellowyn", "status": "offline" },
-    { "username": "Fenwick", "status": "offline" },
-    { "username": "Grimsdottir_the_Unreasonably_Long", "status": "offline" }
+    {
+      "username": "Aurelith",
+      "status": "in_game"
+    },
+    {
+      "username": "Brambleforge",
+      "status": "online"
+    },
+    {
+      "username": "Caskwyn",
+      "status": "online"
+    },
+    {
+      "username": "Dunmarrow",
+      "status": "offline"
+    },
+    {
+      "username": "Ellowyn",
+      "status": "offline"
+    },
+    {
+      "username": "Fenwick",
+      "status": "offline"
+    },
+    {
+      "username": "Grimsdottir_the_Unreasonably_Long",
+      "status": "offline"
+    }
   ],
-  "incoming": [{ "username": "Halvard" }, { "username": "Ilsabet" }],
-  "outgoing": [{ "username": "Jorunn" }],
+  "incoming": [
+    {
+      "username": "Halvard"
+    },
+    {
+      "username": "Ilsabet"
+    }
+  ],
+  "outgoing": [
+    {
+      "username": "Jorunn"
+    }
+  ],
   "reject": {
     "ghost": "user_not_found",
     "blocked": "blocked_by_user",
@@ -18,12 +53,28 @@
   },
   "auth": {
     "accounts": {
-      "dev": { "username": "Lytion", "is_dev": true },
-      "staff": { "username": "Marla", "is_staff": true },
-      "player": { "username": "Aurelith" },
+      "dev": {
+        "username": "Lytion",
+        "is_dev": true
+      },
+      "staff": {
+        "username": "Marla",
+        "is_staff": true
+      },
+      "player": {
+        "username": "Aurelith"
+      },
       "nameless": {}
     },
-    "stall": ["stall"]
+    "stall": [
+      "stall"
+    ]
+  },
+  "update": {
+    "launcher_version": "3.2.1",
+    "game_version": "6.8.1",
+    "stall": false,
+    "size_mb": 0
   },
   "players": {
     "online": 42,
@@ -33,14 +84,18 @@
         "name": "solos1",
         "region": "NA",
         "players": 1,
-        "names": ["Aurelith"]
+        "names": [
+          "Aurelith"
+        ]
       },
       {
         "display_name": "Duos EU 1",
         "name": "duos1",
         "region": "EU",
         "players": 1,
-        "names": ["Lytion"]
+        "names": [
+          "Lytion"
+        ]
       },
       {
         "display_name": "Classic Squads NA 1",

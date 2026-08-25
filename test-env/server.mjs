@@ -18,6 +18,7 @@
 import { createServer } from "node:http";
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { serveUpdate, UPDATE_PATHS } from "./update.mjs";
 
 const PORT = Number(process.env.PORT || 8787);
 const DATA = fileURLToPath(new URL("./data.json", import.meta.url));
@@ -319,6 +320,15 @@ createServer(async (req, res) => {
     return send({ events: data().events });
   }
 
+  // The CDN side: the version file and zips the updater pulls off cdn_base.
+  // Handles its own response (range, stall) or returns false to fall through.
+  if (req.method === "GET" && UPDATE_PATHS.includes(path)) {
+    console.log(path);
+    if (serveUpdate(req, res, path, data(), (line) => console.log(line))) {
+      return;
+    }
+  }
+
   const route = routes[path];
   if (req.method !== "POST" || !route) {
     res.writeHead(404).end();
@@ -354,4 +364,5 @@ createServer(async (req, res) => {
   console.log(`dashboard   → http://localhost:${PORT}/`);
   console.log(`players URL → http://localhost:${PORT}/players`);
   console.log(`auth URL    → http://localhost:${PORT}/auth`);
+  console.log(`CDN base    → http://localhost:${PORT}  (set cdn_base to test updates)`);
 });

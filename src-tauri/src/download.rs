@@ -43,6 +43,10 @@ fn human(bytes: u64) -> String {
 fn http() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .user_agent(concat!("ef-launcher/", env!("CARGO_PKG_VERSION")))
+        // Timeout after 15s if no connexion established
+        .connect_timeout(Duration::from_secs(15))
+        // Timeout if no byte received after 1min.
+        .read_timeout(Duration::from_secs(60))
         .build()
         .map_err(|e| e.to_string())
 }
@@ -104,14 +108,27 @@ async fn download_sequential(
     let mut file = File::create(dest).map_err(|e| format!("{}: {e}", dest.display()))?;
     let mut done: u64 = 0;
     let mut last = Instant::now();
+    let mut last_bytes = 0u64;
 
     while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
         file.write_all(&chunk).map_err(|e| e.to_string())?;
         done += chunk.len() as u64;
-        if last.elapsed().as_millis() >= 150 {
+        let delta_time = last.elapsed();
+        if delta_time.as_millis() >= 150 {
             let pct = if total > 0 { done as f64 / total as f64 * 100.0 } else { 0.0 };
-            emit(app, stage, format!("{} / {}", human(done), human(total)), pct, done, total);
+            // Speed over the window since the last tick, same readout as the
+            // segmented path's reporter.
+            let speed = ((done - last_bytes) as f64 / delta_time.as_secs_f64()) as u64;
+            emit(
+                app,
+                stage,
+                format!("{} / {}  ({}/s)", human(done), human(total), human(speed)),
+                pct,
+                done,
+                total,
+            );
             last = Instant::now();
+            last_bytes = done;
         }
     }
     emit(app, stage, format!("{} downloaded", human(done)), 100.0, done, total.max(done));
