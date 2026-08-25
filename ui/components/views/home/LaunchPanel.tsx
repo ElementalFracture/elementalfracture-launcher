@@ -9,13 +9,32 @@ import "./LaunchPanel.css";
 /** The banner's call to action once the game is installed. */
 export function LaunchPanel() {
   const { settings } = useSettings();
-  const { updating, gameOutdated, gameUpdatePop, versions, applyGameUpdate } =
+  const { updating, gameOutdated, versions, applyGameUpdate, checkGameUpdate } =
     useGame();
   const [launchBusy, setLaunchBusy] = useState(false);
+
+  /* Nothing is on a timer, so this is where the CDN gets asked: the only
+     moment a stale answer has a consequence. Bounded, because a launcher that
+     can't reach the CDN must still start the game — the check is a guard, not
+     a gate, and 3s is well past a healthy answer (~100ms) while staying short
+     enough not to feel like a hang. */
+  const stillCurrent = async () => {
+    const late = new Promise<{ outdated: boolean }>((resolve) =>
+      setTimeout(() => resolve({ outdated: false }), 3000)
+    );
+    const { outdated } = await Promise.race([checkGameUpdate(), late]);
+    return !outdated;
+  };
 
   const onLaunch = async () => {
     setLaunchBusy(true);
     try {
+      if (!(await stillCurrent())) {
+        // checkGameUpdate refreshed the versions on its way, so `gameOutdated`
+        // has already turned this plate into Update behind the toast.
+        toast("A game update shipped — update before you play.");
+        return;
+      }
       await rust.launchGame();
       toast("Launching Spellbreak…");
       // Opt-in (Settings → Launcher): quit once the game is on its way. Held
@@ -33,9 +52,7 @@ export function LaunchPanel() {
   };
 
   if (gameOutdated) {
-    // gameUpdatePop carries the offered version once the startup check has
-    // run; the versions the views read are the fallback before that.
-    const target = gameUpdatePop ?? versions?.remote;
+    const target = versions?.remote;
     return (
       <div>
         <LaunchPlate
