@@ -22,6 +22,9 @@ const commands = vi.hoisted(() => ({
 
 vi.mock("@/generated/bindings", () => ({ commands }));
 
+const toasts = vi.hoisted(() => ({ toast: vi.fn(), toastOnce: vi.fn() }));
+vi.mock("@/lib/toast", () => toasts);
+
 /** The view re-verifies the install on selection, so tests have to select it. */
 function SelectModsTab({ children }: { children: ReactNode }) {
   const { setView } = useUI();
@@ -96,6 +99,42 @@ describe("update button", () => {
     renderMods();
     await waitFor(() => expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy());
     expect(screen.queryByText("Update game")).toBeNull();
+  });
+});
+
+describe("check for game updates", () => {
+  const press = async () => {
+    renderMods();
+    const button = await screen.findByText("Check for game updates");
+    fireEvent.click(button);
+  };
+
+  it("names the version it found — the check used to answer with silence", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    await press();
+    await waitFor(() =>
+      expect(toasts.toast).toHaveBeenCalledWith(
+        "Game update available (v6.0.3) — Launch it from Home."
+      )
+    );
+  });
+
+  it("says so when the install is current", async () => {
+    await press();
+    await waitFor(() =>
+      expect(toasts.toast).toHaveBeenCalledWith("Game is up to date")
+    );
+  });
+
+  it("blames the CDN, not the install, when the version can't be read", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+    await press();
+    await waitFor(() =>
+      expect(toasts.toast).toHaveBeenCalledWith(
+        "Couldn't reach the update server, check the CDN base in Advanced.",
+        true
+      )
+    );
   });
 });
 

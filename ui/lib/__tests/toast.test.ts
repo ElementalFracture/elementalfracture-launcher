@@ -14,7 +14,7 @@ async function freshToast() {
 beforeEach(() => add.mockClear());
 
 describe("toast", () => {
-  it("adds an ordinary toast that dismisses after 2.6s", async () => {
+  it("adds an ordinary toast that dismisses after 5s", async () => {
     const { toast } = await freshToast();
 
     toast("Settings saved");
@@ -23,7 +23,7 @@ describe("toast", () => {
       title: "Settings saved",
       type: "info",
       priority: "low",
-      timeout: 2600,
+      timeout: 5000,
     });
   });
 

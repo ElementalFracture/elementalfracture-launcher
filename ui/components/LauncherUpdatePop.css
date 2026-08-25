@@ -1,19 +1,10 @@
-/* ============ Update popups (below the topbar, right) ============ */
+/* ============ Launcher update popup (bottom right) ============ */
 
-#update-pops {
+.update-pop[data-slot="card"] {
   position: fixed;
   bottom: 16px;
   right: 16px;
-  display: flex;
-  /* Column, so a launcher and a game update stack one above the other rather
-     than side by side. */
-  flex-direction: column;
-  gap: 10px;
-  align-items: flex-end;
   z-index: 80;
-}
-
-.update-pop[data-slot="card"] {
   width: 240px;
   text-align: left;
   margin-bottom: 0;

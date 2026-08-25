@@ -14,7 +14,7 @@ import { toast } from "@/lib/toast";
 
 /** The installed game version, and the manual check for a newer one. */
 export function GameVersionCard() {
-  const { versions, refreshVersions, checkGameUpdate } = useGame();
+  const { versions, checkGameUpdate } = useGame();
   const [checkingUpdates, setCheckingUpdates] = useState(false);
 
   // The CDN's current track, falling back to what's installed when it's unreachable.
@@ -24,20 +24,20 @@ export function GameVersionCard() {
       ? `v${versions.local} (installed)`
       : "";
 
-  /* Manual game check: raises the corner popup rather than patching on the
-     spot, so an update never starts without a click. */
+  /* Manual game check: it reports, it doesn't patch — pulling the update is a
+     click on Home's plate, so one never starts on its own. */
   const onCheckGameUpdates = async () => {
     setCheckingUpdates(true);
     try {
-      const v = await refreshVersions();
-      if (!v?.remote) {
+      const { remote, outdated } = await checkGameUpdate();
+      if (!remote) {
         toast(
           "Couldn't reach the update server, check the CDN base in Advanced.",
           true
         );
-        return;
-      }
-      if (!(await checkGameUpdate())) {
+      } else if (outdated) {
+        toast(`Game update available (v${remote}) — Launch it from Home.`);
+      } else {
         toast("Game is up to date");
       }
     } finally {

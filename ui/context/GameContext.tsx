@@ -25,16 +25,16 @@ interface GameContextValue {
   /** Top-right "Launcher Update Available" popup. */
   launcherUpdatePop: boolean;
   setLauncherUpdatePop: (v: boolean) => void;
-  /** Top-right "Game Update Available" popup, and the version it offers. */
-  gameUpdatePop: string | null;
-  dismissGameUpdatePop: () => void;
   gameOutdated: boolean;
   refreshStatus: () => Promise<GameStatus | null>;
   refreshVersions: () => Promise<VersionInfo | null>;
   checkLauncherUpdate: () => Promise<LauncherUpdateInfo | null>;
-  /** Raise the game-update popup if the install is behind the CDN. */
-  checkGameUpdate: () => Promise<boolean>;
-  /** Pull the pending game patch. Driven by the popup. */
+  /** Ask the CDN, right now, whether the install is behind it, refreshing the
+      versions every view reads on the way. Three answers, so the caller can
+      tell an unreachable CDN (`remote: null`) from an install that is current.
+      The automatic path is `gameOutdated`; this is the manual check. */
+  checkGameUpdate: () => Promise<{ remote: string | null; outdated: boolean }>;
+  /** Pull the pending game patch. Driven by Home's Launch/Update plate. */
   applyGameUpdate: () => Promise<boolean>;
   provisionInstall: (
     report?: (msg: string, isError?: boolean) => void
@@ -57,7 +57,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [installBusy, setInstallBusy] = useState(false);
   const [installNotice, setInstallNotice] = useState<string | null>(null);
   const [launcherUpdatePop, setLauncherUpdatePop] = useState(false);
-  const [gameUpdatePop, setGameUpdatePop] = useState<string | null>(null);
 
   // Latest-value ref so checkGameUpdate can read the status without depending
   // on it. Written synchronously alongside setStatus rather than from an
@@ -76,8 +75,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /* A pending update is announced by the top-right popup, not from here — this
-     only refreshes the numbers the Settings/Game views read. */
   const refreshVersions = useCallback(async () => {
     try {
       const v = await rust.getVersions();
@@ -184,24 +181,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshSettings, refreshStatus]);
 
-  /* A game update is never applied behind the player's back: if the install
-     disagrees with the CDN version, raise the popup and let them click it. */
   const checkGameUpdate = useCallback(async () => {
-    let v: VersionInfo | null;
-    try {
-      v = await rust.getVersions();
-    } catch {
-      return false;
-    }
+    const v = await refreshVersions();
     const st = statusRef.current;
-    const outdated = Boolean(
-      v?.remote && st?.exe_present && v.local !== v.remote
-    );
-    if (outdated) {
-      setGameUpdatePop(v!.remote);
-    }
-    return outdated;
-  }, []);
+    return {
+      remote: v?.remote ?? null,
+      outdated: Boolean(v?.remote && st?.exe_present && v.local !== v.remote),
+    };
+  }, [refreshVersions]);
 
   const applyGameUpdate = useCallback(async () => {
     setUpdating(true);
@@ -212,7 +199,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ? `Game updated to v${version}`
           : "Game updated"
       );
-      setGameUpdatePop(null);
       return true;
     } catch (e) {
       toast("Update failed: " + e, true);
@@ -225,18 +211,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [refreshStatus, refreshVersions]);
 
   // One-time startup sequence — deliberately runs only on mount.
-  // checkGameUpdate reads the status via statusRef, so it has to wait for the
-  // first refreshStatus or it sees null and never offers the update.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     // Update-first: the launcher's own update check goes ahead of the game
     // one, so a newer build prompts before a stale one offers a patch.
     checkLauncherUpdate().then(() => {
-      refreshStatus().then(checkGameUpdate);
+      refreshStatus();
       refreshVersions();
     });
-    const id = setInterval(refreshStatus, 15_000);
-    return () => clearInterval(id);
+    const statusId = setInterval(refreshStatus, 15_000);
+    const onFocus = () => refreshVersions();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(statusId);
+      window.removeEventListener("focus", onFocus);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -256,8 +245,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     installNotice,
     launcherUpdatePop,
     setLauncherUpdatePop,
-    gameUpdatePop,
-    dismissGameUpdatePop: () => setGameUpdatePop(null),
     gameOutdated,
     refreshStatus,
     refreshVersions,

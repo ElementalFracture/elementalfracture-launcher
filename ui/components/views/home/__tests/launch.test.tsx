@@ -106,6 +106,50 @@ describe("a pending game update", () => {
   });
 });
 
+describe("the check at the launch itself", () => {
+  it("refuses the launch when a patch shipped since the last look", async () => {
+    // Current at render, behind by the time Launch is pressed — the case a
+    // timer would have caught late and this catches exactly.
+    render(<HomeView />, { wrapper: Providers });
+    const btn = await screen.findByTitle("Launch Spellbreak");
+
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    await act(async () => {
+      btn.click();
+    });
+
+    expect(commands.launchGame).not.toHaveBeenCalled();
+    // And the plate it was pressed on is now the update.
+    expect(await screen.findByTitle("Download game update v6.0.3")).toBeTruthy();
+  });
+
+  it("launches when the CDN agrees the install is current", async () => {
+    await launch();
+    await waitFor(() => expect(commands.launchGame).toHaveBeenCalled());
+    // Asked at the launch, not from a poll minutes old.
+    expect(commands.getVersions).toHaveBeenCalled();
+  });
+
+  it("launches anyway when the CDN doesn't answer — a guard, not a gate", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<HomeView />, { wrapper: Providers });
+    const btn = await screen.findByTitle("Launch Spellbreak");
+
+    // Never resolves: offline, or a CDN that accepted the connection and went
+    // quiet. The 3s bound is what keeps Launch from hanging on it.
+    commands.getVersions.mockReturnValue(new Promise(() => {}));
+    await act(async () => {
+      btn.click();
+    });
+    expect(commands.launchGame).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(3100);
+    });
+    await waitFor(() => expect(commands.launchGame).toHaveBeenCalled());
+  });
+});
+
 describe("close on launch", () => {
   it("quits the launcher once the game is on its way", async () => {
     commands.getSettings.mockResolvedValue(makeSettings({ close_on_launch: true }));
