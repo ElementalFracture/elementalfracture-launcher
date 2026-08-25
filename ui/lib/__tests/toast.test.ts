@@ -27,7 +27,7 @@ describe("toast", () => {
     });
   });
 
-  it("adds an error toast announced urgently and held for 5s", async () => {
+  it("adds an error toast announced urgently and held until dismissed", async () => {
     const { toast } = await freshToast();
 
     toast("Update failed", true);
@@ -36,7 +36,8 @@ describe("toast", () => {
       title: "Update failed",
       type: "error",
       priority: "high",
-      timeout: 5000,
+      // timeout 0: base-ui keeps it up until the player closes it.
+      timeout: 0,
     });
   });
 
