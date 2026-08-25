@@ -65,7 +65,16 @@ pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> Result<Vec<Stri
     }
 
     let url = format!("{}/patch/mod/mod.zip", cdn_base.trim_end_matches('/'));
-    let resp = reqwest::get(&url)
+    let client = reqwest::Client::builder()
+        // Timeout after 15s if no connexion established
+        .connect_timeout(std::time::Duration::from_secs(15))
+        // Timeout if no byte received after 1min.
+        .read_timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|e| format!("mod download failed: {e}"))?;
+    let resp = client
+        .get(&url)
+        .send()
         .await
         .and_then(|r| r.error_for_status())
         .map_err(|e| format!("mod download failed: {e}"))?;

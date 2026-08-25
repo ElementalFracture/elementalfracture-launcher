@@ -2,8 +2,9 @@
 
 A local backend to run the launcher against, so you can drive the parts of the
 app that normally need the live services — and put them in states the live ones
-won't give you on demand. Right now that means the friend graph and token
-validation; the plan is for update flows and the rest to follow.
+won't give you on demand. Right now that means the friend graph, token
+validation, and the update flow — the version check and the download/install
+path, including a stall that reproduces a frozen updater (see below).
 
 It serves the endpoints `src-tauri/src/remote.rs` calls, so nothing in the app
 is mocked or bypassed — the Tauri command, the HTTP call, `FriendsContext`, and
@@ -66,6 +67,7 @@ the drawer polls every 60s, and reopening it refreshes immediately. No restart.
 | `outgoing`        | Requests you've sent, with cancel                                |
 | `reject`          | Names that always fail, and how (see below)                      |
 | `auth`            | Which tokens validate, and as whom (see below)                   |
+| `update`          | The version tracks and the update download/stall (see below)     |
 | `players.online`  | The online count on the home view                                |
 | `players.servers` | The in-game pill's per-mode, per-region breakdown                |
 | `events`          | The events list on the home view                                 |
@@ -221,6 +223,47 @@ leaves the two URLs out of the copy rather than blanking them, so they fall
 back to the debug defaults and land here even if your real profile points at
 production. Then sign back in with one of the tokens above, as many times as
 you like.
+
+## Update testing
+
+The updater pulls four things off `cdn_base` — a version file and three zips —
+and `update.mjs` serves all of them from the `update` block in `data.json`, so
+an update run happens against bytes you control:
+
+```json
+"update": {
+  "launcher_version": "3.2.1",
+  "game_version": "6.8.1",
+  "stall": false,
+  "size_mb": 0
+}
+```
+
+| Path                        | Built from                | Lands as                          |
+| --------------------------- | ------------------------- | --------------------------------- |
+| `/launcher/config.ini`      | the two `*_version` keys  | the update badge + startup check  |
+| `/patch/latest.zip`         | dummy balance paks        | `g3/Content/Paks` (the `ef` pak)  |
+| `/patch/mod/mod.zip`        | a dummy loader + mod DLL  | the mod loader + `Mods/dlls`      |
+| `/game/elefracbase.zip`     | a minimal `g3` tree       | a fresh install (`download_game`) |
+
+Point the launcher at it with **Settings → Advanced → CDN base** set to
+`http://localhost:8787` (or set `cdn_base` in the dev profile's `settings.json`
+directly — unlike the auth/players URLs it doesn't fall back to a debug
+default). The zips are real (uncompressed) archives built by hand in
+`update.mjs` — no dependencies — so the happy path extracts and bumps
+`version.txt` for real.
+
+**The stall.** `stall` is the reason this exists: a frozen updater. Set it and
+the matching download sends its headers, streams ~40%, then holds the socket
+open forever — the shape of a CDN that goes silent mid-body. It's a boolean for
+every stage, or one of `"patch"` / `"mod"` / `"base"` to freeze a single step;
+`config.ini` never stalls, so the version check still returns. A launcher
+without a read timeout hangs here; one with the fix in `download.rs` gives up
+after ~30s with a "download stalled" error.
+
+`size_mb` pads each zip, to push `latest.zip` past the 64 MB threshold where the
+downloader switches to its segmented, multi-connection path (range requests are
+honored, so that path works too). Leave it at 0 for a quick single-stream run.
 
 ## What it doesn't do
 
