@@ -30,9 +30,11 @@ the fixture with nothing to configure:
 | ----------- | ------------------------------- | ---------------------------------- |
 | players URL | `http://localhost:8787/players` | `https://play.elefrac.com/players` |
 | auth URL    | `http://localhost:8787/auth`    | `https://play.elefrac.com/auth`    |
+| CDN base    | `http://localhost:8787`         | `https://cdn.elefrac.com`          |
 
 `sidecar_base()` in `remote.rs` strips the trailing `/players` to get the base
-the friend endpoints hang off. The auth URL is used as-is.
+the friend endpoints hang off. The auth URL is used as-is, and `cdn_base` is the
+root the four update assets hang off (`cdn_base()` in `settings.rs`).
 
 That's only where a profile _starts_. Both stay editable under **Settings →
 Advanced** and the change sticks, so a dev build can be aimed at production when
@@ -41,9 +43,19 @@ the default hardcodes 8787. The flip side: a debug build with no test env
 running fails every account and friend call, which is its own state worth seeing
 but surprising the first time.
 
-The downloads and update feed (`play_base`, `cdn_base`) stay live even in debug.
-There's no fixture for them yet, and 404s from this server would tell you less
+`play_base` — the portal API behind the home view — stays live even in debug.
+There's no fixture for it yet, and 404s from this server would tell you less
 than the real thing.
+
+**`cdn_base` pointing here has teeth**, unlike the read-only endpoints above:
+press Update in a dev build with this server running and the fixture's *dummy*
+paks and stub loader are installed, for real, into whatever `game_path` the
+profile carries — which `dev-profile.sh signed-out` copies from your real
+settings. Point `game_path` at a copy of the install, or send the CDN back at
+the real one with `CDN_BASE=https://cdn.elefrac.com`. A later update from the
+live CDN overwrites the fixture files, so it's recoverable, not fatal.
+With no test env running, a debug build simply finds no remote version: nothing
+is offered and nothing is downloaded.
 
 The friend endpoints take any non-empty token — they only check that one is
 set, so whatever you already have saved is fine. `/auth` is the strict one, and
@@ -90,7 +102,8 @@ Emptying a list is the way to see each empty state; emptying `friends`,
 
 <http://localhost:8787/> is the same state with controls on it: friends and
 their statuses, pending requests either way, tokens and their flags,
-rejections, the online count, the servers behind the in-game pill, and events.
+rejections, the online count, the servers behind the in-game pill, events, and
+the game/launcher versions the updater compares against.
 It polls every 2s, so it and the launcher agree — accept a request in the
 drawer and the row moves here on its own.
 
@@ -246,12 +259,33 @@ an update run happens against bytes you control:
 | `/patch/mod/mod.zip`        | a dummy loader + mod DLL  | the mod loader + `Mods/dlls`      |
 | `/game/elefracbase.zip`     | a minimal `g3` tree       | a fresh install (`download_game`) |
 
-Point the launcher at it with **Settings → Advanced → CDN base** set to
-`http://localhost:8787` (or set `cdn_base` in the dev profile's `settings.json`
-directly — unlike the auth/players URLs it doesn't fall back to a debug
-default). The zips are real (uncompressed) archives built by hand in
-`update.mjs` — no dependencies — so the happy path extracts and bumps
-`version.txt` for real.
+Debug builds already point here, so there is nothing to configure. A profile
+seeded before that default existed still carries the old value, though — its
+`settings.json` pins what it was written with. `dev-profile.sh signed-out` drops
+the key so the default takes over; **Settings → Advanced → CDN base** clears it
+by hand; and `CDN_BASE=…` aims a run somewhere else on purpose:
+
+```sh
+CDN_BASE=https://cdn.elefrac.com test-env/dev-profile.sh keep   # the real CDN
+CDN_BASE=http://localhost:9000 test-env/dev-profile.sh keep     # a non-default PORT
+```
+
+The zips are real (uncompressed) archives built by hand in `update.mjs` — no
+dependencies — so the happy path extracts and bumps `version.txt` for real.
+They are also dummies, and they land in whatever `game_path` the profile points
+at: aim that at a copy before pressing Update, unless you don't mind a real
+install carrying a fixture pak until the next update from the live CDN.
+
+**Pretending a patch shipped.** The dashboard's **Updates** card has a **Ship a
+game update** button: it bumps the last number of `update.game_version`
+(6.8.1 → 6.8.2), which is what `/launcher/config.ini` reports and what the
+launcher compares its install against. Once the CDN is ahead, Home's Launch
+plate becomes **Update** and clicking it pulls the fixture's `latest.zip`.
+Either version can also be typed in directly, launcher included.
+
+The launcher reads the versions on startup and whenever **Mods & Install** is
+opened, so switch to that tab and back rather than restarting it. Both edits are
+in memory like every other dashboard change — `data.json` is untouched.
 
 **The stall.** `stall` is the reason this exists: a frozen updater. Set it and
 the matching download sends its headers, streams ~40%, then holds the socket

@@ -13,11 +13,15 @@
 #
 # `signed-out` copies your real settings.json with the four identity fields
 # blanked, so game path and wrapper carry over and only the login differs — no
-# re-onboarding to get to the Guest pill. The auth and players URLs are left out
-# of the copy so they fall back to the debug defaults, which point at this test
-# env; sign back in with one of its tokens (README.md). The real profile is only
-# ever read from. Log in inside the dev profile if you want; the next
-# `signed-out` run blanks it again, which is what the name promises.
+# re-onboarding to get to the Guest pill. The auth, players and CDN URLs are
+# left out of the copy so they fall back to the debug defaults, which point at
+# this test env; sign back in with one of its tokens (README.md). The real
+# profile is only ever read from. Log in inside the dev profile if you want; the
+# next `signed-out` run blanks it again, which is what the name promises.
+#
+# Note what the CDN default means once the test env is up: an update installs
+# fixture paks into whatever game_path came across in the copy. Point that at a
+# copy of the install, or set CDN_BASE (below) back at the real CDN.
 #
 # Linux only: on Windows the config dir comes from %APPDATA%.
 #
@@ -47,6 +51,7 @@ case "$PROFILE" in
       // out they would pin whatever your real profile happens to point at.
       delete s.auth_url;
       delete s.players_url;
+      delete s.cdn_base;
       fs.writeFileSync(process.argv[2], JSON.stringify(s, null, 2));
     ' "$APP/settings.json" "$DEV/settings.json"
     ;;
@@ -70,6 +75,27 @@ case "$PROFILE" in
     exit 1
     ;;
 esac
+
+# Aim the dev profile's downloads somewhere other than the debug default (which
+# is already this test env on 8787) — the real CDN, or a non-default PORT:
+#
+#     CDN_BASE=https://cdn.elefrac.com test-env/dev-profile.sh keep
+#     CDN_BASE=http://localhost:9000 test-env/dev-profile.sh keep
+#
+# Written into the dev profile only, and it sticks like any Settings → Advanced
+# edit until something changes it — including a later `signed-out` run, which
+# drops the key again.
+if [ -n "${CDN_BASE:-}" ]; then
+  mkdir -p "$DEV"
+  node -e '
+    const fs = require("fs");
+    const [file, base] = process.argv.slice(1);
+    const s = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
+    s.cdn_base = base;
+    fs.writeFileSync(file, JSON.stringify(s, null, 2));
+  ' "$DEV/settings.json" "$CDN_BASE"
+  echo "cdn_base:    $CDN_BASE"
+fi
 
 echo "dev profile: $DEV ($PROFILE)"
 exec npm run --prefix "$REPO" tauri-dev
