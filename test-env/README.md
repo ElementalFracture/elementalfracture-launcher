@@ -86,10 +86,13 @@ the drawer polls every 60s, and reopening it refreshes immediately. No restart.
 
 A server's mode comes from its name — `MODE_MATCHERS` in
 `ui/components/topbar/players.ts` reads "solo" / "duo" / "squad" /
-"arena|tdm|capture" out of `display_name`, and a `vsolo…` container name or a
-"Classic …" display name puts it on the classic side of the breakdown. Two
-regions have to be reporting before the split shows at all, which is why the
-seeded servers span NA and EU.
+"arena|tdm|capture" out of `display_name`, and the balance comes from the same
+place: a `vsolo…` container name or a "Classic …" display name is classic, a
+`ptsolo…` name or a "Playtest …" display name is the playtest channel, and
+anything else is Elemental Fracture. Each balance gets its own table in the
+in-game breakdown, so playtest players are never folded into the live numbers.
+Two regions have to be reporting before the region split shows at all, which is
+why the seeded servers span NA and EU.
 
 `status` is `"in_game"`, `"online"`, or `"offline"` — it decides which section a
 friend lands in (in-game sorts above online). Pending requests carry no status.
@@ -155,6 +158,7 @@ whatever you say it is:
   "accounts": {
     "dev": { "username": "Lytion", "is_dev": true },
     "staff": { "username": "Marla", "is_staff": true },
+    "tester": { "username": "Wrenlow", "is_tester": true },
     "player": { "username": "Aurelith" },
     "nameless": {}
   },
@@ -170,6 +174,7 @@ these reach every branch of the three places that call `applyToken`
 | --------------- | ----------------------- | -------------------------------------------------------- |
 | `dev`           | ok, with `is_dev`       | "Welcome, Lytion (dev)!" — and the Developer subheading  |
 | `staff`         | ok, with `is_staff`     | "Welcome, Marla (staff)!" — the Staff subheading         |
+| `tester`        | ok, with `is_tester`    | no badge, but the Playtest channel appears in the pill   |
 | `player`        | ok, no flags            | "Welcome, Aurelith!", no subheading on the pill          |
 | `nameless`      | `{"ok": true}`, no name | "doesn't recognize it" — the `username` half failing     |
 | _anything else_ | `{"ok": false}`         | "doesn't recognize it" — the `ok` half failing           |
@@ -227,6 +232,21 @@ since that's what a player sees when the sidecar grows a code the launcher
 hasn't learned yet. `blocked_by_user` above stands in for one of those: a
 refusal the server means, and the launcher can only report vaguely.
 
+## The playtest channel
+
+The variant pill's third option — **Playtest** — is hidden unless the account
+holds `is_tester` (a dev sees it too, holding it implicitly). Sign in with the
+`tester` token above to reach it, or flip **tester** on any token's row in the
+dashboard: `refresh_account` re-checks the stored token every minute, so the tab
+appears without a restart or a re-paste.
+
+Its label follows the pak on disk: **Enable Playtest** downloads
+`{cdn}/patch/dev.zip` (the CDN key kept its old name) and switches onto it,
+**Playtest** just switches. This server answers that key with a dummy pak, so
+the whole path runs locally: the archive's inner `ElefracPlaytest_P.*` are
+staged as `ElefracTest_P.*`, the production pak is parked as `.bak`, and the
+window turns blueprint blue.
+
 ## The signed-out and first-boot states
 
 `dev-profile.sh` here seeds the profile debug builds use, for the two states
@@ -251,7 +271,7 @@ you like.
 
 ## Update testing
 
-The updater pulls four things off `cdn_base` — a version file and three zips —
+The updater pulls five things off `cdn_base` — a version file and four zips —
 and `update.mjs` serves all of them from the `update` block in `data.json`, so
 an update run happens against bytes you control:
 
@@ -268,6 +288,7 @@ an update run happens against bytes you control:
 | --------------------------- | ------------------------- | --------------------------------- |
 | `/launcher/config.ini`      | the two `*_version` keys  | the update badge + startup check  |
 | `/patch/latest.zip`         | dummy balance paks        | `g3/Content/Paks` (the `ef` pak)  |
+| `/patch/dev.zip`            | a dummy playtest pak      | `ElefracTest_P.*` (the playtest)  |
 | `/patch/mod/mod.zip`        | a dummy loader + mod DLL  | the mod loader + `Mods/dlls`      |
 | `/game/elefracbase.zip`     | a minimal `g3` tree       | a fresh install (`download_game`) |
 
@@ -312,7 +333,8 @@ untouched.
 **The stall.** `stall` is the reason this exists: a frozen updater. Set it and
 the matching download sends its headers, streams ~40%, then holds the socket
 open forever — the shape of a CDN that goes silent mid-body. It's a boolean for
-every stage, or one of `"patch"` / `"mod"` / `"base"` to freeze a single step;
+every stage, or one of `"patch"` / `"playtest"` / `"mod"` / `"base"` to freeze a
+single step;
 `config.ini` never stalls, so the version check still returns. A launcher
 without a read timeout hangs here; one with the fix in `download.rs` gives up
 after ~30s with a "download stalled" error.

@@ -101,6 +101,31 @@ describe("InGamePill", () => {
     expect(eu.classList.contains("idle")).toBe(false);
   });
 
+  it("tables playtest lobbies as their own balance", () => {
+    // They run on their own servers, so they're a third section rather than
+    // players quietly folded into the Elemental Fracture numbers.
+    live.playersData = {
+      online: 3,
+      servers: [
+        ...SERVERS,
+        { display_name: "Playtest Solos", players: 3, region: "NA" },
+      ],
+    };
+    open();
+    expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
+      "Elemental Fracture",
+      "Classic",
+      "Playtest",
+    ]);
+    // Their players are theirs alone: counted here, and nowhere near the
+    // Elemental Fracture solos column those three would otherwise inflate.
+    expect(rows("Playtest")).toEqual([["Solos", "3", "0"]]);
+    expect(rows("Elemental Fracture")).toEqual([
+      ["Solos", "5", "3"],
+      ["Squads", "0", "4"],
+    ]);
+  });
+
   it("drops a balance nobody is playing", () => {
     live.playersData = { online: 5, servers: [SERVERS[0]] };
     open();

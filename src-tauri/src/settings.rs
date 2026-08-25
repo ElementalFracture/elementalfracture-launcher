@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use tauri::Manager;
 
 #[derive(Serialize, Deserialize, specta::Type, Clone, Debug)]
@@ -27,6 +28,9 @@ pub struct Settings {
     /// Drive the account subheading (only staff/dev get one).
     pub is_staff: bool,
     pub is_dev: bool,
+    /// Tester badge: unlocks the hidden Playtest variant.
+    /// A peer of staff/dev, not implied by either.
+    pub is_tester: bool,
     /// The auth token itself — kept here so it survives before a game
     /// folder exists and gets written into Mods/commands when one does.
     pub auth_token: String,
@@ -92,6 +96,7 @@ impl Default for Settings {
             username: String::new(),
             is_staff: false,
             is_dev: false,
+            is_tester: false,
             auth_token: String::new(),
             onboarded: false,
             minimize_on_close: false,
@@ -120,16 +125,65 @@ fn settings_path(app: &tauri::AppHandle) -> PathBuf {
     config_dir(app).join("settings.json")
 }
 
+/// Serializes all settings WRITES, so two load-modify-store calls (a token
+/// paste racing the install flow) can't clobber each other and silently drop a
+/// field like the token.
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
+
 pub fn load(app: &tauri::AppHandle) -> Settings {
-    fs::read_to_string(settings_path(app))
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    let path = settings_path(app);
+    let raw = match fs::read_to_string(&path) {
+        Ok(s) => s,
+        // No file yet (first boot) — a legitimate default.
+        Err(_) => return Settings::default(),
+    };
+    match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(e) => {
+            // The file exists but won't parse (corrupted / half-written). Do
+            // NOT silently reset to defaults — that is exactly how a saved auth
+            // token vanishes without a trace. Keep the bad file so the loss is
+            // visible and recoverable, then fall back to defaults.
+            let bak = path.with_extension("json.corrupt");
+            let _ = fs::rename(&path, &bak);
+            eprintln!(
+                "settings: {} was unparseable ({e}); backed up to {} and using defaults",
+                path.display(),
+                bak.display()
+            );
+            Settings::default()
+        }
+    }
+}
+
+/// Crash-safe write: serialize to a temp file, then rename over settings.json,
+/// so an interrupted write can never leave a half-written config for the next
+/// load to treat as corrupt.
+fn write_atomic(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(s).map_err(|e| e.to_string())?;
+    let path = settings_path(app);
+    let tmp = path.with_extension("json.tmp");
+    fs::write(&tmp, json).map_err(|e| format!("{}: {e}", tmp.display()))?;
+    fs::rename(&tmp, &path).map_err(|e| format!("{}: {e}", path.display()))
 }
 
 pub fn store(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(s).map_err(|e| e.to_string())?;
-    fs::write(settings_path(app), json).map_err(|e| e.to_string())
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    write_atomic(app, s)
+}
+
+/// Load-modify-store under the write lock, so no concurrent writer can slip a
+/// whole-settings overwrite between the read and the write and undo an
+/// in-flight token. Returns the settings as written.
+pub fn mutate(
+    app: &tauri::AppHandle,
+    f: impl FnOnce(&mut Settings),
+) -> Result<Settings, String> {
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut s = load(app);
+    f(&mut s);
+    write_atomic(app, &s)?;
+    Ok(s)
 }
 
 /// The bare host the in-game injector connects to (on :4948), extracted from

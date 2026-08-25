@@ -1,5 +1,5 @@
-import type { GameVariant } from "@/lib/gameVariant";
 import type { PlayerServer } from "@/lib/rust";
+import type { GameVariant } from "@/lib/gameVariant";
 
 /** Server-name pattern → the mode bucket it belongs in. */
 const MODE_MATCHERS: readonly (readonly [RegExp, string])[] = [
@@ -10,15 +10,25 @@ const MODE_MATCHERS: readonly (readonly [RegExp, string])[] = [
 ];
 
 /**
- * Which balance a server runs. Classic servers are the manager's dynamic
- * vanilla groups: container name vsolo/vduos/… and display "Classic <Mode> N".
- * Anything else is an Elemental Fracture server.
+ * Which balance a server runs, read off its names — the sidecar reports no
+ * variant of its own, so the naming conventions the server manager uses are
+ * the only signal there is.
+ *
+ * Classic servers are the manager's dynamic vanilla groups: container name
+ * vsolo/vduos/… and display "Classic <Mode> N". Playtest lobbies follow the
+ * same shape one letter over — container ptsolo/ptduos/… and display
+ * "Playtest <Mode> N". Anything else is an Elemental Fracture server.
  */
 export function variantOf(server: PlayerServer): GameVariant {
-  return /^v(solo|duo|squad|arena)/i.test(server.name || "") ||
-    /^classic\b/i.test(server.display_name || "")
-    ? "classic"
-    : "ef";
+  const name = server.name || "";
+  const display = server.display_name || "";
+  if (/^pt(solo|duo|squad|arena)/i.test(name) || /^playtest\b/i.test(display)) {
+    return "playtest";
+  }
+  if (/^v(solo|duo|squad|arena)/i.test(name) || /^classic\b/i.test(display)) {
+    return "classic";
+  }
+  return "ef";
 }
 
 export function modeLabel(server: PlayerServer) {
@@ -105,15 +115,15 @@ export function modeRowsByVariant(
   servers: readonly PlayerServer[],
   regions: readonly string[]
 ): Record<GameVariant, ModeRow[]> {
+  const rowsFor = (variant: GameVariant) =>
+    modeRows(
+      servers.filter((s) => variantOf(s) === variant),
+      regions
+    );
   return {
-    ef: modeRows(
-      servers.filter((s) => variantOf(s) === "ef"),
-      regions
-    ),
-    classic: modeRows(
-      servers.filter((s) => variantOf(s) === "classic"),
-      regions
-    ),
+    ef: rowsFor("ef"),
+    classic: rowsFor("classic"),
+    playtest: rowsFor("playtest"),
   };
 }
 

@@ -47,6 +47,7 @@ pub struct TokenResult {
     pub username: Option<String>,
     pub is_staff: bool,
     pub is_dev: bool,
+    pub is_tester: bool,
     pub verified: bool,
     pub warning: Option<String>,
 }
@@ -62,22 +63,26 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
         return Err("Token is empty.".into());
     }
 
-    let mut s = settings::load(&app);
-    s.auth_token = token.clone();
     // A new token means an as-yet-unverified identity — clear the name and role
     // flags so a failed lookup can't leave the previous account's badge, or its
     // name, showing. Only the success path below fills them back in, which is
     // what makes a non-empty `username` mean "this token was accepted": the
     // token itself is stored either way, so it can't answer that on its own.
-    s.username.clear();
-    s.is_staff = false;
-    s.is_dev = false;
-    settings::store(&app, &s)?;
+    // Under the write lock, so the install flow saving settings mid-paste
+    // can't put the old token back.
+    let s = settings::mutate(&app, |s| {
+        s.auth_token = token.clone();
+        s.username.clear();
+        s.is_staff = false;
+        s.is_dev = false;
+        s.is_tester = false;
+    })?;
 
     let unverified = |warning: String| TokenResult {
         username: None,
         is_staff: false,
         is_dev: false,
+        is_tester: false,
         verified: false,
         warning: Some(warning),
     };
@@ -95,23 +100,93 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
     let body: serde_json::Value = resp.json().await.unwrap_or_default();
     if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
         if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
-            let is_staff = body.get("is_staff").and_then(|v| v.as_bool()).unwrap_or(false);
-            let is_dev = body.get("is_dev").and_then(|v| v.as_bool()).unwrap_or(false);
-            let mut s = settings::load(&app);
-            s.username = username.to_string();
-            s.is_staff = is_staff;
-            s.is_dev = is_dev;
-            settings::store(&app, &s)?;
-            return Ok(TokenResult {
-                username: Some(username.to_string()),
+            let Account {
+                username,
                 is_staff,
                 is_dev,
+                is_tester,
+            } = read_account(&body, username);
+            settings::mutate(&app, |s| {
+                s.username = username.clone();
+                s.is_staff = is_staff;
+                s.is_dev = is_dev;
+                s.is_tester = is_tester;
+            })?;
+            return Ok(TokenResult {
+                username: Some(username),
+                is_staff,
+                is_dev,
+                is_tester,
                 verified: true,
                 warning: None,
             });
         }
     }
     Ok(unverified("Token saved, but the auth server doesn't recognize it.".into()))
+}
+
+/// The account behind a validated token, as the portal reports it.
+#[derive(Serialize, specta::Type)]
+pub struct Account {
+    pub username: String,
+    pub is_staff: bool,
+    pub is_dev: bool,
+    pub is_tester: bool,
+}
+
+/// The role flags out of an `/auth` body. Older auth servers don't send
+/// `is_tester` yet — absent reads as false rather than as a refusal.
+fn read_account(body: &serde_json::Value, username: &str) -> Account {
+    let flag = |key: &str| body.get(key).and_then(|v| v.as_bool()).unwrap_or(false);
+    Account {
+        username: username.to_string(),
+        is_staff: flag("is_staff"),
+        is_dev: flag("is_dev"),
+        is_tester: flag("is_tester"),
+    }
+}
+
+/// Re-validate the STORED token and refresh the cached role flags, so a
+/// freshly granted staff/dev/tester badge shows up without a restart.
+///
+/// Unlike apply_token — a new-token paste, which clears stale roles up front —
+/// this only reports on success: `None` means "no refresh", and the roles
+/// already on disk are left exactly as they were. A network blip must never
+/// cost someone their badge.
+#[tauri::command]
+#[specta::specta]
+pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, String> {
+    let s = settings::load(&app);
+    let token = s.auth_token.trim().to_string();
+    if token.is_empty() {
+        return Ok(None);
+    }
+
+    let resp = match client()?
+        .post(s.auth_url.trim())
+        .json(&serde_json::json!({ "token": token }))
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        // Network failure: don't touch the stored roles, just report no refresh.
+        Err(_) => return Ok(None),
+    };
+
+    let body: serde_json::Value = resp.json().await.unwrap_or_default();
+    if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
+        if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
+            let account = read_account(&body, username);
+            settings::mutate(&app, |s| {
+                s.username = account.username.clone();
+                s.is_staff = account.is_staff;
+                s.is_dev = account.is_dev;
+                s.is_tester = account.is_tester;
+            })?;
+            return Ok(Some(account));
+        }
+    }
+    Ok(None)
 }
 
 /// Base URL of the players sidecar (where /friends lives), derived from the

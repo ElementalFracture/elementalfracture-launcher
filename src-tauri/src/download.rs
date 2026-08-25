@@ -330,6 +330,94 @@ fn extract_flat(zip_path: &Path, dest: &Path) -> Result<Vec<String>, String> {
     Ok(names)
 }
 
+/// Pull the pak/sig out of the playtest archive under the names the playtest
+/// variant looks for, whatever they're called inside it. Returns what it
+/// found, for the progress line.
+fn stage_test_pak(zip_path: &Path, paks: &Path) -> Result<String, String> {
+    let file = File::open(zip_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
+    let mut pak = false;
+    let mut sig = false;
+    for i in 0..zip.len() {
+        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        if entry.is_dir() {
+            continue;
+        }
+        let Some(rel) = entry.enclosed_name() else { continue };
+        let Some(name) = rel
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(str::to_ascii_lowercase)
+        else {
+            continue;
+        };
+        let dest = if name.ends_with(".pak") {
+            pak = true;
+            paks.join("ElefracTest_P.pak")
+        } else if name.ends_with(".sig") {
+            sig = true;
+            paks.join("ElefracTest_P.sig")
+        } else {
+            continue;
+        };
+        let mut f = File::create(&dest).map_err(|e| format!("{}: {e}", dest.display()))?;
+        std::io::copy(&mut entry, &mut f).map_err(|e| e.to_string())?;
+    }
+    if !pak {
+        return Err("the playtest archive didn't contain a .pak file.".into());
+    }
+    Ok(if sig {
+        "pak + sig".into()
+    } else {
+        "pak (unsigned)".into()
+    })
+}
+
+/// Download the Playtest balance pak, stage it as ElefracTest_P.pak beside the
+/// production pak, then switch the game onto it (which parks the Elemental
+/// Fracture pak). Gated in the UI behind the Tester badge; the CDN path is
+/// unlisted rather than access-controlled.
+///
+/// The CDN key stays `patch/dev.zip` — it's what the server publishes, and the
+/// staged file keeps its `ElefracTest_P` name for installs that already have
+/// one. Only what the launcher calls the channel changed.
+#[tauri::command]
+#[specta::specta]
+pub async fn install_playtest_build(app: tauri::AppHandle) -> Result<String, String> {
+    let s = settings::load(&app);
+    if s.game_path.is_empty() {
+        return Err("Set the game folder first (Settings).".into());
+    }
+    let root = PathBuf::from(&s.game_path);
+    let paks = game::paks_dir(&root);
+    if !paks.is_dir() {
+        return Err(format!("Paks folder not found: {}", paks.display()));
+    }
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+
+    let tmp = root.join("_efplaytest.zip");
+    download_to_file(&app, "download-playtest", &format!("{cdn}/patch/dev.zip"), &tmp).await?;
+
+    emit(&app, "extract-playtest", "Installing the playtest build…".into(), 0.0, 0, 0);
+    let (tmp2, paks2) = (tmp.clone(), paks.clone());
+    let staged = tauri::async_runtime::spawn_blocking(move || stage_test_pak(&tmp2, &paks2))
+        .await
+        .map_err(|e| e.to_string())??;
+    let _ = fs::remove_file(&tmp);
+    emit(
+        &app,
+        "extract-playtest",
+        format!("Playtest build installed ({staged})"),
+        100.0,
+        0,
+        0,
+    );
+
+    let variant = game::switch_to(&s.game_path, "playtest")?;
+    emit(&app, "done", "Playtest build ready".into(), 100.0, 0, 0);
+    Ok(variant)
+}
+
 /// All remote launcher configuration lives in one ini file on the CDN:
 /// {cdn}/launcher/config.ini. It carries both version tracks
 /// (GameVersion / LauncherVersion) and has room for any future settings.
@@ -540,6 +628,17 @@ mod tests {
         assert_eq!(config_version(&cfg, "gameversion"), None);
         assert_eq!(config_version(&cfg, "launcherversion"), None);
     }
+
+    /// The dev opt-in is a switch, not a "the variable exists" test — an
+    /// EF_LAUNCHER_UPDATE=0 left behind in a shell profile means off.
+    #[test]
+    fn launcher_update_opt_in_reads_as_a_switch() {
+        assert!(opt_in(Some("1")));
+        assert!(opt_in(Some("yes")));
+        assert!(!opt_in(Some("0")));
+        assert!(!opt_in(Some("")));
+        assert!(!opt_in(None));
+    }
 }
 
 /// The version marker written after a successful self-update. Guards
@@ -568,6 +667,28 @@ pub struct LauncherUpdateInfo {
     pub current: String,
     pub remote: Option<String>,
     pub update: bool,
+    /// False when this build doesn't ask the CDN about itself at all, so the
+    /// UI can say "off in this build" rather than "couldn't reach the server".
+    pub checked: bool,
+}
+
+/// True when `EF_LAUNCHER_UPDATE` is set to something meant as "yes".
+fn opt_in(value: Option<&str>) -> bool {
+    matches!(value, Some(v) if !v.is_empty() && v != "0")
+}
+
+/// Whether this build consults the CDN about a newer launcher.
+///
+/// Debug builds don't: their compiled-in version trails every release, so a
+/// `tauri dev` session would come up behind the blocking update modal every
+/// time — and the binary a self-update would swap is the one cargo just built.
+/// Nothing is requested from the CDN either, which is the point: a dev profile
+/// aims `cdn_base` at the live one by default.
+///
+/// `EF_LAUNCHER_UPDATE=1` turns the check back on for a session that means to
+/// drive it; point `cdn_base` at the test env first (test-env/README.md).
+fn self_update_checked() -> bool {
+    !cfg!(debug_assertions) || opt_in(std::env::var("EF_LAUNCHER_UPDATE").ok().as_deref())
 }
 
 #[tauri::command]
@@ -577,9 +698,13 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
         let _ = fs::remove_file(target.with_extension("old"));
     }
 
+    let current = env!("CARGO_PKG_VERSION").to_string();
+    if !self_update_checked() {
+        return LauncherUpdateInfo { current, remote: None, update: false, checked: false };
+    }
+
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
-    let current = env!("CARGO_PKG_VERSION").to_string();
     let remote = match http() {
         Ok(client) => fetch_remote_launcher_version(&client, &cdn).await,
         Err(_) => None,
@@ -592,7 +717,7 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
         &remote,
         Some(r) if *r != current && installed.as_deref() != Some(r.as_str())
     );
-    LauncherUpdateInfo { current, remote, update }
+    LauncherUpdateInfo { current, remote, update, checked: true }
 }
 
 /// Self-update: pull the new binary from the CDN, swap it in place of the
@@ -601,6 +726,12 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
 #[tauri::command]
 #[specta::specta]
 pub async fn update_launcher(app: tauri::AppHandle) -> Result<(), String> {
+    // The check being off means the binary under us is a local build; swapping
+    // it for a CDN one would throw away what cargo just produced.
+    if !self_update_checked() {
+        return Err("Launcher self-update is off in dev builds (set EF_LAUNCHER_UPDATE=1).".into());
+    }
+
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
     let remote = fetch_remote_launcher_version(&http()?, &cdn)

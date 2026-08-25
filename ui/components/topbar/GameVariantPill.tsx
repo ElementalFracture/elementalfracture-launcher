@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Tabs } from "@base-ui/react/tabs";
 import { InfoPopover } from "@/components/InfoPopover";
 import { useGame } from "@/context/GameContext";
+import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import {
   GAME_VARIANTS,
+  canSeePlaytest,
   toGameVariant,
   type GameVariant,
 } from "@/lib/gameVariant";
@@ -12,17 +15,35 @@ import "./GameVariantPill.css";
 
 export function GameVariantPill() {
   const { status, refreshStatus } = useGame();
+  const { settings } = useSettings();
+  const [installing, setInstalling] = useState(false);
 
   const activeGameVariant = toGameVariant(status?.variant);
+  // The playtest channel is invisible to accounts without the badge — devs
+  // included, since they hold it implicitly. Never a disabled tab: an option
+  // nobody outside the playtest can take is better left unsaid.
+  const variants = GAME_VARIANTS.filter(
+    (v) => !v.testersOnly || canSeePlaytest(settings)
+  );
 
   const onGameVariant = async (picked: GameVariant | null) => {
-    if (!picked || picked === activeGameVariant) {
+    if (!picked || picked === activeGameVariant || installing) {
       return;
     }
     try {
-      await rust.setVariant(picked);
+      // First time on this machine there is no pak to switch to, so the
+      // channel is downloaded and switched onto in one go; the shared install
+      // progress bar carries it (download-playtest / extract-playtest).
+      if (picked === "playtest" && !status?.test_installed) {
+        setInstalling(true);
+        await rust.installPlaytestBuild();
+      } else {
+        await rust.setVariant(picked);
+      }
     } catch (e) {
       toast(String(e), true);
+    } finally {
+      setInstalling(false);
     }
     refreshStatus();
   };
@@ -30,6 +51,18 @@ export function GameVariantPill() {
   if (!status?.exe_present) {
     return null;
   }
+
+  /* What the playtest tab says depends on whether its pak is on disk:
+     pressing it either switches balance or pulls it down first. */
+  const labelFor = ({ id, label }: { id: GameVariant; label: string }) => {
+    if (id !== "playtest") {
+      return label;
+    }
+    if (installing) {
+      return "Enabling…";
+    }
+    return status?.test_installed ? label : "Enable Playtest";
+  };
 
   return (
     /*
@@ -44,14 +77,14 @@ export function GameVariantPill() {
     >
       <Tabs.List className="game-variant-container" aria-label="Game variant">
         <Tabs.Indicator className="fill-selected" />
-        {GAME_VARIANTS.map(({ id, label, title }) => (
+        {variants.map(({ id, label, title }) => (
           <Tabs.Tab
             key={id}
             value={id}
             className="game-variant-seg"
             title={title}
           >
-            {label}
+            {labelFor({ id, label })}
           </Tabs.Tab>
         ))}
       </Tabs.List>
@@ -64,6 +97,12 @@ export function GameVariantPill() {
           <strong>Classic</strong> is Spellbreak as it was at shutdown: the
           original balance, preserved untouched.
         </p>
+        {canSeePlaytest(settings) && (
+          <p>
+            <strong>Playtest</strong> is the private playtest channel:
+            unreleased balance for testers to try before it ships.
+          </p>
+        )}
       </InfoPopover>
     </Tabs.Root>
   );

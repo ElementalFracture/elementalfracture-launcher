@@ -83,6 +83,23 @@
   --border: #4b3b20;
 }
 
+/* Playtest: the same palette in blueprint blue, so a playtest build never
+   looks like the one everyone else is on. Toggled by body.playtest, set from
+   the installed pak like the others; the gold stays, since it carries the
+   brand through all three. */
+:root:has(body.playtest) {
+  --background: #050d1f;
+  --foreground: #ffffff;
+  --card: #0b1f42;
+  --popover: #0f2751;
+  --primary: #d9b45b;
+  --primary-bright: #f0d48a;
+  --muted: #081831;
+  --muted-foreground: #a8bde3;
+  --cream: #eaf1ff;
+  --border: #1d3f80;
+}
+
 @theme inline {
   --font-sans: "Segoe UI", "Inter Variable", "Noto Sans", system-ui, sans-serif;
   --font-heading: var(--font-sans);
@@ -197,6 +214,18 @@ body.classic::before {
 }
 body.classic::after {
   opacity: 1;
+}
+/* Playtest glow (blueprint blue). It borrows the ::after layer rather than
+   adding a third: only one of classic/playtest is ever on, so they can't both
+   want it, and an ef ⇄ playtest switch still crossfades between the layers. */
+body.playtest::before {
+  opacity: 0;
+}
+body.playtest::after {
+  opacity: 1;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #0041baee 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #0033a0cc 0%, transparent 55%);
 }
 
 #app {

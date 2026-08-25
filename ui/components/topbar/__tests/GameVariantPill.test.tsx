@@ -5,16 +5,29 @@ import { GameVariantPill } from "../GameVariantPill";
 const game = vi.hoisted(() => ({
   gameVariant: "ef" as string,
   exePresent: true,
+  testInstalled: false,
   refreshStatus: vi.fn(),
 }));
-const rust = vi.hoisted(() => ({ setVariant: vi.fn(async () => "ef") }));
+// The badge that decides whether the Test Build channel exists at all.
+const account = vi.hoisted(() => ({ is_tester: false, is_dev: false }));
+const rust = vi.hoisted(() => ({
+  setVariant: vi.fn(async () => "ef"),
+  installPlaytestBuild: vi.fn(async () => "playtest"),
+}));
 const toast = vi.hoisted(() => vi.fn());
 
 vi.mock("@/context/GameContext", () => ({
   useGame: () => ({
-    status: { variant: game.gameVariant, exe_present: game.exePresent },
+    status: {
+      variant: game.gameVariant,
+      exe_present: game.exePresent,
+      test_installed: game.testInstalled,
+    },
     refreshStatus: game.refreshStatus,
   }),
+}));
+vi.mock("@/context/SettingsContext", () => ({
+  useSettings: () => ({ settings: account }),
 }));
 vi.mock("@/lib/rust", () => rust);
 vi.mock("@/lib/toast", () => ({ toast }));
@@ -31,6 +44,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   game.gameVariant = "ef";
   game.exePresent = true;
+  game.testInstalled = false;
+  account.is_tester = false;
+  account.is_dev = false;
 });
 
 describe("GameVariantPill", () => {
@@ -90,6 +106,70 @@ describe("GameVariantPill", () => {
     game.exePresent = false;
     const { container } = render(<GameVariantPill />);
     expect(container.firstChild).toBeNull();
+  });
+
+  describe("the playtest channel", () => {
+    it("is invisible to an account without the badge", () => {
+      render(<GameVariantPill />);
+      expect(screen.queryByRole("tab", { name: /playtest/i })).toBeNull();
+    });
+
+    it("shows for a tester, and for a dev who holds it implicitly", () => {
+      account.is_tester = true;
+      const { unmount } = render(<GameVariantPill />);
+      expect(screen.getByRole("tab", { name: "Enable Playtest" })).toBeTruthy();
+      unmount();
+
+      account.is_tester = false;
+      account.is_dev = true;
+      render(<GameVariantPill />);
+      expect(screen.getByRole("tab", { name: "Enable Playtest" })).toBeTruthy();
+    });
+
+    it("offers the download until the pak is on disk, then a plain switch", () => {
+      account.is_tester = true;
+      const { unmount } = render(<GameVariantPill />);
+      expect(screen.getByRole("tab", { name: "Enable Playtest" })).toBeTruthy();
+      unmount();
+
+      game.testInstalled = true;
+      render(<GameVariantPill />);
+      expect(screen.getByRole("tab", { name: "Playtest" })).toBeTruthy();
+    });
+
+    it("downloads it the first time instead of switching to a pak that isn't there", async () => {
+      account.is_tester = true;
+      render(<GameVariantPill />);
+      fireEvent.click(seg("Enable Playtest"));
+
+      await waitFor(() => expect(rust.installPlaytestBuild).toHaveBeenCalled());
+      expect(rust.setVariant).not.toHaveBeenCalled();
+      await waitFor(() => expect(game.refreshStatus).toHaveBeenCalled());
+    });
+
+    it("just switches once the pak is installed", async () => {
+      account.is_tester = true;
+      game.testInstalled = true;
+      render(<GameVariantPill />);
+      fireEvent.click(seg("Playtest"));
+
+      await waitFor(() => expect(rust.setVariant).toHaveBeenCalledWith("playtest"));
+      expect(rust.installPlaytestBuild).not.toHaveBeenCalled();
+    });
+
+    it("puts a failed download in front of the player", async () => {
+      account.is_tester = true;
+      rust.installPlaytestBuild.mockRejectedValueOnce(new Error("playtest archive: 404"));
+      render(<GameVariantPill />);
+      fireEvent.click(seg("Enable Playtest"));
+
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith(
+          expect.stringContaining("playtest archive: 404"),
+          true
+        )
+      );
+    });
   });
 
   it("explains the two balances behind the note", () => {
