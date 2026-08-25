@@ -55,13 +55,13 @@ describe("update-first startup", () => {
     const { result } = renderGame();
     await Promise.resolve();
     expect(commands.getStatus).not.toHaveBeenCalled();
-    expect(result.current.gameUpdatePop).toBeNull();
+    expect(result.current.gameOutdated).toBe(false);
 
     await act(async () => {
       check.resolve({ current: "3.0.2", remote: "3.1.0", update: true });
       await check.promise;
     });
-    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
   });
 
   it("still runs the game work when the launcher check fails", async () => {
@@ -74,58 +74,74 @@ describe("update-first startup", () => {
   });
 });
 
-describe("startup game-update check", () => {
-  it("offers the update when the install is behind the CDN", async () => {
+describe("gameOutdated", () => {
+  it("goes up when the install is behind the CDN", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
     const { result } = renderGame();
-    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
   });
 
-  it("never patches on its own — the popup has to be clicked", async () => {
+  it("never patches on its own — the plate has to be clicked", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
     const { result } = renderGame();
-    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
     expect(commands.updatePatch).not.toHaveBeenCalled();
   });
 
-  it("still offers it when get_status resolves after get_versions", async () => {
-    // checkGameUpdate reads the status through a ref. Firing it before the
-    // first refreshStatus lands makes it see null and skip the offer silently,
-    // so the startup sequence has to order the two.
+  it("holds until the status says the game is actually installed", async () => {
+    // Derived from both, so whichever lands second is what raises it — a
+    // version answer on its own says nothing about an install that isn't there.
     const status = deferred<ReturnType<typeof makeStatus>>();
     commands.getStatus.mockReturnValue(status.promise);
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
 
     const { result } = renderGame();
     await Promise.resolve();
-    expect(result.current.gameUpdatePop).toBeNull();
+    expect(result.current.gameOutdated).toBe(false);
 
     await act(async () => {
       status.resolve(makeStatus());
       await status.promise;
     });
-    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
   });
 
-  it("stays quiet when the install already matches the CDN", async () => {
+  it("stays down when the install already matches the CDN", async () => {
     const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
-    expect(result.current.gameUpdatePop).toBeNull();
+    expect(result.current.gameOutdated).toBe(false);
   });
 
-  it("stays quiet when the game is not installed", async () => {
+  it("stays down when the game is not installed", async () => {
     commands.getStatus.mockResolvedValue(makeStatus({ exe_present: false }));
     commands.getVersions.mockResolvedValue(makeVersions({ local: null, remote: "6.0.3" }));
     const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
-    expect(result.current.gameUpdatePop).toBeNull();
+    expect(result.current.gameOutdated).toBe(false);
   });
 
-  it("stays quiet when the CDN version is unavailable", async () => {
+  it("stays down when the CDN version is unavailable — nobody is locked out offline", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
     const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
-    expect(result.current.gameUpdatePop).toBeNull();
+    expect(result.current.gameOutdated).toBe(false);
+  });
+});
+
+describe("noticing an update without being asked", () => {
+  it("re-reads the versions when the window comes back", async () => {
+    // One of the two moments the CDN is asked at all — there is no timer, so
+    // coming back from the patch notes is what turns Launch into Update. The
+    // other is the launch itself (see the Home suite).
+    const { result } = renderGame();
+    await waitFor(() => expect(result.current.versions).not.toBeNull());
+    expect(result.current.gameOutdated).toBe(false);
+
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
   });
 });
 
@@ -150,24 +166,31 @@ describe("applyGameUpdate", () => {
     await waitFor(() => expect(result.current.updating).toBe(false));
   });
 
-  it("clears the popup once the patch lands", async () => {
+  it("stops offering once the patch lands", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    // The patch is what makes the install current, so the versions read
+    // afterwards agree — which is what lowers the flag.
+    commands.updatePatch.mockImplementation(async () => {
+      commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.3", remote: "6.0.3" }));
+      return { status: "ok", data: "6.0.3" };
+    });
+
     const { result } = renderGame();
-    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
 
     await act(async () => {
       await result.current.applyGameUpdate();
     });
     expect(commands.updatePatch).toHaveBeenCalled();
-    expect(result.current.gameUpdatePop).toBeNull();
+    await waitFor(() => expect(result.current.gameOutdated).toBe(false));
   });
 
-  it("keeps the popup up and lowers the flag when the patch fails", async () => {
+  it("keeps offering it and lowers the flag when the patch fails", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
     commands.updatePatch.mockResolvedValue({ status: "error", error: "connection reset" });
 
     const { result } = renderGame();
-    await waitFor(() => expect(result.current.gameUpdatePop).toBe("6.0.3"));
+    await waitFor(() => expect(result.current.gameOutdated).toBe(true));
 
     let ok: boolean | undefined;
     await act(async () => {
@@ -175,7 +198,7 @@ describe("applyGameUpdate", () => {
     });
     expect(ok).toBe(false);
     expect(result.current.updating).toBe(false);
-    expect(result.current.gameUpdatePop).toBe("6.0.3");
+    expect(result.current.gameOutdated).toBe(true);
   });
 });
 
