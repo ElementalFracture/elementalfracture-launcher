@@ -1,0 +1,43 @@
+.launch-plate {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 290px;
+  height: 90px;
+  padding: 0;
+  border: none;
+  background: url("../../../assets/launch-bg.png") center / contain no-repeat;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 14px #00000088);
+  transition:
+    filter 0.15s,
+    transform 0.1s;
+}
+.launch-plate:hover {
+  background-image: url("../../../assets/launch-bg-hover.png");
+}
+.launch-plate:active {
+  transform: scale(0.985);
+}
+.launch-plate:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.launch-plate-label {
+  font-family: var(--font-display);
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--primary-bright) 70%, var(--cream));
+  transition: color 0.15s;
+}
+.launch-plate:hover .launch-plate-label {
+  color: var(--cream);
+}
+
+.launch-plate-label.long {
+  font-size: 30px;
+  letter-spacing: 0.03em;
+}

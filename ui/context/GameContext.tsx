@@ -28,6 +28,7 @@ interface GameContextValue {
   /** Top-right "Game Update Available" popup, and the version it offers. */
   gameUpdatePop: string | null;
   dismissGameUpdatePop: () => void;
+  gameOutdated: boolean;
   refreshStatus: () => Promise<GameStatus | null>;
   refreshVersions: () => Promise<VersionInfo | null>;
   checkLauncherUpdate: () => Promise<LauncherUpdateInfo | null>;
@@ -240,6 +241,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const gameOutdated = Boolean(
+    versions?.remote &&
+    status?.exe_present &&
+    versions.local !== versions.remote
+  );
+
   const value: GameContextValue = {
     status,
     versions,
@@ -251,6 +258,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setLauncherUpdatePop,
     gameUpdatePop,
     dismissGameUpdatePop: () => setGameUpdatePop(null),
+    gameOutdated,
     refreshStatus,
     refreshVersions,
     checkLauncherUpdate,

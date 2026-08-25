@@ -3,10 +3,11 @@
  *
  * The download path in src-tauri/src/download.rs pulls four things off
  * `cdn_base`: the version file it compares against, the balance patch, the mod
- * package, and (fresh installs only) the base game. Point cdn_base at this
- * server — Settings → Advanced, or `CDN_BASE=http://localhost:8787` in the dev
- * profile — and every one of them is answered here from the `update` block in
- * data.json, so an update run happens against bytes you control.
+ * package, and (fresh installs only) the base game. Debug builds point at this
+ * server by default (`cdn_base()` in settings.rs), so every one of them is
+ * answered here from the `update` block in data.json and an update run happens
+ * against bytes you control — dummy ones, which do land in the profile's
+ * game_path.
  *
  *   {cdn}/launcher/config.ini   version tracks the badge + startup check read
  *   {cdn}/patch/latest.zip      the balance paks, extracted into g3/…/Paks

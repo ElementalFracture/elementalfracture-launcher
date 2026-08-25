@@ -63,6 +63,49 @@ async function launch() {
   });
 }
 
+describe("a pending game update", () => {
+  const outdated = () => makeVersions({ local: "6.0.2", remote: "6.0.3" });
+
+  it("takes the button over instead of launching", async () => {
+    commands.getVersions.mockResolvedValue(outdated());
+    commands.updatePatch.mockResolvedValue({ status: "ok", data: "6.0.3" });
+
+    render(<HomeView />, { wrapper: Providers });
+    const btn = await screen.findByTitle("Download game update v6.0.3");
+    expect(screen.queryByTitle("Launch Spellbreak")).toBeNull();
+
+    await act(async () => {
+      btn.click();
+    });
+    expect(commands.updatePatch).toHaveBeenCalled();
+    expect(commands.launchGame).not.toHaveBeenCalled();
+  });
+
+  it("gives Launch back once the patch lands", async () => {
+    commands.getVersions.mockResolvedValue(outdated());
+    // The patch is what makes the install current, so the versions read after
+    // it agree — which is what hands the button back.
+    commands.updatePatch.mockImplementation(async () => {
+      commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.3", remote: "6.0.3" }));
+      return { status: "ok", data: "6.0.3" };
+    });
+
+    render(<HomeView />, { wrapper: Providers });
+    const btn = await screen.findByTitle("Download game update v6.0.3");
+    await act(async () => {
+      btn.click();
+    });
+    expect(await screen.findByTitle("Launch Spellbreak")).toBeTruthy();
+  });
+
+  it("leaves Launch alone when the CDN version can't be read", async () => {
+    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+
+    render(<HomeView />, { wrapper: Providers });
+    expect(await screen.findByTitle("Launch Spellbreak")).toBeTruthy();
+  });
+});
+
 describe("close on launch", () => {
   it("quits the launcher once the game is on its way", async () => {
     commands.getSettings.mockResolvedValue(makeSettings({ close_on_launch: true }));

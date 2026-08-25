@@ -45,14 +45,34 @@ pub struct Settings {
 /// Settings → Advanced. Both are overridable there and the override sticks —
 /// this only decides where a profile starts.
 ///
-/// `play_base` and `cdn_base` deliberately stay live even in debug: the test env
-/// has no downloads, patch notes or update feed to serve, and 404s from it would
-/// be less useful than the real thing.
+/// `play_base` stays live even in debug: the test env has no patch notes or
+/// portal API to serve, and 404s from it would be less useful than the real
+/// thing. `cdn_base` has a fixture (test-env/update.mjs) and follows the same
+/// rule as the account endpoints — see `cdn_base()`.
 fn portal_base() -> &'static str {
     if cfg!(debug_assertions) {
         "http://localhost:8787"
     } else {
         "https://play.elefrac.com"
+    }
+}
+
+/// Where the updater pulls the version file and the three zips from. Debug
+/// builds aim at the local test env (`npm run test-env`), which serves all
+/// four from its `update` block, so a dev session drives the update flow
+/// against bytes you control rather than asking the live CDN about a build
+/// that is behind it by definition.
+///
+/// Two things follow from that, both deliberate. With no test env running, a
+/// debug build simply has no remote version — nothing is offered, nothing is
+/// downloaded. And with one running, an update installs *fixture* paks and a
+/// stub loader into whatever `game_path` the profile points at, so point that
+/// at a copy. Overridable in Settings → Advanced either way.
+fn cdn_base() -> &'static str {
+    if cfg!(debug_assertions) {
+        "http://localhost:8787"
+    } else {
+        "https://cdn.elefrac.com"
     }
 }
 
@@ -66,7 +86,7 @@ impl Default for Settings {
             launch_command: if cfg!(windows) { String::new() } else { "umu-run".into() },
             wine_prefix: String::new(),
             play_base: "https://play.elefrac.com".into(),
-            cdn_base: "https://cdn.elefrac.com".into(),
+            cdn_base: cdn_base().into(),
             auth_url: format!("{}/auth", portal_base()),
             players_url: format!("{}/players", portal_base()),
             username: String::new(),
@@ -215,10 +235,13 @@ mod tests {
             assert_eq!(s.auth_url, "https://play.elefrac.com/auth");
             assert_eq!(s.players_url, "https://play.elefrac.com/players");
         }
-        // Downloads and the update feed have no fixture, so they stay live
-        // either way.
+        if cfg!(debug_assertions) {
+            assert_eq!(s.cdn_base, "http://localhost:8787");
+        } else {
+            assert_eq!(s.cdn_base, "https://cdn.elefrac.com");
+        }
+        // The portal API has no fixture, so it stays live either way.
         assert_eq!(s.play_base, "https://play.elefrac.com");
-        assert_eq!(s.cdn_base, "https://cdn.elefrac.com");
     }
 
     /// `signed-out` in test-env/dev-profile.sh seeds a profile by *omitting*

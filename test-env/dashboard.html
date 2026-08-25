@@ -829,6 +829,64 @@
         );
       }
 
+      /** Bump the last number of a dotted version: 6.8.1 → 6.8.2. */
+      function nextVersion(version) {
+        const parts = String(version ?? "")
+          .trim()
+          .split(".");
+        const tail = parts[parts.length - 1];
+        // A version that doesn't end in a number still has to move on, or the
+        // button would look broken on whatever someone typed in the field.
+        if (!/^\d+$/.test(tail)) {
+          return [...parts, "1"].filter(Boolean).join(".");
+        }
+        parts[parts.length - 1] = String(Number(tail) + 1);
+        return parts.join(".");
+      }
+
+      function updates(s) {
+        const update = s.update ?? {};
+        return card(
+          "Updates",
+          "only reached when cdn_base points here",
+          el(
+            "div",
+            { className: "grid" },
+            field(
+              "Game version",
+              text("update.game_version", update.game_version, (v) =>
+                set(["update", "game_version"], v)
+              )
+            ),
+            field(
+              "Launcher version",
+              text("update.launcher_version", update.launcher_version, (v) =>
+                set(["update", "launcher_version"], v)
+              )
+            )
+          ),
+          el(
+            "div",
+            { className: "row line" },
+            el("button", {
+              textContent: "Ship a game update",
+              title:
+                "Bump the game version this CDN reports, the way a patch day would",
+              onclick: () =>
+                set(
+                  ["update", "game_version"],
+                  nextVersion(update.game_version)
+                ),
+            })
+          ),
+          el("p", {
+            className: "empty",
+            textContent:
+              "Ahead of the installed version, Launch turns into Update. The launcher reads this at startup and whenever Mods & Install is opened, so switch to that tab and back to see it flip without a restart.",
+          })
+        );
+      }
+
       function events(s) {
         const list = s.events ?? [];
         const path = (i, key) => ["events", i, key];
@@ -930,6 +988,7 @@
           pending(next, "outgoing", "Outgoing", "requests you've sent"),
           rejections(next),
           home(next),
+          updates(next),
           events(next)
         );
 
