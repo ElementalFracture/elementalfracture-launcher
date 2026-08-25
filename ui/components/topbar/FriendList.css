@@ -32,8 +32,7 @@
   padding: 4px 2px;
 }
 
-/* The section heads themselves live in TopBar.css, shared with the in-game
-   breakdown's accordion. */
+/* The section heads themselves live in TopBar.css. */
 
 .friend-row {
   display: flex;
