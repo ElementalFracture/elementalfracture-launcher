@@ -1,10 +1,17 @@
 import { useState } from "react";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/shadcn/card";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import "./UpdatePops.css";
 
-/** One top-right card: click the body to apply, the × to dismiss. */
+/** One bottom-corner card: click the body to apply, the × to dismiss. */
 function UpdatePop({
   title,
   sub,
@@ -19,26 +26,31 @@ function UpdatePop({
   onDismiss: () => void;
 }) {
   return (
-    <div
+    <Card
+      size="sm"
       className={"update-pop" + (busy ? " busy" : "")}
       role="button"
       tabIndex={0}
       onClick={onApply}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onApply()}
     >
-      <button
-        className="update-pop-x"
-        title="Dismiss"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDismiss();
-        }}
-      >
-        ×
-      </button>
-      <div className="update-pop-title">{title}</div>
-      <div className="update-pop-sub">{sub}</div>
-    </div>
+      <CardHeader>
+        <CardTitle className="update-pop-title">{title}</CardTitle>
+        <CardDescription className="update-pop-sub">{sub}</CardDescription>
+        <CardAction>
+          <button
+            className="update-pop-x"
+            title="Dismiss"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+          >
+            ×
+          </button>
+        </CardAction>
+      </CardHeader>
+    </Card>
   );
 }
 

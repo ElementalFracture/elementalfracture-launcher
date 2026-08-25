@@ -10,7 +10,7 @@
   max-width: min(480px, 90vw);
   font-size: 15px;
   background: linear-gradient(180deg, var(--popover) 0%, var(--card) 100%);
-  border: 1px solid var(--primary);
+  border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
   box-shadow:
     0 24px 70px #000d,
@@ -42,48 +42,6 @@
   justify-content: center;
   margin-top: 18px;
   flex-wrap: wrap;
-}
-
-/* Wizard buttons follow the social-banner scheme: flat cream text that
-   turns gold on hover (primary starts gold, brightens on hover). The
-   surfaces the Button primitive carries elsewhere are stripped back here. */
-.wizard-actions [data-slot="button"] {
-  background: none;
-  border: none;
-  border-radius: 0;
-  font-family: var(--font-body);
-  font-size: 14px;
-  letter-spacing: 0.02em;
-  padding: 8px 14px;
-  transition:
-    color 0.15s,
-    transform 0.1s;
-}
-.wizard-actions [data-slot="button"]:hover {
-  filter: none;
-}
-.wizard-actions [data-slot="button"]:active {
-  transform: scale(0.97);
-}
-/* The gradient and border styles.css gives the default and secondary buttons
-   are at the same specificity as the rule above, so they're unset per variant
-   rather than relying on file order. */
-.wizard-actions [data-slot="button"][data-variant="secondary"] {
-  background: none;
-  color: var(--cream);
-  opacity: 0.85;
-}
-.wizard-actions [data-slot="button"][data-variant="secondary"]:hover {
-  color: var(--primary);
-  opacity: 1;
-}
-.wizard-actions [data-slot="button"][data-variant="default"] {
-  background: none;
-  border-color: transparent;
-  color: var(--primary);
-}
-.wizard-actions [data-slot="button"][data-variant="default"]:hover {
-  color: var(--primary-bright);
 }
 
 .wizard-tooltip {

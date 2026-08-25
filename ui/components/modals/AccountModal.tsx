@@ -70,6 +70,7 @@ export function AccountModal({
             placeholder="Paste your token…"
             value={token}
             onChange={(e) => setToken(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && save()}
           />
           <p className="wizard-tooltip">
             Don’t have a token?{" "}
@@ -77,15 +78,15 @@ export function AccountModal({
             one.
           </p>
           <div className="wizard-actions">
-            <Button disabled={saving} onClick={save}>
-              Save
-            </Button>
             <Button
               variant="secondary"
               disabled={saving}
               onClick={() => onOpenChange(false)}
             >
               Cancel
+            </Button>
+            <Button disabled={saving} onClick={save}>
+              Save
             </Button>
           </div>
         </div>
