@@ -1,46 +1,32 @@
 import { useState } from "react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/shadcn/accordion";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/shadcn/popover";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/shadcn/tabs";
-import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { Swords } from "lucide-react";
-import { GAME_VARIANTS, toGameVariant } from "@/lib/gameVariant";
-import { playersByRegion, totalPlayers, variantTotal } from "./players";
+import { GAME_VARIANTS } from "@/lib/gameVariant";
+import { modeRowsByVariant, regionsOf } from "./players";
 import "./InGamePill.css";
+import {Separator} from "@/components/shadcn/separator.tsx";
 
-/** Players in game, with a per-region, per-balance breakdown behind a click. */
+/** Players in game, with a per-gameVariant, per-region breakdown behind a click. */
 export function InGamePill() {
   const { playersData, refreshPlayers } = useLiveData();
-  const { status } = useGame();
   const [open, setOpen] = useState(false);
 
   const inGame = Number.isFinite(playersData?.online)
     ? (playersData!.online as number)
     : null;
 
-  const byRegion = playersByRegion(playersData?.servers ?? []);
-  const regions = [...byRegion.keys()];
-  // Held rather than left to `defaultValue`: the refresh on open can drop the
-  // region that was picked, and the strip has to land somewhere real.
-  const [region, setRegion] = useState<string | null>(null);
-  const activeRegion = region && regions.includes(region) ? region : regions[0];
-  // Show the installed game variant when opening the popover
-  const installed = toGameVariant(status?.variant);
+  const servers = playersData?.servers ?? [];
+  const regions = regionsOf(servers);
+  const rowsByGameVariant = modeRowsByVariant(servers, regions);
+  // A game variant with no populated mode has nothing to table, so it drops out.
+  const sections = GAME_VARIANTS.filter(
+    ({ id }) => rowsByGameVariant[id].length > 0
+  );
 
   return (
     <Popover
@@ -66,55 +52,47 @@ export function InGamePill() {
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8}>
-        {/* One tab per region, and inside it one collapsible section per
-            game variant — the installed variant opens first. Every known mode
-            gets a row whether anyone is in it, so the panel keeps its
-            shape; the idle ones just read muted. */}
-        <Tabs
-          value={activeRegion}
-          onValueChange={(value) => setRegion(String(value))}
-          className="region-tabs"
-        >
-          <TabsList className="w-full">
-            {[...byRegion].map(([name, byVariant]) => (
-              <TabsTrigger key={name} value={name}>
-                {name}
-                <span className="tab-count">{`(${totalPlayers(byVariant)})`}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {[...byRegion].map(([name, byVariant]) => (
-            <TabsContent key={name} value={name}>
-              <Accordion key={installed} defaultValue={[installed]}>
-                {GAME_VARIANTS.map(({ id, label: variantLabel }) => (
-                  <AccordionItem key={id} value={id}>
-                    <AccordionTrigger>
-                      <span className="variant-title">{variantLabel}</span>
-                      <span className="variant-count">
-                        ({variantTotal(byVariant[id])})
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      {[...byVariant[id]].map(([label, players]) => (
-                        <div
-                          key={label}
-                          className={
-                            "mode-row" + (players.count === 0 ? " idle" : "")
-                          }
-                        >
-                          <span>{label}</span>
-                          <span className="game-mode-count">
-                            {players.count}
-                          </span>
-                        </div>
+        <div className="player-breakdown">
+          {sections.length === 0 ? (
+            <div className="no-one">No one in game</div>
+          ) : (
+            sections.map(({ id, label: variantLabel }) => (
+              <section key={id} className="variant-section">
+                <h3 className="variant-title">{variantLabel}</h3>
+                <Separator/>
+                <table className="mode-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <span className="sr-only">Mode</span>
+                      </th>
+                      {regions.map((region) => (
+                        <th key={region} scope="col">
+                          {region}
+                        </th>
                       ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </TabsContent>
-          ))}
-        </Tabs>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rowsByGameVariant[id].map(({ label, counts }) => (
+                      <tr key={label}>
+                        <th scope="row">{label}</th>
+                        {counts.map((count, column) => (
+                          <td
+                            key={regions[column]}
+                            className={count === 0 ? "idle" : undefined}
+                          >
+                            {count}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ))
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );

@@ -42,10 +42,10 @@ export function regionOf(server: PlayerServer): string {
 }
 
 /**
- * The regions the breakdown gets a tab for: the ones the sidecar reports,
+ * The regions the breakdown gets a column for: the ones the sidecar reports,
  * NA/EU first and the rest alphabetical. Falls back to the known regions when
  * nothing is reported, so an unreachable sidecar leaves an empty breakdown
- * rather than no tabs at all.
+ * rather than a table with no columns at all.
  */
 export function regionsOf(servers: readonly PlayerServer[]): string[] {
   const rank = (region: string) => {
@@ -61,55 +61,59 @@ export function regionsOf(servers: readonly PlayerServer[]): string[] {
   );
 }
 
-/** How many players are in one mode, and who they are. */
-export interface ModePlayers {
-  count: number;
-  names: string[];
+// One line of a game variant's table: the mode, and its head count per region.
+export interface ModeRow {
+  label: string;
+  counts: number[];
 }
 
-/**
- * Roll the sidecar's per-server figures up into per-mode totals, keyed by
- * mode label. Seeded with every known mode so the popover lists them all —
- * an empty mode reads as "No one in game" rather than vanishing. Modes the
- * sidecar reports but MODE_MATCHERS doesn't know are appended after those.
- */
-export function playersByMode(
-  servers: readonly PlayerServer[]
-): Map<string, ModePlayers> {
-  const byMode = new Map<string, ModePlayers>(
-    MODE_MATCHERS.map(([, label]): [string, ModePlayers] => [
+// Get the players count by region for each game mode of specified servers.
+export function modeRows(
+  servers: readonly PlayerServer[],
+  regions: readonly string[]
+): ModeRow[] {
+  const byMode = new Map<string, number[]>(
+    MODE_MATCHERS.map(([, label]): [string, number[]] => [
       label,
-      { count: 0, names: [] },
+      regions.map(() => 0),
     ])
   );
 
   for (const server of servers) {
+    const column = regions.indexOf(regionOf(server));
+    // A region outside the columns has nowhere to land; `regions` comes from
+    // the same servers, so this only bites a caller that narrowed the list.
+    if (column === -1) {
+      continue;
+    }
     const label = modeLabel(server);
-    let players = byMode.get(label);
-    if (!players) {
-      players = { count: 0, names: [] };
-      byMode.set(label, players);
+    let counts = byMode.get(label);
+    if (!counts) {
+      counts = regions.map(() => 0);
+      byMode.set(label, counts);
     }
-    players.count += server.players ?? 0;
-    if (Array.isArray(server.names)) {
-      players.names.push(...server.names);
-    }
+    counts[column] += server.players ?? 0;
   }
 
-  return byMode;
+  return [...byMode]
+    .filter(([, counts]) => counts.some((count) => count > 0))
+    .map(([label, counts]) => ({ label, counts }));
 }
 
-/**
- * The same roll-up, split into the two balance variants the breakdown lists
- * separately. Each side is seeded with every known mode, so both sections keep
- * the same four rows whether or not anyone is playing that balance.
- */
-export function playersByVariant(
-  servers: readonly PlayerServer[]
-): Record<GameVariant, Map<string, ModePlayers>> {
+// The rows each balance's table gets, over the same region columns.
+export function modeRowsByVariant(
+  servers: readonly PlayerServer[],
+  regions: readonly string[]
+): Record<GameVariant, ModeRow[]> {
   return {
-    ef: playersByMode(servers.filter((s) => variantOf(s) === "ef")),
-    classic: playersByMode(servers.filter((s) => variantOf(s) === "classic")),
+    ef: modeRows(
+      servers.filter((s) => variantOf(s) === "ef"),
+      regions
+    ),
+    classic: modeRows(
+      servers.filter((s) => variantOf(s) === "classic"),
+      regions
+    ),
   };
 }
 
@@ -122,35 +126,5 @@ export function rosterOf(
     (a, b) =>
       Number(isFriend(b)) - Number(isFriend(a)) ||
       a.localeCompare(b, "en", { sensitivity: "base" })
-  );
-}
-
-/** Everyone across one game variant: the figure on its section head. */
-export function variantTotal(byMode: Map<string, ModePlayers>): number {
-  let total = 0;
-  for (const players of byMode.values()) {
-    total += players.count;
-  }
-  return total;
-}
-
-/** Everyone in one region, both game variant together: the figure on its tab. */
-export function totalPlayers(
-  byVariant: Record<GameVariant, Map<string, ModePlayers>>
-): number {
-  return Object.values(byVariant).reduce(
-    (total, byMode) => total + variantTotal(byMode),
-    0
-  );
-}
-
-export function playersByRegion(
-  servers: readonly PlayerServer[]
-): Map<string, Record<GameVariant, Map<string, ModePlayers>>> {
-  return new Map(
-    regionsOf(servers).map((region) => [
-      region,
-      playersByVariant(servers.filter((s) => regionOf(s) === region)),
-    ])
   );
 }

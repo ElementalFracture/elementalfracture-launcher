@@ -1,43 +1,66 @@
-/* ============ In-game pill: the per-region breakdown popover ============ */
+/* ============ In-game pill: the per-balance breakdown popover ============ */
 
-/* Region tab strip sits above the per-balance sections. */
-.region-tabs [data-slot="tabs-trigger"] {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 11px;
+/* One section per game variant, headed by its name in primary. */
+.player-breakdown .variant-section + .variant-section {
+  margin-top: 14px;
+}
+
+.player-breakdown .variant-title {
+  padding: 0 2px 4px;
+  margin-bottom: 4px;
+  font-size: 13px;
   font-weight: 700;
+  color: var(--primary);
 }
 
-.region-tabs .tab-count {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  opacity: 0.7;
-}
-
-.region-tabs [data-slot="tabs-trigger"][data-active] {
-  color: var(--primary-foreground);
-  background: var(--primary);
-}
-/* The balance section heads take the friend drawer's look, which TopBar.css
-   carries for both. Only their head count is local. */
-.region-tabs .variant-count {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.7;
-}
-.mode-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 2px;
+.player-breakdown .mode-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 13px;
   font-weight: 600;
+  margin-top: 4px;
 }
-.mode-row .game-mode-count {
-  color: var(--primary);
+
+.player-breakdown .mode-table th[scope="row"],
+.player-breakdown .mode-table thead th:first-child {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  font-weight: inherit;
+  padding-right: 12px;
+}
+.player-breakdown .mode-table th[scope="col"],
+.player-breakdown .mode-table td {
+  min-width: 28px;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The region heads sit back: they label the columns rather than compete
+   with the figures under them. */
+.player-breakdown .mode-table thead th {
+  padding: 0 4px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.player-breakdown .mode-table tbody th,
+.player-breakdown .mode-table tbody td {
+  padding: 4px 4px;
+}
+.player-breakdown .mode-table tbody td {
   font-size: 12px;
 }
-/* Nobody in the mode: the row stays for shape, but recedes. */
-.mode-row.idle,
-.mode-row.idle .game-mode-count {
+/* Nobody in that mode in that region: the cell holds the column, but recedes. */
+.player-breakdown .mode-table tbody td.idle {
+  color: var(--muted-foreground);
+}
+
+/* Nobody in game at all: the popover says so rather than sitting empty. */
+.player-breakdown .no-one {
+  padding: 4px 2px;
+  font-size: 13px;
   color: var(--muted-foreground);
 }

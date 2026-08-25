@@ -7,12 +7,8 @@ const live = vi.hoisted(() => ({
   playersData: null as PlayersData | null,
   refreshPlayers: vi.fn(),
 }));
-const game = vi.hoisted(() => ({ variant: "ef" as string }));
 
 vi.mock("@/context/LiveDataContext", () => ({ useLiveData: () => live }));
-vi.mock("@/context/GameContext", () => ({
-  useGame: () => ({ status: { variant: game.variant } }),
-}));
 
 /* Two regions, both balances, and one mode nobody is in — enough shape to
    read every part of the breakdown off one render. */
@@ -21,7 +17,6 @@ const SERVERS = [
     display_name: "NA Solos",
     players: 5,
     region: "NA",
-    // Out of order, and "ash" is on the mode's two servers at once.
     names: ["cinder", "ash", "me", "briar", "ash"],
   },
   { display_name: "NA Duos", players: 0, region: "NA" },
@@ -32,6 +27,7 @@ const SERVERS = [
     region: "NA",
   },
   { display_name: "EU Solos", players: 3, region: "EU", names: ["dusk"] },
+  { display_name: "EU Squads", players: 4, region: "EU" },
 ];
 
 const open = () => {
@@ -39,84 +35,82 @@ const open = () => {
   fireEvent.click(screen.getByTitle("Players in game: click for a breakdown"));
 };
 
-/** The row a mode label sits in, inside whichever section is open. */
-const modeRow = (label: string) =>
-  screen.getByText(label).closest(".mode-row") as HTMLElement;
-
-const modeCount = (label: string) =>
-  modeRow(label).querySelector(".game-mode-count")?.textContent;
-
-/** A balance section's head, which carries its name and head count. */
-const section = (label: string) =>
-  screen.getByRole("button", { name: new RegExp(`^${label}`) });
-
-/** Whether a balance section is open, read off its accordion trigger. */
-const expanded = (label: string) =>
-  section(label).getAttribute("aria-expanded");
-
-/** Each tab as [region, head count]. */
-const tabs = () =>
+/** A balance's table, found by the title above it. */
+const table = (variant: string) =>
   screen
-    .getAllByRole("tab")
-    .map((t) => [
-      t.firstChild?.textContent,
-      t.querySelector(".tab-count")?.textContent,
-    ]);
+    .getByRole("heading", { name: variant })
+    .closest("section")!
+    .querySelector("table")!;
+
+/** Its column heads, the mode one included — it reads as a screen-reader label. */
+const columns = (variant: string) =>
+  [...table(variant).querySelectorAll("thead th")].map((th) => th.textContent);
+
+/** Its rows, as [mode, ...one count per region column]. */
+const rows = (variant: string) =>
+  [...table(variant).querySelectorAll("tbody tr")].map((tr) =>
+    [...tr.children].map((cell) => cell.textContent)
+  );
 
 beforeEach(() => {
   vi.clearAllMocks();
-  live.playersData = { online: 10, servers: SERVERS };
-  game.variant = "ef";
+  live.playersData = { online: 14, servers: SERVERS };
 });
 
 describe("InGamePill", () => {
-  it("gives every reported region a tab, NA first", () => {
+  it("heads each balance with its name, no tab strip in the way", () => {
     open();
-    expect(tabs().map(([region]) => region)).toEqual(["NA", "EU"]);
-  });
-
-  it("counts both balances into the region's tab figure", () => {
-    open();
-    // NA: 5 EF solos + 2 Classic solos, and nobody in duos.
-    expect(tabs()).toEqual([
-      ["NA", "(7)"],
-      ["EU", "(3)"],
+    expect(screen.queryAllByRole("tab")).toEqual([]);
+    expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
+      "Elemental Fracture",
+      "Classic",
     ]);
   });
 
-  it("opens the balance the install runs, and leaves the other shut", () => {
-    game.variant = "classic";
+  it("gives every reported region a column, NA first", () => {
     open();
-    expect(expanded("Classic")).toBe("true");
-    expect(expanded("Elemental Fracture")).toBe("false");
+    expect(columns("Elemental Fracture")).toEqual(["Mode", "NA", "EU"]);
   });
 
-  it("falls back to Elemental Fracture when the balance is unknown", () => {
-    game.variant = "unknown";
+  it("counts a mode against the region its server sits in", () => {
     open();
-    expect(expanded("Elemental Fracture")).toBe("true");
+    expect(rows("Elemental Fracture")).toEqual([
+      ["Solos", "5", "3"],
+      ["Squads", "0", "4"],
+    ]);
   });
 
-  it("counts only the servers in the selected region", () => {
+  it("tables a balance's modes against its own servers only", () => {
     open();
-    expect(modeCount("Solos")).toBe("5");
-
-    // The tab is named "EU 3" now that the head count rides along with it.
-    fireEvent.click(screen.getByRole("tab", { name: /^EU/ }));
-    expect(modeCount("Solos")).toBe("3");
+    expect(rows("Classic")).toEqual([["Solos", "2", "0"]]);
   });
 
-  it("heads each balance section with its own count", () => {
+  it("leaves out a mode nobody is in", () => {
     open();
-    // NA runs 5 EF solos against 2 Classic ones, and empty duos either side.
-    expect(section("Elemental Fracture").textContent).toContain("(5)");
-    expect(section("Classic").textContent).toContain("(2)");
+    // NA duos are reported but empty, so the mode gets no row at all.
+    expect(screen.queryByText("Duos")).toBeNull();
   });
 
-  it("mutes a mode nobody is in", () => {
+  it("mutes a region where nobody is in that mode", () => {
     open();
-    expect(modeRow("Duos").classList.contains("idle")).toBe(true);
-    expect(modeRow("Solos").classList.contains("idle")).toBe(false);
+    // Squads run in EU only, so its NA cell is the muted one.
+    const [, na, eu] = table("Elemental Fracture").querySelectorAll(
+      "tbody tr:last-child > *"
+    );
+    expect(na.classList.contains("idle")).toBe(true);
+    expect(eu.classList.contains("idle")).toBe(false);
+  });
+
+  it("drops a balance nobody is playing", () => {
+    live.playersData = { online: 5, servers: [SERVERS[0]] };
+    open();
+    expect(screen.queryByRole("heading", { name: "Classic" })).toBeNull();
+  });
+
+  it("says so when nobody is in game at all", () => {
+    live.playersData = { online: 0, servers: [] };
+    open();
+    expect(screen.getByText("No one in game")).toBeTruthy();
   });
 
   it("refreshes the figures when the breakdown is opened", () => {
