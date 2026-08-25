@@ -45,7 +45,7 @@ export function AuthTokenCard() {
         toast(`Welcome, ${res.username}${badge}! Token saved.`);
         setTokenLine(`Signed in as ${res.username}${badge}.`);
       } else {
-        toast(res.warning ?? "Token saved.", true);
+        toast(res.warning ?? "Token saved.", Boolean(res.warning));
         setTokenLine(res.warning ?? "Token saved (could not verify).");
       }
       setToken("");

@@ -33,7 +33,7 @@ export function AccountModal({
         const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
         toast(`Welcome, ${res.username}${badge}! Token saved.`);
       } else {
-        toast(res.warning ?? "Token saved.", true);
+        toast(res.warning ?? "Token saved.", Boolean(res.warning));
       }
       setToken("");
       onOpenChange(false);
