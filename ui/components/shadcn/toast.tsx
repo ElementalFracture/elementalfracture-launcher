@@ -177,19 +177,34 @@ function ToastIcon({ type }: { type: string | undefined }) {
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager();
 
-  return toasts.map((toastItem) => (
-    <Toast key={toastItem.id} toast={toastItem}>
-      <ToastContent>
-        <ToastIcon type={toastItem.type} />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <ToastTitle />
-          <ToastDescription />
-        </div>
-        <ToastAction />
-        <ToastClose />
-      </ToastContent>
-    </Toast>
-  ));
+  return toasts.map((toastItem) => {
+    /* An error toast carries a message worth copying — a backend string, a
+       path, a URL — and it stays up until dismissed, so there is time to. Its
+       text selects, and `data-base-ui-swipe-ignore` keeps the drag that
+       selects it from being read as a swipe-to-dismiss (Toast.Root skips a
+       pointerdown that starts inside one). Only errors: everywhere else the
+       swipe is worth more than the selection. */
+    const selectable = toastItem.type === "error";
+    return (
+      <Toast key={toastItem.id} toast={toastItem}>
+        <ToastContent>
+          <ToastIcon type={toastItem.type} />
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col gap-1",
+              selectable && "cursor-text select-text"
+            )}
+            {...(selectable ? { "data-base-ui-swipe-ignore": "" } : {})}
+          >
+            <ToastTitle />
+            <ToastDescription />
+          </div>
+          <ToastAction />
+          <ToastClose />
+        </ToastContent>
+      </Toast>
+    );
+  });
 }
 
 function Toaster({
