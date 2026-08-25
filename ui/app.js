@@ -445,7 +445,22 @@ async function refreshStatus() {
   document.querySelectorAll(".variant-pill").forEach((p) => {
     p.classList.toggle("active", p.dataset.variant === status.variant);
   });
+  renderTestBuildAccess();
   applyVariantTheme(status.variant);
+}
+
+// The Private Test Build pill is hidden unless the account holds the Tester
+// badge (developers see it too). Its label reflects whether the pak is already
+// downloaded: "Enable Test Build" pulls dev.zip first, "Test Build" just switches.
+function renderTestBuildAccess() {
+  const allowed = !!(settings.is_tester || settings.is_dev);
+  const pill = document.querySelector('.variant-pill[data-variant="dev"]');
+  if (pill) {
+    pill.hidden = !allowed;
+    pill.textContent = status?.test_installed ? "Test Build" : "Enable Test Build";
+  }
+  const note = $("variant-info-test");
+  if (note) note.hidden = !allowed;
 }
 
 // Swap the hero text + colour theme by variant. Classic → warm tan (body.classic in CSS)
@@ -455,13 +470,20 @@ const HERO_TEXT = {
              sub: "Community servers, restored battles, new balance. Spellbreak lives on." },
   classic: { eyebrow: "Spellbreak Classic",  title: "The Hollow Lands, as they were before.",
              sub: "Community servers, restored battles, the original balance. Spellbreak, preserved." },
+  dev:     { eyebrow: "Private Test Build",  title: "The Hollow Lands, ahead of the storm.",
+             sub: "Unreleased balance, for testers. Expect rough edges: your feedback shapes what ships." },
 };
 let _variantApplied = null;
+// Body theme class per variant: EF = default (no class), Classic = warm tan,
+// Test Build = blueprint blue.
+function setThemeClass(variant) {
+  document.body.classList.toggle("classic", variant === "classic");
+  document.body.classList.toggle("dev", variant === "dev");
+}
 function applyVariantTheme(variant) {
-  const classic = variant === "classic";
   const heroEls = ["hero-eyebrow", "hero-title", "hero-sub"].map($).filter(Boolean);
   const setText = () => {
-    const t = HERO_TEXT[classic ? "classic" : "ef"];
+    const t = HERO_TEXT[variant] ?? HERO_TEXT.ef;
     if (heroEls[0]) heroEls[0].textContent = t.eyebrow;
     if (heroEls[1]) heroEls[1].textContent = t.title;
     if (heroEls[2]) heroEls[2].textContent = t.sub;
@@ -471,16 +493,16 @@ function applyVariantTheme(variant) {
   const isChange = _variantApplied !== null; // false on first load → apply instantly
   _variantApplied = variant;
   if (!isChange) {
-    document.body.classList.toggle("classic", classic);
+    setThemeClass(variant);
     setText();
     return;
   }
-  // A real EF ⇄ Classic toggle: only the content that changes eases over, at
-  // the same 2.6 s as the hero-art crossfade. Colours transition via
-  // body.theming; the hero copy fades out, swaps at the midpoint, fades in.
+  // A real variant switch: only the content that changes eases over, at the
+  // same 2.6 s as the hero-art crossfade. Colours transition via body.theming;
+  // the hero copy fades out, swaps at the midpoint, fades in.
   document.body.classList.add("theming");
   void document.body.offsetWidth; // commit the slow transitions before recolouring
-  document.body.classList.toggle("classic", classic);
+  setThemeClass(variant);
   clearTimeout(applyVariantTheme._recolour);
   applyVariantTheme._recolour = setTimeout(
     () => document.body.classList.remove("theming"), 2600);
@@ -495,10 +517,20 @@ function applyVariantTheme(variant) {
 
 document.querySelectorAll(".variant-pill").forEach((pill) => {
   pill.addEventListener("click", async () => {
+    const variant = pill.dataset.variant;
     try {
-      await invoke("set_variant", { variant: pill.dataset.variant });
+      if (variant === "dev" && !status?.test_installed) {
+        // First time on this machine: pull dev.zip, stage it, switch onto it.
+        // Progress rides the shared install progress bar (download-dev/extract-dev).
+        pill.disabled = true;
+        await invoke("install_dev_build");
+      } else {
+        await invoke("set_variant", { variant });
+      }
     } catch (e) {
       toast(String(e), true);
+    } finally {
+      pill.disabled = false;
     }
     refreshStatus();
   });
@@ -601,6 +633,8 @@ listen("install-progress", (ev) => {
     "download-patch": "Downloading update",
     "extract-patch": "Installing update",
     "install-mods": "Installing mods",
+    "download-dev": "Downloading Test Build",
+    "extract-dev": "Installing Test Build",
     "done": "Done",
   };
   $("progress").hidden = false;
@@ -1447,6 +1481,25 @@ $("btn-reset-settings").addEventListener("click", async () => {
   setInterval(refreshPlayers, 60_000);
   setInterval(refreshEvents, 300_000);
   setInterval(refreshStatus, 15_000);
+  // Pick up account role changes (staff/dev/tester) live: re-validate the
+  // stored token every minute so a freshly granted badge (e.g. Tester) makes
+  // the Test Build pill appear without a launcher restart.
+  setInterval(async () => {
+    if (!settings.auth_token) return;
+    try {
+      const r = await invoke("refresh_account");
+      if (r?.ok) {
+        settings.username = r.username;
+        settings.is_staff = r.is_staff;
+        settings.is_dev = r.is_dev;
+        settings.is_tester = r.is_tester;
+        renderAccount();
+        renderTestBuildAccess();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, 60_000);
   // Also the launcher presence heartbeat: polling /friends marks the user
   // "online" while the launcher is open (the sidecar bumps their presence).
   setInterval(refreshFriends, 60_000);

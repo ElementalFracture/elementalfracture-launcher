@@ -46,6 +46,7 @@ pub struct TokenResult {
     pub username: Option<String>,
     pub is_staff: bool,
     pub is_dev: bool,
+    pub is_tester: bool,
     pub verified: bool,
     pub warning: Option<String>,
 }
@@ -60,18 +61,21 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
         return Err("Token is empty.".into());
     }
 
-    let mut s = settings::load(&app);
-    s.auth_token = token.clone();
-    // A new token means an as-yet-unverified identity — clear any stale role
-    // flags so a failed lookup can't leave an old staff/dev badge showing.
-    s.is_staff = false;
-    s.is_dev = false;
-    settings::store(&app, &s)?;
+    // A new token means an as-yet-unverified identity — clear any stale role flags so a failed
+    // lookup can't leave an old staff/dev badge showing. Atomic so a racing writer (e.g. the
+    // install flow) can't clobber the just-saved token.
+    let s = settings::mutate(&app, |s| {
+        s.auth_token = token.clone();
+        s.is_staff = false;
+        s.is_dev = false;
+        s.is_tester = false;
+    })?;
 
     let unverified = |warning: String| TokenResult {
         username: None,
         is_staff: false,
         is_dev: false,
+        is_tester: false,
         verified: false,
         warning: Some(warning),
     };
@@ -91,21 +95,74 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
         if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
             let is_staff = body.get("is_staff").and_then(|v| v.as_bool()).unwrap_or(false);
             let is_dev = body.get("is_dev").and_then(|v| v.as_bool()).unwrap_or(false);
-            let mut s = settings::load(&app);
-            s.username = username.to_string();
-            s.is_staff = is_staff;
-            s.is_dev = is_dev;
-            settings::store(&app, &s)?;
+            // Older auth servers don't send is_tester yet — absent defaults to false.
+            let is_tester = body.get("is_tester").and_then(|v| v.as_bool()).unwrap_or(false);
+            settings::mutate(&app, |s| {
+                s.username = username.to_string();
+                s.is_staff = is_staff;
+                s.is_dev = is_dev;
+                s.is_tester = is_tester;
+            })?;
             return Ok(TokenResult {
                 username: Some(username.to_string()),
                 is_staff,
                 is_dev,
+                is_tester,
                 verified: true,
                 warning: None,
             });
         }
     }
     Ok(unverified("Token saved, but the auth server doesn't recognize it.".into()))
+}
+
+/// Periodically re-validate the STORED token against the auth URL and refresh
+/// the cached role flags, so a freshly granted staff/dev/tester badge shows up
+/// without a launcher restart. Unlike apply_token (a new-token paste that clears
+/// stale roles up front), this only UPDATES on success: a transient network
+/// failure returns {"ok": false} and leaves the existing roles untouched.
+#[tauri::command]
+pub async fn refresh_account(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let s = settings::load(&app);
+    let token = s.auth_token.trim().to_string();
+    if token.is_empty() {
+        return Ok(serde_json::json!({ "ok": false }));
+    }
+
+    let resp = match client()?
+        .post(s.auth_url.trim())
+        .json(&serde_json::json!({ "token": token }))
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        // Network failure: don't clobber the stored roles, just report no refresh.
+        Err(_) => return Ok(serde_json::json!({ "ok": false })),
+    };
+
+    let body: serde_json::Value = resp.json().await.unwrap_or_default();
+    if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
+        if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
+            let is_staff = body.get("is_staff").and_then(|v| v.as_bool()).unwrap_or(false);
+            let is_dev = body.get("is_dev").and_then(|v| v.as_bool()).unwrap_or(false);
+            // Older auth servers don't send is_tester yet — absent defaults to false.
+            let is_tester = body.get("is_tester").and_then(|v| v.as_bool()).unwrap_or(false);
+            settings::mutate(&app, |s| {
+                s.username = username.to_string();
+                s.is_staff = is_staff;
+                s.is_dev = is_dev;
+                s.is_tester = is_tester;
+            })?;
+            return Ok(serde_json::json!({
+                "ok": true,
+                "username": username,
+                "is_staff": is_staff,
+                "is_dev": is_dev,
+                "is_tester": is_tester,
+            }));
+        }
+    }
+    Ok(serde_json::json!({ "ok": false }))
 }
 
 /// Base URL of the players sidecar (where /friends lives), derived from the

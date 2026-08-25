@@ -85,6 +85,28 @@ body::after {
 body.classic::before { opacity: 0; }
 body.classic::after { opacity: 1; }
 
+/* ── Test Build (dev) - blueprint blue #0041BA gradient, white text.
+   Toggled by body.dev in app.js; reuses the ::after glow layer. ── */
+body.dev {
+  --bg: #050d1f;
+  --bg-2: #081831;
+  --panel: #0b1f42;
+  --panel-2: #0f2751;
+  --line: #1d3f80;
+  --text: #ffffff;
+  --muted: #a8bde3;
+  --gold: #d9b45b;
+  --gold-bright: #f0d48a;
+  --cream: #eaf1ff;
+}
+body.dev::before { opacity: 0; }
+body.dev::after {
+  opacity: 1;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #0041baee 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 110%, #0033a0cc 0%, transparent 55%);
+}
+
 #app { display: flex; height: 100vh; }
 
 /* ── EF ⇄ Classic switch ─────────────────────────────────────────────
@@ -400,6 +422,27 @@ body.classic .hero-shade::after { opacity: 1; }
 .variant-ef.active { background-image: url("assets/variant-ef-sel.png"); }
 .variant-classic { width: 85px; background-image: url("assets/variant-classic.png"); }
 .variant-classic.active { background-image: url("assets/variant-classic-sel.png"); }
+
+/* Testers-only Test Build pill. No 6.1 art for this one, so it's a themed text
+   pill that still sits naturally beside the image swatches. */
+.variant-dev {
+  height: 34px;
+  padding: 0 14px;
+  display: inline-flex; align-items: center;
+  font: 700 11px/1 "Montserrat", system-ui, sans-serif;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+}
+.variant-dev:hover { color: var(--gold); border-color: var(--gold); }
+.variant-dev.active {
+  color: #1a1020;
+  background: var(--gold);
+  border-color: var(--gold);
+  opacity: 1;
+}
 
 /* Ornate LAUNCH button straight from the 6.1 launcher */
 .launch-img {

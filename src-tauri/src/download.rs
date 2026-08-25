@@ -451,9 +451,9 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String
 
     apply_patch(&app, &cdn, &root).await?;
 
-    let mut s = settings::load(&app);
-    s.game_path = root.to_string_lossy().into_owned();
-    settings::store(&app, &s)?;
+    let s = settings::mutate(&app, |s| {
+        s.game_path = root.to_string_lossy().into_owned();
+    })?;
 
     emit(&app, "done", "Installation complete".into(), 100.0, 0, 0);
     Ok(s.game_path)
@@ -470,6 +470,74 @@ pub async fn update_patch(app: tauri::AppHandle) -> Result<String, String> {
     let version = apply_patch(&app, &cdn, Path::new(&s.game_path)).await?;
     emit(&app, "done", "Update complete".into(), 100.0, 0, 0);
     Ok(version)
+}
+
+/// Pull the balance pak (and its .sig) out of dev.zip and place them as
+/// ElefracTest_P.pak / ElefracTest_P.sig, whatever they were named inside the
+/// archive, so the Test Build can sit parked beside the production pak.
+fn stage_test_pak(zip_path: &Path, paks: &Path) -> Result<String, String> {
+    let file = File::open(zip_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
+    let mut pak = false;
+    let mut sig = false;
+    for i in 0..zip.len() {
+        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        if entry.is_dir() {
+            continue;
+        }
+        let Some(rel) = entry.enclosed_name() else { continue };
+        let Some(name) = rel.file_name().and_then(|n| n.to_str()).map(str::to_ascii_lowercase) else {
+            continue;
+        };
+        let dest = if name.ends_with(".pak") {
+            pak = true;
+            paks.join("ElefracTest_P.pak")
+        } else if name.ends_with(".sig") {
+            sig = true;
+            paks.join("ElefracTest_P.sig")
+        } else {
+            continue;
+        };
+        let mut f = File::create(&dest).map_err(|e| format!("{}: {e}", dest.display()))?;
+        std::io::copy(&mut entry, &mut f).map_err(|e| e.to_string())?;
+    }
+    if !pak {
+        return Err("dev.zip didn't contain a .pak file.".into());
+    }
+    Ok(if sig { "pak + sig".into() } else { "pak (unsigned)".into() })
+}
+
+/// Download the Public Test Build balance pak ({cdn}/patch/dev.zip), stage it
+/// as ElefracTest_P.pak beside the production pak, then switch the game onto it
+/// (which parks the Elemental Fracture pak). Gated in the UI behind the Tester
+/// badge; the CDN path is unlisted rather than access-controlled.
+#[tauri::command]
+pub async fn install_dev_build(app: tauri::AppHandle) -> Result<String, String> {
+    let s = settings::load(&app);
+    if s.game_path.is_empty() {
+        return Err("Set the game folder first (Settings).".into());
+    }
+    let root = PathBuf::from(&s.game_path);
+    let paks = game::paks_dir(&root);
+    if !paks.is_dir() {
+        return Err(format!("Paks folder not found: {}", paks.display()));
+    }
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+
+    let tmp = root.join("_efdev.zip");
+    download_to_file(&app, "download-dev", &format!("{cdn}/patch/dev.zip"), &tmp).await?;
+
+    emit(&app, "extract-dev", "Installing Test Build…".into(), 0.0, 0, 0);
+    let (tmp2, paks2) = (tmp.clone(), paks.clone());
+    let staged = tauri::async_runtime::spawn_blocking(move || stage_test_pak(&tmp2, &paks2))
+        .await
+        .map_err(|e| e.to_string())??;
+    let _ = fs::remove_file(&tmp);
+    emit(&app, "extract-dev", format!("Test Build installed ({staged})"), 100.0, 0, 0);
+
+    let variant = game::switch_to(&s.game_path, "dev")?;
+    emit(&app, "done", "Test Build ready".into(), 100.0, 0, 0);
+    Ok(variant)
 }
 
 /// Installed vs latest version, for the update badge.

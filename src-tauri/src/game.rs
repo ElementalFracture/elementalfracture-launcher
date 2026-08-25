@@ -3,16 +3,28 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// The production (Elemental Fracture) balance pak, and the Public Test Build
+// (dev) balance pak. Only one balance pak is ever mounted at a time; the others
+// are parked out of the way as `<name>.bak` (older installs used `.1`).
 const PAK: &str = "ElefracBalance_P.pak";
 const SIG: &str = "ElefracBalance_P.sig";
+const TEST_PAK: &str = "ElefracTest_P.pak";
+const TEST_SIG: &str = "ElefracTest_P.sig";
+
+/// Parked-copy suffixes, newest first: we write `.bak` but still restore a
+/// legacy `.1` left by older launcher versions.
+const PARK_SUFFIXES: &[&str] = &["bak", "1"];
 
 #[derive(Serialize)]
 pub struct GameStatus {
     pub game_path: String,
     pub valid: bool,
     pub exe_present: bool,
-    /// "ef" | "classic" | "unknown"
+    /// "ef" (Production) | "classic" (Vanilla) | "dev" (Test Build) | "unknown"
     pub variant: String,
+    /// Whether the Public Test Build pak is present (active or parked), so the
+    /// UI can offer "switch to it" vs "download it first".
+    pub test_installed: bool,
     pub local_version: Option<String>,
 }
 
@@ -65,15 +77,25 @@ pub fn read_local_version(root: &Path) -> Option<String> {
 
 pub fn detect_variant(root: &Path) -> String {
     let paks = paks_dir(root);
-    if paks.join(PAK).exists() {
+    if paks.join(TEST_PAK).exists() {
+        // The Test Build pak is mounted.
+        "dev".into()
+    } else if paks.join(PAK).exists() {
         "ef".into()
     } else if paks.is_dir() {
-        // No active balance pak — whether it's parked as .pak.1 or simply
+        // No active balance pak — whether they're parked as .bak or simply
         // not installed, the game plays vanilla.
         "classic".into()
     } else {
         "unknown".into()
     }
+}
+
+/// True when the Public Test Build pak is on disk at all (mounted or parked),
+/// so switching to it needs no download.
+pub fn test_build_installed(root: &Path) -> bool {
+    let paks = paks_dir(root);
+    paks.join(TEST_PAK).exists() || parked_path(&paks, TEST_PAK).is_some()
 }
 
 #[tauri::command]
@@ -84,6 +106,7 @@ pub fn get_status(app: tauri::AppHandle) -> GameStatus {
         valid: !s.game_path.is_empty() && root.join("g3").is_dir(),
         exe_present: find_exe(&root).is_some(),
         variant: detect_variant(&root),
+        test_installed: test_build_installed(&root),
         local_version: read_local_version(&root),
         game_path: s.game_path,
     }
@@ -138,46 +161,83 @@ pub fn auto_find_game() -> Option<String> {
         .map(|p| p.to_string_lossy().into_owned())
 }
 
-/// Switch between Elemental Fracture ("ef") and vanilla Spellbreak
-/// ("classic") by renaming the balance pak in and out of the way,
-/// exactly like the old rename.bat / restore.bat did.
+/// Switch the game between Production ("ef"), Vanilla ("classic") and the
+/// Public Test Build ("dev") by parking the balance paks we don't want and
+/// restoring the one we do, exactly like the old rename.bat / restore.bat did.
 #[tauri::command]
 pub fn set_variant(app: tauri::AppHandle, variant: String) -> Result<String, String> {
     let s = settings::load(&app);
-    if s.game_path.is_empty() {
+    switch_to(&s.game_path, &variant)
+}
+
+/// Core of set_variant, reusable by the Test Build installer: apply the
+/// variant's pak layout and refresh the `.ef_mode` marker to match.
+pub fn switch_to(game_path: &str, variant: &str) -> Result<String, String> {
+    if game_path.is_empty() {
         return Err("Set the game folder first (Settings).".into());
     }
-    let paks = paks_dir(Path::new(&s.game_path));
+    let root = Path::new(game_path);
+    let paks = paks_dir(root);
     if !paks.is_dir() {
         return Err(format!("Paks folder not found: {}", paks.display()));
     }
 
-    apply_variant(&paks, &variant)?;
-    let current = detect_variant(Path::new(&s.game_path));
+    apply_variant(&paks, variant)?;
+    let current = detect_variant(root);
     // Tell the in-game controller which balance is active so it can re-skin + swap its
     // Loadout data to match (read by auth_injector from this marker at launch).
-    write_hidden_mode(Path::new(&s.game_path), &current);
+    write_hidden_mode(root, &current);
     Ok(current)
 }
 
-/// Rename the balance pak (and its .sig) in or out of the way. Robust
-/// against the states the simple rename tripped over: a stale copy on the
-/// destination side (updates re-deliver the pak while Classic is parked as
-/// .pak.1 — Windows fs::rename refuses to overwrite) and a pak that was
-/// never installed at all.
+/// The path of a parked copy of `name` if one exists (`.bak`, or legacy `.1`).
+fn parked_path(paks: &Path, name: &str) -> Option<PathBuf> {
+    PARK_SUFFIXES
+        .iter()
+        .map(|s| paks.join(format!("{name}.{s}")))
+        .find(|p| p.exists())
+}
+
+/// Make `name` the active file: if it's parked and not already active, restore
+/// it; if it's already active, drop any stale parked copies (updates can
+/// re-deliver the real file while a copy is still parked). No-op when absent.
+fn activate(paks: &Path, name: &str) -> Result<(), String> {
+    let active = paks.join(name);
+    if active.exists() {
+        for s in PARK_SUFFIXES {
+            let _ = fs::remove_file(paks.join(format!("{name}.{s}")));
+        }
+    } else if let Some(parked) = parked_path(paks, name) {
+        fs::rename(&parked, &active).map_err(|e| format!("{name}: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Park `name` out of the way as `<name>.bak`. Windows fs::rename refuses to
+/// overwrite, so clear a stale parked copy first; also drop any legacy `.1` so
+/// detection stays unambiguous. No-op when the active file isn't present.
+fn park(paks: &Path, name: &str) -> Result<(), String> {
+    let active = paks.join(name);
+    if active.exists() {
+        let parked = paks.join(format!("{name}.bak"));
+        let _ = fs::remove_file(&parked);
+        fs::rename(&active, &parked).map_err(|e| format!("{name}: {e}"))?;
+    }
+    let _ = fs::remove_file(paks.join(format!("{name}.1")));
+    Ok(())
+}
+
+/// Apply the pak layout for a variant. Only one balance pak is mounted at a
+/// time; the rest are parked as `<name>.bak`.
 fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
     match variant {
+        // Production: Elemental Fracture balance active, Test Build parked.
         "ef" => {
             for name in [PAK, SIG] {
-                let active = paks.join(name);
-                let parked = paks.join(format!("{name}.1"));
-                if active.exists() {
-                    // A fresh update already put the real file back — the
-                    // parked copy is stale, drop it.
-                    let _ = fs::remove_file(&parked);
-                } else if parked.exists() {
-                    fs::rename(&parked, &active).map_err(|e| format!("{name}.1: {e}"))?;
-                }
+                activate(paks, name)?;
+            }
+            for name in [TEST_PAK, TEST_SIG] {
+                park(paks, name)?;
             }
             if !paks.join(PAK).exists() {
                 return Err(format!(
@@ -185,15 +245,24 @@ fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
                 ));
             }
         }
+        // Vanilla: both balance paks parked, stock game only.
         "classic" => {
+            for name in [PAK, SIG, TEST_PAK, TEST_SIG] {
+                park(paks, name)?;
+            }
+        }
+        // Public Test Build: Test balance active, Elemental Fracture parked.
+        "dev" => {
             for name in [PAK, SIG] {
-                let active = paks.join(name);
-                let parked = paks.join(format!("{name}.1"));
-                if active.exists() {
-                    let _ = fs::remove_file(&parked);
-                    fs::rename(&active, &parked).map_err(|e| format!("{name}: {e}"))?;
-                }
-                // Neither file present: nothing to park, vanilla already.
+                park(paks, name)?;
+            }
+            for name in [TEST_PAK, TEST_SIG] {
+                activate(paks, name)?;
+            }
+            if !paks.join(TEST_PAK).exists() {
+                return Err(format!(
+                    "{TEST_PAK} isn't installed: enable the Test Build to download it first."
+                ));
             }
         }
         other => return Err(format!("unknown variant: {other}")),
@@ -226,26 +295,27 @@ mod tests {
 
     #[test]
     fn parked_to_ef_and_back() {
+        // A legacy `.1` park still restores; parking now writes `.bak`.
         let (tmp, p) = paks(&["ElefracBalance_P.pak.1", "ElefracBalance_P.sig.1"]);
         assert_eq!(detect_variant(tmp.path()), "classic");
         apply_variant(&p, "ef").unwrap();
         assert_eq!(names(&p), ["ElefracBalance_P.pak", "ElefracBalance_P.sig"]);
         assert_eq!(detect_variant(tmp.path()), "ef");
         apply_variant(&p, "classic").unwrap();
-        assert_eq!(names(&p), ["ElefracBalance_P.pak.1", "ElefracBalance_P.sig.1"]);
+        assert_eq!(names(&p), ["ElefracBalance_P.pak.bak", "ElefracBalance_P.sig.bak"]);
     }
 
     #[test]
     fn both_copies_present_after_update() {
         let (tmp, p) = paks(&[
             "ElefracBalance_P.pak",
-            "ElefracBalance_P.pak.1",
+            "ElefracBalance_P.pak.bak",
             "ElefracBalance_P.sig",
-            "ElefracBalance_P.sig.1",
+            "ElefracBalance_P.sig.bak",
         ]);
         assert_eq!(detect_variant(tmp.path()), "ef");
         apply_variant(&p, "classic").unwrap();
-        assert_eq!(names(&p), ["ElefracBalance_P.pak.1", "ElefracBalance_P.sig.1"]);
+        assert_eq!(names(&p), ["ElefracBalance_P.pak.bak", "ElefracBalance_P.sig.bak"]);
         apply_variant(&p, "ef").unwrap();
         assert_eq!(names(&p), ["ElefracBalance_P.pak", "ElefracBalance_P.sig"]);
     }
@@ -265,6 +335,60 @@ mod tests {
     fn no_paks_dir_is_unknown() {
         let tmp = tempfile::tempdir().unwrap();
         assert_eq!(detect_variant(tmp.path()), "unknown");
+    }
+
+    #[test]
+    fn three_way_prod_dev_vanilla() {
+        // Both balance paks installed, production active.
+        let (tmp, p) = paks(&[
+            "ElefracBalance_P.pak",
+            "ElefracBalance_P.sig",
+            "ElefracTest_P.pak",
+            "ElefracTest_P.sig",
+        ]);
+        // Prod: Test parked, Balance active.
+        apply_variant(&p, "ef").unwrap();
+        assert_eq!(detect_variant(tmp.path()), "ef");
+        assert_eq!(names(&p), [
+            "ElefracBalance_P.pak",
+            "ElefracBalance_P.sig",
+            "ElefracTest_P.pak.bak",
+            "ElefracTest_P.sig.bak",
+        ]);
+        assert!(test_build_installed(tmp.path()));
+
+        // Dev: Balance parked, Test active.
+        apply_variant(&p, "dev").unwrap();
+        assert_eq!(detect_variant(tmp.path()), "dev");
+        assert_eq!(names(&p), [
+            "ElefracBalance_P.pak.bak",
+            "ElefracBalance_P.sig.bak",
+            "ElefracTest_P.pak",
+            "ElefracTest_P.sig",
+        ]);
+
+        // Vanilla: both parked.
+        apply_variant(&p, "classic").unwrap();
+        assert_eq!(detect_variant(tmp.path()), "classic");
+        assert_eq!(names(&p), [
+            "ElefracBalance_P.pak.bak",
+            "ElefracBalance_P.sig.bak",
+            "ElefracTest_P.pak.bak",
+            "ElefracTest_P.sig.bak",
+        ]);
+        assert!(test_build_installed(tmp.path()));
+
+        // Back to prod from vanilla restores Balance, leaves Test parked.
+        apply_variant(&p, "ef").unwrap();
+        assert_eq!(detect_variant(tmp.path()), "ef");
+    }
+
+    #[test]
+    fn dev_without_pak_fails() {
+        let (tmp, p) = paks(&["ElefracBalance_P.pak", "ElefracBalance_P.sig"]);
+        assert!(!test_build_installed(tmp.path()));
+        let err = apply_variant(&p, "dev").unwrap_err();
+        assert!(err.contains("enable the Test Build"), "{err}");
     }
 }
 
@@ -654,8 +778,8 @@ fn write_hidden_auth(root: &Path, token: &str, host: &str) {
     }
 }
 
-/// Write the hidden `.ef_mode` marker the injector reads (one line: `ef` or `classic`) so the
-/// in-game controller can re-skin + swap its Loadout data to match the active balance pak.
+/// Write the hidden `.ef_mode` marker the injector reads (one line: `ef`, `classic` or `dev`)
+/// so the in-game controller can re-skin + swap its Loadout data to match the active balance pak.
 /// Marked Hidden on Windows, like `.ef_auth`.
 fn write_hidden_mode(root: &Path, mode: &str) {
     let path = root.join(".ef_mode");
