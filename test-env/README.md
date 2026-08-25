@@ -130,6 +130,18 @@ on a `data.json` with no `auth` at all. Send a list of them to have them land
 together or not at all — that's what a rename is. Both routes answer with the
 whole state, which is what the page re-renders from.
 
+Add `after` (ms) and the patch lands later instead, the route answering at once
+with `{ scheduled }` and the state as it still is:
+
+```sh
+curl localhost:8787/admin/patch -d '{"path":["update","game_version"],"value":"6.8.2","after":10000}'
+```
+
+It's the server that waits, not the page — a browser throttles the timers of a
+tab you've just clicked away from, which is exactly the moment this is for. A
+patch that can't apply is refused up front rather than failing quietly ten
+seconds later.
+
 ## Token validation
 
 `apply_token` in `remote.rs` POSTs `{"token"}` to the auth URL and expects
@@ -283,9 +295,19 @@ launcher compares its install against. Once the CDN is ahead, Home's Launch
 plate becomes **Update** and clicking it pulls the fixture's `latest.zip`.
 Either version can also be typed in directly, launcher included.
 
-The launcher reads the versions on startup and whenever **Mods & Install** is
-opened, so switch to that tab and back rather than restarting it. Both edits are
-in memory like every other dashboard change — `data.json` is untouched.
+Nothing in the launcher polls the CDN. It asks at startup, whenever its window
+comes back, and at the launch itself — so pressing the button while the launcher
+is in the background is enough to see the plate change when you click back to
+it.
+
+**Ship it late** is for the case that ordering can't reach: an install that was
+current when the player looked and is behind by the time they press Launch.
+Press it, click the launcher (its focus check runs, and still says current),
+then press Launch — it refuses, toasts, and the plate becomes Update under your
+cursor. The delay in seconds is the box beside the button.
+
+Both edits are in memory like every other dashboard change — `data.json` is
+untouched.
 
 **The stall.** `stall` is the reason this exists: a frozen updater. Set it and
 the matching download sends its headers, streams ~40%, then holds the socket

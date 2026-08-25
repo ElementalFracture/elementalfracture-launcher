@@ -366,6 +366,7 @@
       }
 
       const set = (path, value) => patch({ path, value });
+      const setLater = (path, value, after) => patch({ path, value, after });
       const push = (path, value) => patch({ path, push: value });
       const drop = (path) => patch({ path, remove: true });
 
@@ -865,24 +866,48 @@
               )
             )
           ),
-          el(
-            "div",
-            { className: "row line" },
-            el("button", {
-              textContent: "Ship a game update",
-              title:
-                "Bump the game version this CDN reports, the way a patch day would",
-              onclick: () =>
-                set(
-                  ["update", "game_version"],
-                  nextVersion(update.game_version)
-                ),
-            })
-          ),
+          (() => {
+            const seconds = el("input", {
+              className: "num",
+              type: "number",
+              min: 1,
+              value: drafts["update.delay"] ?? 10,
+              dataset: { key: "update.delay" },
+              title: "Seconds to wait before the version changes",
+              oninput: (e) => (drafts["update.delay"] = e.target.value),
+            });
+            return el(
+              "div",
+              { className: "row line" },
+              el("button", {
+                textContent: "Ship a game update",
+                title:
+                  "Bump the game version this CDN reports, the way a patch day would",
+                onclick: () =>
+                  set(
+                    ["update", "game_version"],
+                    nextVersion(update.game_version)
+                  ),
+              }),
+              el("button", {
+                textContent: "Ship it late",
+                title:
+                  "Same bump, after the delay — time to bring the launcher to the front believing it is current",
+                onclick: () => {
+                  const after = Math.max(1, Number(seconds.value) || 10) * 1000;
+                  const to = nextVersion(update.game_version);
+                  setLater(["update", "game_version"], to, after);
+                  toast(`v${to} in ${after / 1000}s`, true);
+                },
+              }),
+              seconds,
+              el("span", { className: "hint", textContent: "seconds" })
+            );
+          })(),
           el("p", {
             className: "empty",
             textContent:
-              "Ahead of the installed version, Launch turns into Update. The launcher reads this at startup and whenever Mods & Install is opened, so switch to that tab and back to see it flip without a restart.",
+              "Ahead of the installed version, Launch turns into Update. The launcher asks the CDN at startup, whenever its window comes back, and at the launch itself — nothing polls. So “ship it late” is how you reach the case where it looked current a moment ago: press it, click the launcher, then press Launch.",
           })
         );
       }

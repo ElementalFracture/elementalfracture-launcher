@@ -292,11 +292,32 @@ createServer(async (req, res) => {
     // remove and a set, and half of that is a lost account. They go onto a
     // copy that only replaces the real state once every one of them lands.
     const patches = Array.isArray(sent) ? sent : [sent];
-    const next = structuredClone(data());
-    try {
+    // `after` (ms) on any of them delays the lot. The point is a change that
+    // lands while the launcher is in the foreground believing it's current —
+    // scheduled here rather than in the page, since a browser throttles the
+    // timers of a tab you've just clicked away from.
+    const after = Math.max(0, Number(patches.find((one) => one?.after)?.after) || 0);
+    const apply = () => {
+      const next = structuredClone(data());
       const log = patches.map((one) => patch(next, one));
       state = next;
       log.forEach((line) => console.log(`admin: ${line}`));
+    };
+    if (after) {
+      // Rehearse on a throwaway copy: a bad patch has to fail now, while
+      // someone is looking at the answer, not silently in ten seconds.
+      try {
+        patches.reduce((draft, one) => (patch(draft, one), draft), structuredClone(data()));
+      } catch (e) {
+        console.error(`admin: ${e.message}`);
+        return send({ ok: false, error: e.message }, 400);
+      }
+      setTimeout(apply, after).unref?.();
+      console.log(`admin: in ${after}ms →`);
+      return send({ ok: true, scheduled: after, state: data() });
+    }
+    try {
+      apply();
     } catch (e) {
       console.error(`admin: ${e.message}`);
       return send({ ok: false, error: e.message }, 400);

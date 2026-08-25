@@ -12,7 +12,7 @@ import { HomeView } from "@/components/views/home/HomeView";
 import { ModsView } from "@/components/views/mods/ModsView";
 import { SettingsView } from "@/components/views/settings/SettingsView";
 import { Wizard } from "@/components/Wizard";
-import { UpdatePops } from "@/components/UpdatePops";
+import { LauncherUpdatePop } from "@/components/LauncherUpdatePop";
 import { Toaster } from "@/components/shadcn/toast";
 
 function App() {
@@ -36,7 +36,7 @@ function App() {
                   </main>
                 </div>
                 <Wizard />
-                <UpdatePops />
+                <LauncherUpdatePop />
                 <Toaster />
               </UIProvider>
             </ProgressProvider>
