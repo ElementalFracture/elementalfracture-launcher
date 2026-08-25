@@ -17,6 +17,7 @@
  */
 import { commands } from "@/generated/bindings";
 import type {
+  Account,
   FileCheck,
   GameStatus,
   LauncherUpdateInfo,
@@ -30,6 +31,7 @@ import type {
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type {
+  Account,
   FileCheck,
   GameStatus,
   LauncherUpdateInfo,
@@ -64,6 +66,11 @@ export async function resetSettings(): Promise<Settings> {
 
 export async function applyToken(token: string): Promise<TokenResult> {
   return unwrap(await commands.applyToken(token));
+}
+
+/** Re-check the stored token's roles. `null` = nothing to report, roles kept. */
+export async function refreshAccount(): Promise<Account | null> {
+  return unwrap(await commands.refreshAccount());
 }
 
 /* ---------------- install / game state ---------------- */
@@ -108,6 +115,11 @@ export async function launchGame(): Promise<void> {
 
 export async function setVariant(variant: string): Promise<string> {
   return unwrap(await commands.setVariant(variant));
+}
+
+/** Pull the playtest pak and switch onto it. Returns the variant now active. */
+export async function installPlaytestBuild(): Promise<string> {
+  return unwrap(await commands.installPlaytestBuild());
 }
 
 export async function downloadGame(dest: string): Promise<string> {

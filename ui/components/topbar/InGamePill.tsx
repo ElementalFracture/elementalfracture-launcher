@@ -23,7 +23,9 @@ export function InGamePill() {
   const servers = playersData?.servers ?? [];
   const regions = regionsOf(servers);
   const rowsByGameVariant = modeRowsByVariant(servers, regions);
-  // A game variant with no populated mode has nothing to table, so it drops out.
+  // A game variant with no populated mode has nothing to table, so it drops
+  // out — which is what keeps the playtest section out of everyone's popover
+  // until a playtest lobby actually has someone in it.
   const sections = GAME_VARIANTS.filter(
     ({ id }) => rowsByGameVariant[id].length > 0
   );

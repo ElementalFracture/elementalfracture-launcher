@@ -215,6 +215,20 @@ describe("variantOf", () => {
       variantOf({ name: "vault-arena", display_name: "Vault Arena" })
     ).toBe("ef");
   });
+
+  it("reads the playtest container names and display names as Playtest", () => {
+    expect(variantOf({ name: "ptsolo-1" })).toBe("playtest");
+    expect(variantOf({ name: "ptduos-2" })).toBe("playtest");
+    expect(variantOf({ name: "ptsquad-1" })).toBe("playtest");
+    expect(variantOf({ name: "ptarena-3" })).toBe("playtest");
+    expect(variantOf({ display_name: "Playtest Solos 1" })).toBe("playtest");
+  });
+
+  it("does not mistake an EF server whose name merely starts with pt", () => {
+    expect(variantOf({ name: "ptarmigan-1", display_name: "Ptarmigan" })).toBe(
+      "ef"
+    );
+  });
 });
 
 describe("modeRowsByVariant", () => {

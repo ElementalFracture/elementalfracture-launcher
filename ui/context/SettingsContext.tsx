@@ -10,6 +10,7 @@ interface SettingsContextValue {
   saveSettings: (next: Settings) => Promise<void>;
   resetSettings: () => Promise<Settings>;
   applyToken: (token: string) => Promise<TokenResult>;
+  refreshAccount: () => Promise<void>;
   loadWrappers: () => Promise<WrapperOption[]>;
 }
 
@@ -61,6 +62,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return res;
   }, []);
 
+  /* Re-validate the stored token every minute so a badge granted while the
+     launcher is open (Tester, say) turns up without a restart — that's what
+     makes the Test Build channel appear. Only a successful answer writes:
+     refreshAccount returns null on a network blip, and the roles already on
+     disk stay as they are rather than being cleared by a bad connection. */
+  const refreshAccount = useCallback(async () => {
+    try {
+      if (await rust.refreshAccount()) {
+        setSettings(await rust.getSettings());
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const initial = await rust.getSettings();
@@ -69,6 +85,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         loadWrappers();
       }
     })();
+    const id = setInterval(refreshAccount, 60_000);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -79,6 +97,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveSettings,
     resetSettings,
     applyToken,
+    refreshAccount,
     loadWrappers,
   };
 

@@ -9,6 +9,7 @@ const commands = vi.hoisted(() => ({
   saveSettings: vi.fn(),
   resetSettings: vi.fn(),
   applyToken: vi.fn(),
+  refreshAccount: vi.fn(),
   detectWrappers: vi.fn(),
 }));
 
@@ -24,6 +25,53 @@ beforeEach(() => {
   commands.getSettings.mockResolvedValue(makeSettings());
   commands.detectWrappers.mockResolvedValue([{ command: "umu-run", label: "umu-run" }]);
   commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+  commands.refreshAccount.mockResolvedValue({ status: "ok", data: null });
+});
+
+describe("refreshAccount", () => {
+  it("picks up a badge granted while the launcher was open", async () => {
+    // What makes the Test Build channel appear without a restart.
+    const { result } = renderSettings();
+    await waitFor(() => expect(result.current.settings).not.toBeNull());
+    expect(result.current.settings?.is_tester).toBe(false);
+
+    commands.refreshAccount.mockResolvedValue({
+      status: "ok",
+      data: { username: "Lytion", is_staff: false, is_dev: false, is_tester: true },
+    });
+    commands.getSettings.mockResolvedValue(makeSettings({ is_tester: true }));
+
+    await act(async () => {
+      await result.current.refreshAccount();
+    });
+    expect(result.current.settings?.is_tester).toBe(true);
+  });
+
+  it("leaves the roles alone when the portal says nothing", async () => {
+    // A network blip answers null. Re-reading settings on that would be
+    // harmless here but pointless — the badge must never be lost to a blip.
+    commands.getSettings.mockResolvedValue(makeSettings({ is_tester: true }));
+    const { result } = renderSettings();
+    await waitFor(() => expect(result.current.settings?.is_tester).toBe(true));
+
+    commands.getSettings.mockClear();
+    await act(async () => {
+      await result.current.refreshAccount();
+    });
+    expect(commands.getSettings).not.toHaveBeenCalled();
+    expect(result.current.settings?.is_tester).toBe(true);
+  });
+
+  it("survives a refresh that throws", async () => {
+    commands.refreshAccount.mockRejectedValue(new Error("offline"));
+    const { result } = renderSettings();
+    await waitFor(() => expect(result.current.settings).not.toBeNull());
+
+    await act(async () => {
+      await result.current.refreshAccount();
+    });
+    expect(result.current.settings).not.toBeNull();
+  });
 });
 
 describe("initial load", () => {

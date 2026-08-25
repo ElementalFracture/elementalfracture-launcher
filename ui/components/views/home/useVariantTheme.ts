@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { toGameVariant, type GameVariant } from "@/lib/gameVariant";
 
-/** Hero copy per balance: EF sells the community edition, Classic the preserved one. */
+/** Hero copy per balance: EF sells the community edition, Classic the
+    preserved one, and the playtest one sets expectations for a playtest. */
 const HERO_TEXT = {
   ef: {
     title: "The Hollow Lands still beckon, breaker",
@@ -10,6 +11,10 @@ const HERO_TEXT = {
   classic: {
     title: "The Hollow Lands, as they were before.",
     sub: "Community servers, restored battles, the original balance. Spellbreak, preserved.",
+  },
+  playtest: {
+    title: "The Hollow Lands, ahead of the storm.",
+    sub: "Unreleased balance, for testers. Expect rough edges: your feedback shapes what ships.",
   },
 } as const;
 
@@ -23,11 +28,19 @@ const THEME_MS = 1600;
 /** Midpoint of the copy fade: text is swapped while it's invisible. */
 const COPY_SWAP_MS = 900;
 
+/** The body class carrying the palette. EF is the default, so it has none. */
+function setThemeClass(variant: GameVariant) {
+  document.body.classList.toggle("classic", variant === "classic");
+  document.body.classList.toggle("playtest", variant === "playtest");
+}
+
 /**
- * Drive the EF ⇄ Classic look off the installed variant: `body.classic` carries
- * the warm palette, and `body.theming` slows every recolour for the length of a
- * switch (so ordinary hover feedback stays snappy). Only the hero copy actually
- * animates — it fades out, swaps at the midpoint, and fades back in.
+ * Drive the look off the installed variant: `body.classic` carries the warm
+ * palette and `body.playtest` the blueprint blue of the playtest build (EF is
+ * the
+ * default, no class), while `body.theming` slows every recolour for the length
+ * of a switch (so ordinary hover feedback stays snappy). Only the hero copy
+ * actually animates — it fades out, swaps at the midpoint, and fades back in.
  */
 // TODO: I think this could be done in css.
 export function useVariantTheme(variant: string | undefined) {
@@ -51,14 +64,14 @@ export function useVariantTheme(variant: string | undefined) {
     applied.current = theme;
 
     if (first) {
-      document.body.classList.toggle("classic", theme === "classic");
+      setThemeClass(theme);
       setCopy(HERO_TEXT[theme]);
       return;
     }
 
     document.body.classList.add("theming");
     void document.body.offsetWidth; // commit the slow transitions before recolouring
-    document.body.classList.toggle("classic", theme === "classic");
+    setThemeClass(theme);
     setFading(true);
 
     const recolour = setTimeout(

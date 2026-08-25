@@ -23,6 +23,10 @@
 # fixture paks into whatever game_path came across in the copy. Point that at a
 # copy of the install, or set CDN_BASE (below) back at the real CDN.
 #
+# Debug builds never check the CDN for a newer launcher, so a dev session can't
+# end up stuck behind the blocking update modal; prefix with
+# EF_LAUNCHER_UPDATE=1 to run that check anyway (test-env/README.md).
+#
 # Linux only: on Windows the config dir comes from %APPDATA%.
 #
 set -euo pipefail

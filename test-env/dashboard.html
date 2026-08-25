@@ -653,6 +653,12 @@
               toggle(`auth.${token}.staff`, "staff", held?.is_staff, (on) =>
                 set([...path, "is_staff"], on)
               ),
+              // The badge that reveals the Playtest channel in the variant
+              // pill. Devs see it too, so `dev` on its own is enough to test
+              // the visible half — this is the tester-only path.
+              toggle(`auth.${token}.tester`, "tester", held?.is_tester, (on) =>
+                set([...path, "is_tester"], on)
+              ),
               toggle(
                 `auth.${token}.stall`,
                 "stall (no reply)",

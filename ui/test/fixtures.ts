@@ -12,6 +12,7 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     username: "Lytion",
     is_staff: false,
     is_dev: false,
+    is_tester: false,
     auth_token: "tok",
     onboarded: true,
     minimize_on_close: false,
@@ -26,6 +27,7 @@ export function makeStatus(over: Partial<GameStatus> = {}): GameStatus {
     valid: true,
     exe_present: true,
     variant: "ef",
+    test_installed: false,
     local_version: "6.0.2",
     ...over,
   };

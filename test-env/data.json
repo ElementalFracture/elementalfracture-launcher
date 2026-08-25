@@ -61,6 +61,10 @@
         "username": "Marla",
         "is_staff": true
       },
+      "tester": {
+        "username": "Wrenlow",
+        "is_tester": true
+      },
       "player": {
         "username": "Aurelith"
       },
@@ -103,6 +107,16 @@
         "region": "NA",
         "players": 0,
         "names": []
+      },
+      {
+        "name": "ptsolo-1",
+        "display_name": "Playtest Solos 1",
+        "players": 2,
+        "region": "NA",
+        "names": [
+          "Wrenlow",
+          "Doobs"
+        ]
       }
     ]
   },

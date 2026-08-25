@@ -54,6 +54,8 @@ export function stageLabel(stage: string) {
     "download-patch": "Downloading update",
     "extract-patch": "Installing update",
     "install-mods": "Installing mods",
+    "download-playtest": "Downloading playtest build",
+    "extract-playtest": "Installing playtest build",
     done: "Done",
   };
   return stages[stage] ?? stage;

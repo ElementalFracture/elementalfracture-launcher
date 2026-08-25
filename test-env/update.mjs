@@ -1,9 +1,9 @@
 /**
  * The CDN side of the wire, for exercising the launcher's updater locally.
  *
- * The download path in src-tauri/src/download.rs pulls four things off
- * `cdn_base`: the version file it compares against, the balance patch, the mod
- * package, and (fresh installs only) the base game. Debug builds point at this
+ * The download path in src-tauri/src/download.rs pulls five things off
+ * `cdn_base`: the version file it compares against, the balance patch, the
+ * playtest patch, the mod package, and (fresh installs only) the base game. Debug builds point at this
  * server by default (`cdn_base()` in settings.rs), so every one of them is
  * answered here from the `update` block in data.json and an update run happens
  * against bytes you control — dummy ones, which do land in the profile's
@@ -11,6 +11,7 @@
  *
  *   {cdn}/launcher/config.ini   version tracks the badge + startup check read
  *   {cdn}/patch/latest.zip      the balance paks, extracted into g3/…/Paks
+ *   {cdn}/patch/dev.zip         the playtest balance pak (Enable Playtest)
  *   {cdn}/patch/mod/mod.zip     the mod loader + DLLs
  *   {cdn}/game/elefracbase.zip  the base install (download_game)
  *
@@ -137,7 +138,7 @@ function cfg(state) {
   return state.update ?? {};
 }
 
-/** The four assets, keyed by the path each is served at. Each is `{ type,
+/** The five assets, keyed by the path each is served at. Each is `{ type,
  *  bytes }` — the ini as text, the zips as store archives with dummy but
  *  structurally real contents so extraction on the happy path succeeds. */
 export function asset(path, state) {
@@ -162,6 +163,18 @@ export function asset(path, state) {
         bytes: storeZip([
           ["ElefracBalance_P.pak", pad("balance pak")],
           ["ElefracBalance_P.sig", Buffer.from("sig")],
+        ]),
+      };
+    case "/patch/dev.zip":
+      // The playtest channel ("Enable Playtest" in the variant pill). The CDN
+      // key kept its old `dev` name; install_playtest_build renames whatever
+      // .pak/.sig it finds inside to ElefracTest_P.*, so the inner names being
+      // different from the staged ones is the point, not an oversight.
+      return {
+        type: "application/zip",
+        bytes: storeZip([
+          ["ElefracPlaytest_P.pak", pad("playtest pak")],
+          ["ElefracPlaytest_P.sig", Buffer.from("sig")],
         ]),
       };
     case "/patch/mod/mod.zip":
@@ -195,13 +208,14 @@ export function asset(path, state) {
 /** Which stage a path belongs to, for matching against `update.stall`. */
 function stageOf(path) {
   if (path === "/patch/latest.zip") return "patch";
+  if (path === "/patch/dev.zip") return "playtest";
   if (path === "/patch/mod/mod.zip") return "mod";
   if (path === "/game/elefracbase.zip") return "base";
   return null; // config.ini is never stalled — the version check must return
 }
 
 /** True when this asset should hang. `update.stall` is a boolean (every stage)
- *  or one of "patch" | "mod" | "base" to freeze a single step. */
+ *  or one of "patch" | "playtest" | "mod" | "base" to freeze a single step. */
 function stalls(path, state) {
   const want = cfg(state).stall;
   if (!want) return false;
@@ -272,6 +286,7 @@ export function serveUpdate(req, res, path, state, log) {
 export const UPDATE_PATHS = [
   "/launcher/config.ini",
   "/patch/latest.zip",
+  "/patch/dev.zip",
   "/patch/mod/mod.zip",
   "/game/elefracbase.zip",
 ];
