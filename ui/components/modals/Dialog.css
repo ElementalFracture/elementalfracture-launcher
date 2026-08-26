@@ -87,3 +87,9 @@
   font-size: 12px;
   word-break: break-all;
 }
+.wizard-error {
+  color: var(--destructive);
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}

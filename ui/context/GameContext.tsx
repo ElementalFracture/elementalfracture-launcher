@@ -139,7 +139,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     try {
       let dir = await rust.autoFindGame();
       if (!dir) {
-        toast("Nothing found in the usual places, pick the folder yourself.");
         dir = await rust.pickGameDir("Select your Spellbreak folder");
       }
       if (!dir || !settings) {
