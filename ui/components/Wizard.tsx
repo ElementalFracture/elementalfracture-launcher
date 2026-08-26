@@ -7,7 +7,6 @@ import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
 import { openLink } from "@/lib/links";
-import { toast } from "@/lib/toast";
 import "./modals/Dialog.css";
 
 const LINKS = {
@@ -24,9 +23,11 @@ export function Wizard() {
 
   const [step, setStep] = useState<Step>("welcome");
   const [gameResult, setGameResult] = useState("");
+  const [gameError, setGameError] = useState("");
   const [gameBusy, setGameBusy] = useState(false);
   const [token, setToken] = useState("");
   const [tokenBusy, setTokenBusy] = useState(false);
+  const [tokenError, setTokenError] = useState("");
   const [doneTitle, setDoneTitle] = useState("You're all set!");
 
   // Re-arm the wizard's local UI state each time it's (re)opened — this can
@@ -36,7 +37,9 @@ export function Wizard() {
     if (showWizard) {
       setStep("welcome");
       setGameResult("");
+      setGameError("");
       setToken("");
+      setTokenError("");
       setDoneTitle("You're all set!");
     }
   }, [showWizard]);
@@ -48,6 +51,7 @@ export function Wizard() {
 
   const onLocateGame = async () => {
     setGameBusy(true);
+    setGameError("");
     setGameResult("Looking for an existing install…");
     try {
       let dir = await rust.autoFindGame();
@@ -63,12 +67,22 @@ export function Wizard() {
       }
       await saveSettings({ ...settings, game_path: dir });
       setGameResult("Hooked: " + dir + ", installing updates & mods…");
-      await provisionInstall((msg, isError) => {
-        setGameResult(isError ? msg : "Hooked: " + dir + ", " + msg.toLowerCase());
+      const ok = await provisionInstall((msg, isError) => {
+        if (isError) {
+          setGameResult("");
+          setGameError(msg);
+        } else {
+          setGameResult("Hooked: " + dir + ", " + msg.toLowerCase());
+        }
       });
-      setTimeout(() => setStep("done"), 900);
+      // Only move on once the install actually succeeded — a failure leaves
+      // the step up with its message, so it can be retried or skipped.
+      if (ok) {
+        setTimeout(() => setStep("token"), 1000);
+      }
     } catch (e) {
-      setGameResult(String(e));
+      setGameResult("");
+      setGameError(String(e));
     } finally {
       setGameBusy(false);
     }
@@ -81,17 +95,20 @@ export function Wizard() {
       return;
     }
     setTokenBusy(true);
+    setTokenError("");
     try {
       const res = await applyToken(trimmed);
-      if (res.verified && res.username) {
-        setDoneTitle(`You're all set, ${res.username}!`);
-      } else if (res.warning) {
-        toast(res.warning, true);
+      // A token the portal wouldn't confirm leaves the step up with what was
+      // typed, so it can be corrected — or skipped with the other button.
+      if (!res.verified || !res.username) {
+        setTokenError(res.warning ?? "That token couldn't be verified.");
+        return;
       }
+      setDoneTitle(`You're all set, ${res.username}!`);
       setToken("");
       setStep("done");
     } catch (e) {
-      toast(String(e), true);
+      setTokenError(String(e));
     } finally {
       setTokenBusy(false);
     }
@@ -119,13 +136,10 @@ export function Wizard() {
           <div className="wizard-step">
             <h2>Have you set up the game before?</h2>
             <p className="muted">
-              If Spellbreak is already on this machine, point the launcher at its folder and you’re
-              done.
+              If Spellbreak is already on this machine, point the launcher at
+              its folder and you’re done.
             </p>
             <div className="wizard-actions">
-              <Button disabled={gameBusy} onClick={onLocateGame}>
-                Yes, locate my install
-              </Button>
               <Button
                 variant="secondary"
                 disabled={gameBusy}
@@ -133,30 +147,40 @@ export function Wizard() {
               >
                 No, not yet
               </Button>
+              <Button disabled={gameBusy} onClick={onLocateGame}>
+                Yes, locate my install
+              </Button>
             </div>
             {gameResult && <p className="muted wizard-result">{gameResult}</p>}
+            {gameError && (
+              <p className="wizard-result wizard-error">{gameError}</p>
+            )}
           </div>
         )}
 
         {step === "token" && (
           <div className="wizard-step">
             <h2>Authentication token</h2>
-            <p className="muted">Your token identifies you on Elemental Fracture servers.</p>
+            <p className="muted">
+              Your token identifies you on Elemental Fracture servers.
+            </p>
             <Input
               type="password"
               placeholder="Paste your token…"
               value={token}
-              onChange={(e) => setToken(e.target.value)}
+              onChange={(e) => {
+                setToken(e.target.value);
+                setTokenError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && onTokenSave()}
             />
             <p className="wizard-tooltip">
               Don’t have an authentication token?{" "}
-              <a onClick={() => openLink(LINKS.discord)}>Join the Discord</a> and set up a token.{" "}
+              <a onClick={() => openLink(LINKS.discord)}>Join the Discord</a>{" "}
+              and set up a token.{" "}
               <a onClick={() => openLink(LINKS.guide)}>Here’s the guide</a>.
             </p>
             <div className="wizard-actions">
-              <Button disabled={tokenBusy} onClick={onTokenSave}>
-                Save & continue
-              </Button>
               <Button
                 variant="secondary"
                 disabled={tokenBusy}
@@ -164,7 +188,13 @@ export function Wizard() {
               >
                 Skip for now
               </Button>
+              <Button disabled={tokenBusy} onClick={onTokenSave}>
+                Save & continue
+              </Button>
             </div>
+            {tokenError && (
+              <p className="wizard-result wizard-error">{tokenError}</p>
+            )}
           </div>
         )}
 
