@@ -43,6 +43,7 @@ fn main() {
         game::auto_find_game,
         game::detect_wrappers,
         download::download_game,
+        download::ensure_runtime,
         download::update_patch,
         download::install_playtest_build,
         download::get_versions,
