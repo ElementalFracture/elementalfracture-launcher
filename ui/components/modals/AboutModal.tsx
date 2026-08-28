@@ -5,9 +5,9 @@ import { openLink } from "@/lib/links";
 import "./Dialog.css";
 
 const LEGAL_LINKS: { label: string; url: string }[] = [
-  { label: "Privacy Policy", url: "https://docs.elefrac.com/legal/privacy-policy" },
-  { label: "Terms of Service", url: "https://docs.elefrac.com/legal/terms-of-service" },
-  { label: "Legal & Fair Use", url: "https://docs.elefrac.com/legal/legal-status" },
+  { label: "Privacy Policy", url: "https://elefrac.com/legal/privacy-policy" },
+  { label: "Terms of Service", url: "https://elefrac.com/legal/terms-of-service" },
+  { label: "Legal & Fair Use", url: "https://elefrac.com/legal/legal-status" },
 ];
 
 export function AboutModal({

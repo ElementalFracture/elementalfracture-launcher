@@ -11,7 +11,6 @@ const commands = vi.hoisted(() => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   resetSettings: vi.fn(),
-  applyToken: vi.fn(),
   detectWrappers: vi.fn(),
   getStatus: vi.fn(),
   getVersions: vi.fn(),

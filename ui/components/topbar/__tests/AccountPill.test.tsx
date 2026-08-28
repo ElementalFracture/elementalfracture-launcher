@@ -13,7 +13,6 @@ const commands = vi.hoisted(() => ({
   friendAdd: vi.fn(),
   friendAccept: vi.fn(),
   friendRemove: vi.fn(),
-  applyToken: vi.fn(),
   loginEmail: vi.fn(),
   logout: vi.fn(),
 }));
@@ -69,8 +68,8 @@ describe("AccountPill", () => {
     );
   });
 
-  /* apply_token stores the token even when the portal rejects it, so the token
-     alone can't stand for an account — the drawer would only fill with
+  /* A token can be on disk while its account never verified (name empty), so the
+     token alone can't stand for an account: the drawer would only fill with
      invalid_token errors. */
   it("does not open the drawer for a token that never verified", async () => {
     commands.getSettings.mockResolvedValue(

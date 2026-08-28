@@ -9,7 +9,6 @@ interface SettingsContextValue {
   refreshSettings: () => Promise<Settings | null>;
   saveSettings: (next: Settings) => Promise<void>;
   resetSettings: () => Promise<Settings>;
-  applyToken: (token: string) => Promise<TokenResult>;
   loginEmail: (email: string, password: string) => Promise<TokenResult>;
   logout: () => Promise<void>;
   refreshAccount: () => Promise<void>;
@@ -55,13 +54,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const s = await rust.resetSettings();
     setSettings(s);
     return s;
-  }, []);
-
-  const applyToken = useCallback(async (token: string) => {
-    const res = await rust.applyToken(token);
-    const fresh = await rust.getSettings();
-    setSettings(fresh);
-    return res;
   }, []);
 
   const loginEmail = useCallback(async (email: string, password: string) => {
@@ -112,7 +104,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     refreshSettings,
     saveSettings,
     resetSettings,
-    applyToken,
     loginEmail,
     logout,
     refreshAccount,

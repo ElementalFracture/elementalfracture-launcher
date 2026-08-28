@@ -49,9 +49,9 @@ export function AccountPill() {
   };
 
   const name = settings?.username?.trim();
-  /* A stored token is not an account: apply_token keeps the token even when the
-     portal rejects it, so play still works offline. The name is what it clears
-     up front and only writes back on success */
+  /* A stored token is not an account: a token can be on disk (from a past
+     sign-in) while the last role refresh cleared the name, so the name, not the
+     token, is what proves a verified account. */
   const hasToken = Boolean(settings?.auth_token?.trim());
   const registered = Boolean(name);
   const role = settings?.is_dev

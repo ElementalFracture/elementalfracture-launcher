@@ -11,23 +11,25 @@ import "./modals/Dialog.css";
 
 const LINKS = {
   discord: "https://dsc.gg/elefrac",
-  guide: "https://docs.elefrac.com/docs/intro",
+  register: "https://elefrac.com/register",
+  guide: "https://elefrac.com/docs/quick-start-guide",
 };
 
-type Step = "welcome" | "game" | "token" | "done";
+type Step = "welcome" | "game" | "signin" | "done";
 
 export function Wizard() {
   const { showWizard, finishWizard } = useUI();
-  const { settings, saveSettings, applyToken } = useSettings();
+  const { settings, saveSettings, loginEmail } = useSettings();
   const { provisionInstall } = useGame();
 
   const [step, setStep] = useState<Step>("welcome");
   const [gameResult, setGameResult] = useState("");
   const [gameError, setGameError] = useState("");
   const [gameBusy, setGameBusy] = useState(false);
-  const [token, setToken] = useState("");
-  const [tokenBusy, setTokenBusy] = useState(false);
-  const [tokenError, setTokenError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signinBusy, setSigninBusy] = useState(false);
+  const [signinError, setSigninError] = useState("");
   const [doneTitle, setDoneTitle] = useState("You're all set!");
 
   // Re-arm the wizard's local UI state each time it's (re)opened — this can
@@ -38,8 +40,9 @@ export function Wizard() {
       setStep("welcome");
       setGameResult("");
       setGameError("");
-      setToken("");
-      setTokenError("");
+      setEmail("");
+      setPassword("");
+      setSigninError("");
       setDoneTitle("You're all set!");
     }
   }, [showWizard]);
@@ -78,7 +81,7 @@ export function Wizard() {
       // Only move on once the install actually succeeded — a failure leaves
       // the step up with its message, so it can be retried or skipped.
       if (ok) {
-        setTimeout(() => setStep("token"), 1000);
+        setTimeout(() => setStep("signin"), 1000);
       }
     } catch (e) {
       setGameResult("");
@@ -88,29 +91,24 @@ export function Wizard() {
     }
   };
 
-  const onTokenSave = async () => {
-    const trimmed = token.trim();
-    if (!trimmed) {
-      setStep("done");
+  const onSignIn = async () => {
+    if (!email.trim() || !password) {
+      setSigninError("Enter your email and password.");
       return;
     }
-    setTokenBusy(true);
-    setTokenError("");
+    setSigninBusy(true);
+    setSigninError("");
     try {
-      const res = await applyToken(trimmed);
-      // A token the portal wouldn't confirm leaves the step up with what was
-      // typed, so it can be corrected — or skipped with the other button.
-      if (!res.verified || !res.username) {
-        setTokenError(res.warning ?? "That token couldn't be verified.");
-        return;
-      }
+      const res = await loginEmail(email.trim(), password);
       setDoneTitle(`You're all set, ${res.username}!`);
-      setToken("");
+      setEmail("");
+      setPassword("");
       setStep("done");
     } catch (e) {
-      setTokenError(String(e));
+      // loginEmail throws a friendly message on any auth failure.
+      setSigninError(e instanceof Error ? e.message : String(e));
     } finally {
-      setTokenBusy(false);
+      setSigninBusy(false);
     }
   };
 
@@ -143,7 +141,7 @@ export function Wizard() {
               <Button
                 variant="secondary"
                 disabled={gameBusy}
-                onClick={() => setStep("token")}
+                onClick={() => setStep("signin")}
               >
                 No, not yet
               </Button>
@@ -158,42 +156,54 @@ export function Wizard() {
           </div>
         )}
 
-        {step === "token" && (
+        {step === "signin" && (
           <div className="wizard-step">
-            <h2>Authentication token</h2>
+            <h2>Sign in to Elemental Fracture</h2>
             <p className="muted">
-              Your token identifies you on Elemental Fracture servers.
+              Use your Elemental Fracture email and password — the same account
+              as the website.
             </p>
             <Input
-              type="password"
-              placeholder="Paste your token…"
-              value={token}
+              type="email"
+              placeholder="Email"
+              autoComplete="username"
+              value={email}
               onChange={(e) => {
-                setToken(e.target.value);
-                setTokenError("");
+                setEmail(e.target.value);
+                setSigninError("");
               }}
-              onKeyDown={(e) => e.key === "Enter" && onTokenSave()}
+              onKeyDown={(e) => e.key === "Enter" && onSignIn()}
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setSigninError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && onSignIn()}
             />
             <p className="wizard-tooltip">
-              Don’t have an authentication token?{" "}
-              <a onClick={() => openLink(LINKS.discord)}>Join the Discord</a>{" "}
-              and set up a token.{" "}
-              <a onClick={() => openLink(LINKS.guide)}>Here’s the guide</a>.
+              Don’t have an account?{" "}
+              <a onClick={() => openLink(LINKS.register)}>Create one</a>, or see
+              the <a onClick={() => openLink(LINKS.guide)}>quick-start guide</a>.
             </p>
             <div className="wizard-actions">
               <Button
                 variant="secondary"
-                disabled={tokenBusy}
+                disabled={signinBusy}
                 onClick={() => setStep("done")}
               >
                 Skip for now
               </Button>
-              <Button disabled={tokenBusy} onClick={onTokenSave}>
-                Save & continue
+              <Button disabled={signinBusy} onClick={onSignIn}>
+                {signinBusy ? "Signing in…" : "Sign in"}
               </Button>
             </div>
-            {tokenError && (
-              <p className="wizard-result wizard-error">{tokenError}</p>
+            {signinError && (
+              <p className="wizard-result wizard-error">{signinError}</p>
             )}
           </div>
         )}

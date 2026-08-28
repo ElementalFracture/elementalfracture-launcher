@@ -2,7 +2,7 @@ use crate::settings;
 use serde::Serialize;
 use std::time::Duration;
 
-const FEED_URL: &str = "https://docs.elefrac.com/patchnotes/rss.xml";
+const FEED_URL: &str = "https://elefrac.com/patchnotes/feed/";
 
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
@@ -52,82 +52,6 @@ pub struct TokenResult {
     pub warning: Option<String>,
 }
 
-/// Save the token, then validate it against the auth URL (POST {"token"}),
-/// which returns {"ok", "username", "is_staff", "is_dev"}. The token is
-/// stored even when the lookup fails, so play still works offline.
-#[tauri::command]
-#[specta::specta]
-pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenResult, String> {
-    let token = token.trim().to_string();
-    if token.is_empty() {
-        return Err("Token is empty.".into());
-    }
-
-    // A new token means an as-yet-unverified identity — clear the name and role
-    // flags so a failed lookup can't leave the previous account's badge, or its
-    // name, showing. Only the success path below fills them back in, which is
-    // what makes a non-empty `username` mean "this token was accepted": the
-    // token itself is stored either way, so it can't answer that on its own.
-    // Under the write lock, so the install flow saving settings mid-paste
-    // can't put the old token back.
-    let s = settings::mutate(&app, |s| {
-        s.auth_token = token.clone();
-        s.username.clear();
-        s.spellbreak_id.clear();
-        s.avatar.clear();
-        s.discord_id.clear();
-        s.discord_avatar.clear();
-        s.is_staff = false;
-        s.is_dev = false;
-        s.is_tester = false;
-    })?;
-
-    let unverified = |warning: String| TokenResult {
-        username: None,
-        is_staff: false,
-        is_dev: false,
-        is_tester: false,
-        verified: false,
-        warning: Some(warning),
-    };
-
-    let resp = match client()?
-        .post(s.auth_url.trim())
-        .json(&serde_json::json!({ "token": token }))
-        .send()
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => return Ok(unverified(format!("Token saved, but account lookup failed: {e}"))),
-    };
-
-    let body: serde_json::Value = resp.json().await.unwrap_or_default();
-    if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
-        if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
-            let Account {
-                username,
-                is_staff,
-                is_dev,
-                is_tester,
-            } = read_account(&body, username);
-            settings::mutate(&app, |s| {
-                s.username = username.clone();
-                s.is_staff = is_staff;
-                s.is_dev = is_dev;
-                s.is_tester = is_tester;
-            })?;
-            return Ok(TokenResult {
-                username: Some(username),
-                is_staff,
-                is_dev,
-                is_tester,
-                verified: true,
-                warning: None,
-            });
-        }
-    }
-    Ok(unverified("Token saved, but the auth server doesn't recognize it.".into()))
-}
 
 /// The account behind a validated token, as the portal reports it.
 #[derive(Serialize, specta::Type)]
@@ -153,7 +77,7 @@ fn read_account(body: &serde_json::Value, username: &str) -> Account {
 /// Re-validate the STORED token and refresh the cached role flags, so a
 /// freshly granted staff/dev/tester badge shows up without a restart.
 ///
-/// Unlike apply_token — a new-token paste, which clears stale roles up front —
+/// A network blip must never cost someone their badge, so unlike a fresh sign-in
 /// this only reports on success: `None` means "no refresh", and the roles
 /// already on disk are left exactly as they were. A network blip must never
 /// cost someone their badge.
@@ -423,7 +347,7 @@ pub struct NewsItem {
     pub url: String,
 }
 
-/// "What's new" straight from the patchnotes RSS feed on docs.elefrac.com.
+/// "What's new" straight from the patchnotes RSS feed on elefrac.com (the WordPress blog).
 #[tauri::command]
 #[specta::specta]
 pub async fn get_news() -> Result<Vec<NewsItem>, String> {

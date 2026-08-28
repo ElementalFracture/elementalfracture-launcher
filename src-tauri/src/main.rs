@@ -54,7 +54,6 @@ fn main() {
         remote::get_players,
         remote::get_events,
         remote::get_news,
-        remote::apply_token,
         remote::login_email,
         remote::logout,
         remote::refresh_account,
