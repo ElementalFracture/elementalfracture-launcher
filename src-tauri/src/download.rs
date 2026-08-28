@@ -273,31 +273,73 @@ async fn download_segmented(
 }
 
 /// Extract a zip preserving its directory structure.
+/// Turn a zip entry name into a safe relative path under the install dir.
+/// `enclosed_name()` returns None (and the old code SILENTLY skipped the file)
+/// for anything it deems non-enclosed — a Windows-built archive entry, an odd
+/// component, a leading slash — which is exactly how a "downloaded but broken"
+/// install happens: a handful of assets/paks vanish with no error and the game
+/// renders garbage. Here we sanitize instead of dropping: normalise backslashes,
+/// clamp `..`, strip drive/empty components. Only a name that sanitises to
+/// nothing returns None (a pure directory marker), never a real file.
+fn safe_rel_path(name: &str) -> Option<PathBuf> {
+    let mut out = PathBuf::new();
+    for comp in name.replace('\\', "/").split('/') {
+        match comp {
+            "" | "." => continue,
+            ".." => {
+                out.pop();
+            }
+            c => {
+                // Drop a bare Windows drive prefix ("C:") if it ever leads a name.
+                if c.ends_with(':') && c.len() <= 2 {
+                    continue;
+                }
+                out.push(c);
+            }
+        }
+    }
+    (!out.as_os_str().is_empty()).then_some(out)
+}
+
 fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path) -> Result<(), String> {
     let file = File::open(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
     let total = zip.len();
     let mut last = Instant::now();
 
+    // Count files written vs. files the archive says it holds. A mismatch means
+    // something was silently dropped (or the archive is truncated/corrupt); we
+    // surface that as an error so the user retries a clean download instead of
+    // launching a half-extracted, glitched install.
+    let mut expected_files = 0usize;
+    let mut written = 0usize;
+
     for i in 0..total {
         let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
-        let Some(rel) = entry.enclosed_name() else { continue };
-        let out = dest.join(rel);
+        let name = entry.name().to_string();
         if entry.is_dir() {
-            fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+            if let Some(rel) = safe_rel_path(&name) {
+                fs::create_dir_all(dest.join(rel)).map_err(|e| e.to_string())?;
+            }
             continue;
         }
+        expected_files += 1;
+        // A real file MUST resolve to a path — never silently skipped.
+        let rel = safe_rel_path(&name)
+            .ok_or_else(|| format!("archive entry has an unusable name: {name:?}"))?;
+        let out = dest.join(rel);
         if let Some(parent) = out.parent() {
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
         let mut f = File::create(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-        std::io::copy(&mut entry, &mut f).map_err(|e| e.to_string())?;
+        std::io::copy(&mut entry, &mut f).map_err(|e| format!("{name}: {e}"))?;
+        written += 1;
 
         if last.elapsed().as_millis() >= 150 {
             emit(
                 app,
                 stage,
-                format!("{} ({i}/{total})", entry.name()),
+                format!("{name} ({i}/{total})"),
                 i as f64 / total as f64 * 100.0,
                 i as u64,
                 total as u64,
@@ -305,7 +347,14 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
             last = Instant::now();
         }
     }
-    emit(app, stage, format!("{total} files extracted"), 100.0, total as u64, total as u64);
+
+    if written != expected_files {
+        return Err(format!(
+            "extraction incomplete: wrote {written} of {expected_files} files. \
+             The download is likely corrupt — delete the install folder and download again."
+        ));
+    }
+    emit(app, stage, format!("{written} files extracted"), 100.0, total as u64, total as u64);
     Ok(())
 }
 
