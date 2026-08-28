@@ -13,6 +13,17 @@ const SEGMENTS: u64 = 6;
 /// Don't bother splitting anything smaller than this per connection.
 const MIN_SEGMENT: u64 = 32 * 1024 * 1024;
 
+/// The self-contained umu-run zipapp we provision when a Linux box has no game
+/// runtime at all. It's a single python zipapp that bundles its own deps (only
+/// system python3 is required) and, crucially, auto-downloads a Proton build
+/// on first launch when PROTONPATH is unset, so provisioning umu alone is
+/// enough (no separate GE-Proton download needed). Pinned to a known-good
+/// release because the asset name carries the version (the GitHub
+/// latest/download redirect can't target a versioned name); overridable from
+/// the CDN config.ini key `umu_zipapp_url` without shipping a new launcher.
+const UMU_ZIPAPP_URL: &str =
+    "https://github.com/Open-Wine-Components/umu-launcher/releases/download/1.4.4/umu-launcher-1.4.4-zipapp.tar";
+
 #[derive(Serialize, Clone)]
 struct Progress {
     stage: String,
@@ -611,6 +622,14 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String
     s.game_path = root.to_string_lossy().into_owned();
     settings::store(&app, &s)?;
 
+    // Provision a game runtime as part of the install so first launch just
+    // works. Best-effort: a fresh install shouldn't be reported as failed just
+    // because the runtime couldn't be set up (e.g. no python3) — the launch
+    // path re-runs this and surfaces the same message then.
+    if let Err(e) = ensure_runtime(app.clone()).await {
+        emit(&app, "runtime", format!("Runtime setup skipped: {e}"), 100.0, 0, 0);
+    }
+
     emit(&app, "done", "Installation complete".into(), 100.0, 0, 0);
     Ok(s.game_path)
 }
@@ -652,9 +671,204 @@ pub async fn get_versions(app: tauri::AppHandle) -> VersionInfo {
     VersionInfo { local, remote }
 }
 
+/// Read a NUL-terminated field out of a tar header block.
+fn tar_str(bytes: &[u8]) -> String {
+    let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+    String::from_utf8_lossy(&bytes[..end]).into_owned()
+}
+
+/// Parse a tar octal size field (space/NUL padded).
+fn tar_octal(bytes: &[u8]) -> Option<u64> {
+    let s = tar_str(bytes);
+    let s = s.trim_matches(|c| c == ' ' || c == '\0');
+    if s.is_empty() {
+        return Some(0);
+    }
+    u64::from_str_radix(s, 8).ok()
+}
+
+/// Pull the single `umu-run` zipapp out of umu-launcher's (uncompressed) tar
+/// release and write it to `dest`. The archive holds only `umu/umu-run` (the
+/// python zipapp) and a `umu/umu_run.py` symlink to it, so we walk the plain
+/// USTAR 512-byte headers and take the one regular file named `umu-run`. Kept
+/// dependency-free (the zip crate can't read tar, and pulling in a tar crate
+/// for two entries isn't worth it).
+fn extract_umu_run(tar_path: &Path, dest: &Path) -> Result<(), String> {
+    let data = fs::read(tar_path).map_err(|e| format!("{}: {e}", tar_path.display()))?;
+    let mut off = 0usize;
+    while off + 512 <= data.len() {
+        let header = &data[off..off + 512];
+        // Two consecutive zero blocks end the archive; one is enough to stop.
+        if header.iter().all(|&b| b == 0) {
+            break;
+        }
+        let name = tar_str(&header[0..100]);
+        let size = tar_octal(&header[124..136]).ok_or("bad tar size field")?;
+        let typeflag = header[156];
+        let data_start = off + 512;
+        let data_end = data_start
+            .checked_add(size as usize)
+            .filter(|&e| e <= data.len())
+            .ok_or("truncated runtime archive")?;
+
+        // Regular file ('0' or legacy NUL typeflag) whose basename is umu-run.
+        let is_regular = typeflag == b'0' || typeflag == 0;
+        let base = name.rsplit('/').next().unwrap_or(&name);
+        if is_regular && base == "umu-run" {
+            return fs::write(dest, &data[data_start..data_end])
+                .map_err(|e| format!("{}: {e}", dest.display()));
+        }
+
+        // Advance past this entry's data, padded up to the next 512 boundary.
+        off = data_start + ((size as usize + 511) & !511);
+    }
+    Err("umu-run was not found inside the runtime archive.".into())
+}
+
+/// Ensure a usable Linux game runtime exists before launch.
+///
+/// The launcher ships as an AppImage that runs on its own, but the GAME needs
+/// Proton (via umu-run) or Wine to run. This is a no-op on Windows and on any
+/// machine that already has a runtime (CachyOS / Bazzite ship umu + GE-Proton,
+/// so they skip cleanly). Otherwise it provisions the self-contained umu-run
+/// zipapp into the launcher's own data dir (no root, no Steam) and points
+/// `launch_command` at it; umu-run then auto-downloads Proton on first launch.
+///
+/// Defensive throughout: it only ever WRITES into its own runtime dir and only
+/// rewrites `launch_command` when the configured one isn't actually installed,
+/// so it never touches or corrupts an existing runtime.
+#[tauri::command]
+#[specta::specta]
+pub async fn ensure_runtime(app: tauri::AppHandle) -> Result<String, String> {
+    if cfg!(windows) {
+        return Ok("Windows: no external game runtime is needed.".into());
+    }
+
+    let s = settings::load(&app);
+
+    // (a) Already good? A configured wrapper that actually resolves (a bare
+    // name on PATH, or an absolute path we provisioned earlier) means there is
+    // nothing to do.
+    let configured = s.launch_command.trim();
+    let prog = configured.split_whitespace().next().unwrap_or("");
+    if game::command_present(prog) {
+        return Ok(format!("Game runtime already present ({prog}); nothing to set up."));
+    }
+
+    // The configured wrapper is missing. Adopt any real runtime that IS on the
+    // system before downloading anything, preferring umu-run (Proton) over
+    // plain Wine. This also self-heals the default "umu-run" config on a box
+    // that only has wine, and vice-versa.
+    for cand in ["umu-run", "wine", "wine64", "wine-stable"] {
+        if game::command_present(cand) {
+            settings::mutate(&app, |s| s.launch_command = cand.into())?;
+            return Ok(format!("Using the runtime already installed: {cand}."));
+        }
+    }
+
+    // (b) Nothing usable is installed — provision umu-run. It's a python
+    // zipapp, so the host needs python3 (which nearly every desktop Linux ships
+    // by default). Fail with a clear, actionable message if it's genuinely
+    // absent rather than downloading something that can't run.
+    if !game::command_present("python3") {
+        return Err(
+            "No game runtime was found and python3 is missing (umu / Proton needs it). \
+             Install python3 with your package manager, or install Wine, then try again."
+                .into(),
+        );
+    }
+
+    use tauri::Manager;
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("no app data dir available: {e}"))?;
+    let runtime_dir = data_dir.join("runtime");
+    fs::create_dir_all(&runtime_dir).map_err(|e| format!("{}: {e}", runtime_dir.display()))?;
+    let umu_run = runtime_dir.join("umu-run");
+
+    // Allow the CDN to redirect the runtime URL without shipping a new launcher.
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    let url = match http() {
+        Ok(client) => fetch_remote_config(&client, &cdn)
+            .await
+            .get("umu_zipapp_url")
+            .filter(|u| u.starts_with("https://"))
+            .cloned()
+            .unwrap_or_else(|| UMU_ZIPAPP_URL.to_string()),
+        Err(_) => UMU_ZIPAPP_URL.to_string(),
+    };
+
+    emit(&app, "runtime", "Downloading game runtime (umu)…".into(), 0.0, 0, 0);
+    let tar_path = runtime_dir.join("umu-launcher-zipapp.tar");
+    download_to_file(&app, "runtime", &url, &tar_path).await?;
+
+    emit(&app, "runtime", "Installing game runtime…".into(), 0.0, 0, 0);
+    let (tar2, umu2) = (tar_path.clone(), umu_run.clone());
+    tauri::async_runtime::spawn_blocking(move || extract_umu_run(&tar2, &umu2))
+        .await
+        .map_err(|e| e.to_string())??;
+    let _ = fs::remove_file(&tar_path);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&umu_run, fs::Permissions::from_mode(0o755))
+            .map_err(|e| format!("couldn't make umu-run executable: {e}"))?;
+    }
+
+    // Point the launcher at the runtime we just installed. An absolute path is
+    // matched by launch_game's `contains("umu")` Proton branch and by
+    // command_present's absolute-path check, so the next launch just works.
+    let path = umu_run.to_string_lossy().into_owned();
+    settings::mutate(&app, |s| s.launch_command = path.clone())?;
+
+    emit(&app, "done", "Game runtime ready".into(), 100.0, 0, 0);
+    Ok(format!(
+        "Installed the umu runtime to {path}. Proton downloads automatically on first launch."
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tar_reader_pulls_umu_run() {
+        // Build a minimal two-entry tar (a dir + the umu-run regular file) and
+        // confirm the reader extracts exactly the file's bytes.
+        fn header(name: &str, size: u64, typeflag: u8) -> Vec<u8> {
+            let mut h = vec![0u8; 512];
+            let nb = name.as_bytes();
+            h[..nb.len()].copy_from_slice(nb);
+            let octal = format!("{size:011o}\0");
+            h[124..124 + octal.len()].copy_from_slice(octal.as_bytes());
+            h[156] = typeflag;
+            h
+        }
+        let payload = b"#!/usr/bin/env python3\nPK-zipapp-bytes";
+        let mut tar = Vec::new();
+        tar.extend(header("umu/", 0, b'5'));
+        tar.extend(header("umu/umu-run", payload.len() as u64, b'0'));
+        tar.extend(payload);
+        tar.extend(vec![0u8; 512 - payload.len() % 512]); // pad to 512
+        tar.extend(vec![0u8; 1024]); // end-of-archive
+
+        let tmp = tempfile::tempdir().unwrap();
+        let tar_path = tmp.path().join("umu.tar");
+        let out = tmp.path().join("umu-run");
+        fs::write(&tar_path, &tar).unwrap();
+        extract_umu_run(&tar_path, &out).unwrap();
+        assert_eq!(fs::read(&out).unwrap(), payload);
+    }
+
+    #[test]
+    fn tar_reader_errors_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tar_path = tmp.path().join("empty.tar");
+        fs::write(&tar_path, vec![0u8; 1024]).unwrap();
+        assert!(extract_umu_run(&tar_path, &tmp.path().join("umu-run")).is_err());
+    }
 
     #[test]
     fn ini_versions_and_extras() {

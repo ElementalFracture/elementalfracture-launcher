@@ -115,7 +115,19 @@ export async function autoFindGame(): Promise<string | null> {
   return await commands.autoFindGame();
 }
 
+/**
+ * Make sure a game runtime exists (umu-run/Proton, or Wine). Provisions umu-run
+ * on a bare Linux box; a no-op when a runtime is already installed. Returns a
+ * short status string. Called before launch so a fresh install can actually run.
+ */
+export async function ensureRuntime(): Promise<string> {
+  return unwrap(await commands.ensureRuntime());
+}
+
 export async function launchGame(): Promise<void> {
+  // Self-heal the runtime first: on a machine with no umu/Proton/Wine this sets
+  // one up (with progress), and skips instantly when one is already present.
+  await ensureRuntime();
   unwrap(await commands.launchGame());
 }
 

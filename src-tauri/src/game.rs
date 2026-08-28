@@ -565,6 +565,37 @@ fn wrapper_available(prog: &str) -> bool {
         .unwrap_or(true) // if the check itself fails, don't block the launch
 }
 
+/// Strict "is this wrapper/command actually installed" check, used by the
+/// runtime setup to decide whether anything needs provisioning. Unlike
+/// `wrapper_available` (which errs toward letting a launch proceed), this
+/// returns false when the check can't be run. Absolute paths are tested
+/// directly; bare names go through `command -v` on the host (the game runs on
+/// the host even when the launcher lives in a container).
+pub(crate) fn command_present(prog: &str) -> bool {
+    let prog = prog.trim();
+    if prog.is_empty() {
+        return false;
+    }
+    if Path::new(prog).is_absolute() {
+        return Path::new(prog).exists();
+    }
+    let check = format!("command -v {prog} >/dev/null 2>&1");
+    let mut cmd = if settings::in_container() {
+        let mut c = std::process::Command::new("distrobox-host-exec");
+        c.args(["sh", "-c", &check]);
+        c
+    } else {
+        let mut c = std::process::Command::new("sh");
+        c.args(["-c", &check]);
+        c
+    };
+    cmd.stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|st| st.success())
+        .unwrap_or(false)
+}
+
 /// Locate an installed Proton to pin via PROTONPATH — GE-Proton preferred and
 /// newest-by-name, falling back to any Proton build. Lets umu run on a
 /// known-good runtime (DXVK/vkd3d) instead of whatever it defaults to.
