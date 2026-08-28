@@ -131,26 +131,33 @@ describe("launcher panel", () => {
     ).toBe("unchecked");
   });
 
-  it("persists both toggles on save", async () => {
-    // Save spreads the loaded settings; a toggle left out of that spread reads
-    // as on until the next restart and then silently reverts.
+  it("writes a toggle the moment it is flicked", async () => {
+    render(<SettingsView />, { wrapper: Providers });
+    (await screen.findByRole("switch", MINIMIZE)).click();
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ minimize_on_close: true })
+      )
+    );
+  });
+
+  /* Each write spreads the whole of settings, so a second change that went out
+     on the copy the first one replaced would silently undo it. Context's copy
+     only catches up once the save resolves, which is the window this is in. */
+  it("builds the second write on the first, not on a stale copy", async () => {
     render(<SettingsView />, { wrapper: Providers });
     (await screen.findByRole("switch", MINIMIZE)).click();
     screen.getByRole("switch", CLOSE_ON_LAUNCH).click();
-    // Save reads the toggles from its render's closure, so let both flushes
-    // land before pressing it or the assertion tests a stale form.
-    await waitFor(() =>
-      expect(
-        screen.getByRole("switch", CLOSE_ON_LAUNCH).getAttribute("data-state")
-      ).toBe("checked")
-    );
-    screen.getByText("Save settings").click();
 
-    await waitFor(() => expect(commands.saveSettings).toHaveBeenCalled());
-    expect(commands.saveSettings.mock.calls[0][0]).toMatchObject({
-      minimize_on_close: true,
-      close_on_launch: true,
-    });
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          minimize_on_close: true,
+          close_on_launch: true,
+        })
+      )
+    );
   });
 });
 
@@ -250,5 +257,57 @@ describe("checking for a launcher update", () => {
     // Timers never fire early, so this is a floor, not a flaky race.
     expect(Date.now() - started).toBeGreaterThanOrEqual(900);
     expect(spinner()).toBeNull();
+  });
+});
+
+/* The text fields are the half that must not write per keystroke: each save is
+   a disk write, and the URL ones re-pull what reads them. */
+describe("advanced text fields", () => {
+  const cdnBox = () => screen.getByLabelText(/CDN base/);
+
+  beforeEach(() => {
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+  });
+
+  it("holds the draft while you type", async () => {
+    await openAdvanced();
+    commands.saveSettings.mockClear();
+
+    fireEvent.change(cdnBox(), { target: { value: "http://localhost:9000" } });
+    expect(commands.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it("writes it once you leave the field", async () => {
+    await openAdvanced();
+    fireEvent.change(cdnBox(), { target: { value: "http://localhost:9000" } });
+    fireEvent.blur(cdnBox());
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ cdn_base: "http://localhost:9000" })
+      )
+    );
+  });
+
+  it("trims what it writes", async () => {
+    await openAdvanced();
+    fireEvent.change(cdnBox(), {
+      target: { value: "  http://localhost:9000  " },
+    });
+    fireEvent.blur(cdnBox());
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ cdn_base: "http://localhost:9000" })
+      )
+    );
+  });
+
+  it("costs nothing to tab through a field you didn't change", async () => {
+    await openAdvanced();
+    commands.saveSettings.mockClear();
+
+    fireEvent.blur(cdnBox());
+    expect(commands.saveSettings).not.toHaveBeenCalled();
   });
 });

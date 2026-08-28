@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/shadcn/button";
 import { useUI } from "@/context/UIContext";
 import { AdvancedCard } from "./AdvancedCard";
 import { AdvancedToggleCard } from "./AdvancedToggleCard";
@@ -8,8 +7,9 @@ import { ResetButton } from "./ResetButton";
 import { useSettingsForm } from "./useSettingsForm";
 import "./SettingsView.css";
 
-/** The Settings tab. One Save button covers every card's fields, so the form
-    state lives here (in useSettingsForm) rather than in the cards. */
+/** The Settings tab. Every field writes as you leave it — there is no Save —
+    but they share one writer, so the form state lives here (in useSettingsForm)
+    rather than in the cards that draw it. */
 export function SettingsView() {
   const { view } = useUI();
   const form = useSettingsForm();
@@ -24,11 +24,8 @@ export function SettingsView() {
       />
       {showAdvanced && <AdvancedCard form={form} />}
 
-      <div className="save-row">
+      <div className="reset-row">
         <ResetButton onReset={() => setShowAdvanced(false)} />
-        <Button disabled={form.saving} onClick={form.onSave}>
-          Save settings
-        </Button>
       </div>
     </section>
   );
