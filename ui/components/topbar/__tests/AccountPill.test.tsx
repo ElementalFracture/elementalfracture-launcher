@@ -68,17 +68,17 @@ describe("AccountPill", () => {
     );
   });
 
-  /* A token can be on disk while its account never verified (name empty), so the
-     token alone can't stand for an account: the drawer would only fill with
-     invalid_token errors. */
-  it("does not open the drawer for a token that never verified", async () => {
+  /* A token can be on disk while its account is no longer valid (name cleared by
+     an expired-token refresh), so the token alone can't stand for an account:
+     the pill says "session expired" and a click opens sign-in, not the drawer. */
+  it("shows session expired for a token whose account was cleared", async () => {
     commands.getSettings.mockResolvedValue(
       makeSettings({ auth_token: "rejected-tok", username: "" })
     );
     renderPill();
     await settled();
     await waitFor(() =>
-      expect(pill().textContent).toContain("Not signed in")
+      expect(pill().textContent).toContain("Session expired")
     );
 
     fireEvent.click(pill());
@@ -96,6 +96,6 @@ describe("AccountPill", () => {
     renderPill();
     await settled();
     expect(pill().textContent).toContain("Sign in");
-    expect(pill().textContent).not.toContain("Not signed in");
+    expect(pill().textContent).not.toContain("Session expired");
   });
 });

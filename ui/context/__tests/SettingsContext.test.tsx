@@ -47,6 +47,31 @@ describe("refreshAccount", () => {
     expect(result.current.settings?.is_tester).toBe(true);
   });
 
+  it("clears the cached identity when the stored token has expired", async () => {
+    // An expired token: refresh_account clears the identity on disk and answers
+    // with the emptied account (truthy, not null), so the UI re-reads and the
+    // pill flips to "session expired".
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ username: "Doobs", is_tester: true })
+    );
+    const { result } = renderSettings();
+    await waitFor(() => expect(result.current.settings?.username).toBe("Doobs"));
+
+    commands.refreshAccount.mockResolvedValue({
+      status: "ok",
+      data: { username: "", is_staff: false, is_dev: false, is_tester: false },
+    });
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ username: "", is_tester: false })
+    );
+
+    await act(async () => {
+      await result.current.refreshAccount();
+    });
+    expect(result.current.settings?.username).toBe("");
+    expect(result.current.settings?.is_tester).toBe(false);
+  });
+
   it("leaves the roles alone when the portal says nothing", async () => {
     // A network blip answers null. Re-reading settings on that would be
     // harmless here but pointless — the badge must never be lost to a blip.

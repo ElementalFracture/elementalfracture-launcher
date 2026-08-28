@@ -75,12 +75,15 @@ fn read_account(body: &serde_json::Value, username: &str) -> Account {
 }
 
 /// Re-validate the STORED token and refresh the cached role flags, so a
-/// freshly granted staff/dev/tester badge shows up without a restart.
+/// freshly granted staff/dev/tester badge shows up without a restart, and an
+/// expired token flips the account pill to "session expired" instead of showing
+/// a signed-in name that no longer works.
 ///
-/// A network blip must never cost someone their badge, so unlike a fresh sign-in
-/// this only reports on success: `None` means "no refresh", and the roles
-/// already on disk are left exactly as they were. A network blip must never
-/// cost someone their badge.
+/// Three outcomes: a valid token refreshes the roles (returns the account); an
+/// explicit `{"ok": false}` clears the cached identity so the pill prompts a new
+/// sign-in (returns the emptied account); anything else (a network blip or a
+/// malformed reply) is transient and leaves everything on disk untouched
+/// (returns `None`) — a blip must never cost someone their badge.
 #[tauri::command]
 #[specta::specta]
 pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, String> {
@@ -102,28 +105,55 @@ pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, S
     };
 
     let body: serde_json::Value = resp.json().await.unwrap_or_default();
-    if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
-        if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
-            let account = read_account(&body, username);
-            // Avatar + Discord are only updated when /auth actually returns them
-            // (an older sidecar omits them), so an out-of-band change shows up on
-            // the 60s refresh without a re-login, and a blip never clears them.
-            let avatar = body.get("avatar").and_then(|v| v.as_str()).map(str::to_string);
-            let discord_id = body.get("discord_id").and_then(|v| v.as_str()).map(str::to_string);
-            let discord_avatar = body.get("discord_avatar").and_then(|v| v.as_str()).map(str::to_string);
-            settings::mutate(&app, |s| {
-                s.username = account.username.clone();
-                s.is_staff = account.is_staff;
-                s.is_dev = account.is_dev;
-                s.is_tester = account.is_tester;
-                if let Some(a) = &avatar { s.avatar = a.clone(); }
-                if let Some(d) = &discord_id { s.discord_id = d.clone(); }
-                if let Some(d) = &discord_avatar { s.discord_avatar = d.clone(); }
-            })?;
-            return Ok(Some(account));
+    match body.get("ok").and_then(|v| v.as_bool()) {
+        Some(true) => {
+            if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
+                let account = read_account(&body, username);
+                // Avatar + Discord are only updated when /auth actually returns them
+                // (an older sidecar omits them), so an out-of-band change shows up on
+                // the 60s refresh without a re-login, and a blip never clears them.
+                let avatar = body.get("avatar").and_then(|v| v.as_str()).map(str::to_string);
+                let discord_id = body.get("discord_id").and_then(|v| v.as_str()).map(str::to_string);
+                let discord_avatar = body.get("discord_avatar").and_then(|v| v.as_str()).map(str::to_string);
+                settings::mutate(&app, |s| {
+                    s.username = account.username.clone();
+                    s.is_staff = account.is_staff;
+                    s.is_dev = account.is_dev;
+                    s.is_tester = account.is_tester;
+                    if let Some(a) = &avatar { s.avatar = a.clone(); }
+                    if let Some(d) = &discord_id { s.discord_id = d.clone(); }
+                    if let Some(d) = &discord_avatar { s.discord_avatar = d.clone(); }
+                })?;
+                return Ok(Some(account));
+            }
+            Ok(None)
         }
+        // The auth server explicitly rejected the stored token (expired or revoked).
+        // Clear the cached identity so the account pill flips to a "session expired,
+        // sign in again" prompt; keep the token itself so the pill can tell "expired"
+        // apart from "never signed in". Return the now-empty account (not None) so the
+        // UI re-reads and reflects the change. A missing `ok` (malformed reply or a
+        // hiccup) is treated as transient and left alone, like a network blip.
+        Some(false) => {
+            settings::mutate(&app, |s| {
+                s.username.clear();
+                s.spellbreak_id.clear();
+                s.avatar.clear();
+                s.discord_id.clear();
+                s.discord_avatar.clear();
+                s.is_staff = false;
+                s.is_dev = false;
+                s.is_tester = false;
+            })?;
+            Ok(Some(Account {
+                username: String::new(),
+                is_staff: false,
+                is_dev: false,
+                is_tester: false,
+            }))
+        }
+        None => Ok(None),
     }
-    Ok(None)
 }
 
 /// Email/password sign-in (the same account the website uses). POSTs to the
