@@ -1,7 +1,7 @@
 use crate::{game, settings};
 use serde::Serialize;
 use std::fs::{self, File};
-use std::io::{Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -316,7 +316,16 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
     let file = File::open(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
     let total = zip.len();
-    let mut last = Instant::now();
+
+    // Total UNCOMPRESSED bytes, read from the central directory (no decompression).
+    // Progress is driven by bytes, not file count: the archive ends with one huge
+    // game pak, so a per-file bar hits ~99% and then sits frozen for minutes while
+    // that last file copies. Byte progress (updated DURING the copy) moves smoothly.
+    let mut total_bytes: u64 = 0;
+    for i in 0..total {
+        total_bytes += zip.by_index(i).map_err(|e| e.to_string())?.size();
+    }
+    let total_bytes = total_bytes.max(1);
 
     // Count files written vs. files the archive says it holds. A mismatch means
     // something was silently dropped (or the archive is truncated/corrupt); we
@@ -324,6 +333,9 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
     // launching a half-extracted, glitched install.
     let mut expected_files = 0usize;
     let mut written = 0usize;
+    let mut bytes_done: u64 = 0;
+    let mut buf = vec![0u8; 1 << 20]; // 1 MiB copy buffer
+    let mut last = Instant::now();
 
     for i in 0..total {
         let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
@@ -343,20 +355,28 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
         let mut f = File::create(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-        std::io::copy(&mut entry, &mut f).map_err(|e| format!("{name}: {e}"))?;
-        written += 1;
-
-        if last.elapsed().as_millis() >= 150 {
-            emit(
-                app,
-                stage,
-                format!("{name} ({i}/{total})"),
-                i as f64 / total as f64 * 100.0,
-                i as u64,
-                total as u64,
-            );
-            last = Instant::now();
+        // Copy in chunks and report progress DURING the file, so a multi-GB pak
+        // shows a moving bar instead of looking hung on the final entry.
+        loop {
+            let n = entry.read(&mut buf).map_err(|e| format!("{name}: {e}"))?;
+            if n == 0 {
+                break;
+            }
+            f.write_all(&buf[..n]).map_err(|e| format!("{name}: {e}"))?;
+            bytes_done += n as u64;
+            if last.elapsed().as_millis() >= 150 {
+                emit(
+                    app,
+                    stage,
+                    format!("{name}  ({} / {})", human(bytes_done), human(total_bytes)),
+                    bytes_done as f64 / total_bytes as f64 * 100.0,
+                    bytes_done,
+                    total_bytes,
+                );
+                last = Instant::now();
+            }
         }
+        written += 1;
     }
 
     if written != expected_files {
@@ -365,7 +385,7 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
              The download is likely corrupt — delete the install folder and download again."
         ));
     }
-    emit(app, stage, format!("{written} files extracted"), 100.0, total as u64, total as u64);
+    emit(app, stage, format!("{written} files extracted"), 100.0, total_bytes, total_bytes);
     Ok(())
 }
 
