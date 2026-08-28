@@ -51,6 +51,24 @@ body.classic .banner-shade::before {
 body.classic .banner-shade::after {
   opacity: 1;
 }
+/* Playtest (blueprint blue). Reuses the ::after layer rather than adding a
+   third — only one of classic/playtest is ever on — and recolours it to the
+   playtest navy so the banner picks up the blue hue like the rest of the
+   theme, instead of falling back to the EF purple ::before. */
+body.playtest .banner-shade::before {
+  opacity: 0;
+}
+body.playtest .banner-shade::after {
+  opacity: 1;
+  background: linear-gradient(
+    90deg,
+    #050d1ff2 0%,
+    #050d1fcc 30%,
+    #050d1f66 48%,
+    #050d1f14 68%,
+    transparent 88%
+  );
+}
 
 .banner-text {
   position: relative;

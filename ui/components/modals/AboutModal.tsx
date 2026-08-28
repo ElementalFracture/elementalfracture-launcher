@@ -1,7 +1,14 @@
 import { Button } from "@/components/shadcn/button";
 import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import { useGame } from "@/context/GameContext";
+import { openLink } from "@/lib/links";
 import "./Dialog.css";
+
+const LEGAL_LINKS: { label: string; url: string }[] = [
+  { label: "Privacy Policy", url: "https://docs.elefrac.com/legal/privacy-policy" },
+  { label: "Terms of Service", url: "https://docs.elefrac.com/legal/terms-of-service" },
+  { label: "Legal & Fair Use", url: "https://docs.elefrac.com/legal/legal-status" },
+];
 
 export function AboutModal({
   open,
@@ -35,6 +42,22 @@ export function AboutModal({
             Not affiliated with or endorsed by Proletariat, Inc. Everyone
             involved is a volunteer and receives no financial compensation;
             donations only cover the website, game servers and CDN.
+          </p>
+          <p className="about-links">
+            {LEGAL_LINKS.map((link, i) => (
+              <span key={link.url}>
+                {i > 0 && <span className="about-links-sep"> · </span>}
+                <a
+                  href={link.url}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLink(link.url);
+                  }}
+                >
+                  {link.label}
+                </a>
+              </span>
+            ))}
           </p>
           <div className="wizard-actions">
             <Button onClick={onClose}>Close</Button>

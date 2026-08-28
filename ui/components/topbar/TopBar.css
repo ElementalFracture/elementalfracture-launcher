@@ -63,10 +63,17 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-4xl);
+  overflow: hidden;
   font-size: 11px;
   font-weight: 700;
   color: var(--primary-foreground);
   background: linear-gradient(135deg, var(--primary-bright), var(--primary));
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* Status dots: the topbar's own indicator and the presence dot shared by the

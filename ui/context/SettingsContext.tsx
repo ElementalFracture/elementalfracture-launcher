@@ -10,6 +10,8 @@ interface SettingsContextValue {
   saveSettings: (next: Settings) => Promise<void>;
   resetSettings: () => Promise<Settings>;
   applyToken: (token: string) => Promise<TokenResult>;
+  loginEmail: (email: string, password: string) => Promise<TokenResult>;
+  logout: () => Promise<void>;
   refreshAccount: () => Promise<void>;
   loadWrappers: () => Promise<WrapperOption[]>;
 }
@@ -62,6 +64,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return res;
   }, []);
 
+  const loginEmail = useCallback(async (email: string, password: string) => {
+    const res = await rust.loginEmail(email, password);
+    setSettings(await rust.getSettings());
+    return res;
+  }, []);
+
+  const logout = useCallback(async () => {
+    await rust.logout();
+    setSettings(await rust.getSettings());
+  }, []);
+
   /* Re-validate the stored token every minute so a badge granted while the
      launcher is open (Tester, say) turns up without a restart — that's what
      makes the Test Build channel appear. Only a successful answer writes:
@@ -84,6 +97,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (!isWindows) {
         loadWrappers();
       }
+      // Refresh avatar/roles right away so a change made after last sign-in shows
+      // immediately on launch — don't make the user wait for the first 60s tick.
+      refreshAccount();
     })();
     const id = setInterval(refreshAccount, 60_000);
     return () => clearInterval(id);
@@ -97,6 +113,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveSettings,
     resetSettings,
     applyToken,
+    loginEmail,
+    logout,
     refreshAccount,
     loadWrappers,
   };

@@ -70,12 +70,14 @@ function FriendRow({
       <span className="status-dot" data-status={status} />
       <div className="friend-row-main">
         <div className="friend-row-meta">
-          <strong>{username}</strong>
-          {/* TODO verify if status is correct.
+          <span className="friend-row-name">
+            <strong>{username}</strong>
+            {/* TODO verify if status is correct.
           I see online player in friend list but not in Online container
         */}
-          {statusText === "in game" && <small>{statusText}</small>}
-          {pending && <small className="friend-pending">requested</small>}
+            {statusText === "in game" && <small>{statusText}</small>}
+            {pending && <small className="friend-pending">requested</small>}
+          </span>
         </div>
         {error && (
           <p className="friend-row-error" role="alert">
@@ -158,10 +160,10 @@ export function FriendList() {
       <div className="friend-add">
         <Input
           type="text"
-          maxLength={20}
+          maxLength={25}
           spellCheck={false}
           autoComplete="off"
-          placeholder="Add a friend by username"
+          placeholder="Add by Spellbreak ID (username)"
           value={addName}
           aria-invalid={addFriendError !== null}
           aria-describedby={addFriendError ? "friend-add-error" : undefined}
@@ -185,7 +187,7 @@ export function FriendList() {
         <p className="friend-empty">Loading…</p>
       ) : accepted.length === 0 && pending === 0 ? (
         <p className="friend-empty">
-          No friends yet, add someone by their username above.
+          No friends yet, add someone by their Spellbreak ID above.
         </p>
       ) : (
         /* Everything but the offline crowd starts open — that section is the

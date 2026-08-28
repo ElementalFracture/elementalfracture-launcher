@@ -74,6 +74,23 @@
   text-align: left;
   margin: 0 0 12px;
 }
+.about-links {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  text-align: center;
+}
+.about-links a {
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+.about-links a:hover {
+  text-decoration: underline;
+}
+.about-links-sep {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
 .about-made {
   margin: 16px 0 0;
   font-size: 12px;

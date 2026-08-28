@@ -12,10 +12,10 @@ import { useSettings } from "@/context/SettingsContext";
 
 /** Error codes the sidecar answers with, in the wording the popover shows. */
 const FRIEND_ERRORS: Record<string, string> = {
-  user_not_found: "No player with that username.",
+  user_not_found: "No player with that Spellbreak ID.",
   cannot_friend_self: "That's you!",
   invalid_token: "Set your account token first.",
-  username_required: "Enter a username.",
+  username_required: "Enter a Spellbreak ID.",
   no_pending_request: "No pending request from them.",
 };
 

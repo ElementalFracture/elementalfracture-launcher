@@ -68,6 +68,16 @@ export async function applyToken(token: string): Promise<TokenResult> {
   return unwrap(await commands.applyToken(token));
 }
 
+/** Email/password sign-in (the account the website uses). Throws on auth failure. */
+export async function loginEmail(email: string, password: string): Promise<TokenResult> {
+  return unwrap(await commands.loginEmail(email, password));
+}
+
+/** Sign out: clears the stored token, name, avatar and roles. */
+export async function logout(): Promise<void> {
+  unwrap(await commands.logout());
+}
+
 /** Re-check the stored token's roles. `null` = nothing to report, roles kept. */
 export async function refreshAccount(): Promise<Account | null> {
   return unwrap(await commands.refreshAccount());

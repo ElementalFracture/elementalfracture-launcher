@@ -50,6 +50,13 @@
 }
 .friend-row-meta {
   display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+/* The name line (display name + any inline status/pending tag). */
+.friend-row-name {
+  display: flex;
   align-items: baseline;
   gap: 7px;
   min-width: 0;

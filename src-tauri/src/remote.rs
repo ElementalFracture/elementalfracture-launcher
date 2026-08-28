@@ -73,6 +73,10 @@ pub async fn apply_token(app: tauri::AppHandle, token: String) -> Result<TokenRe
     let s = settings::mutate(&app, |s| {
         s.auth_token = token.clone();
         s.username.clear();
+        s.spellbreak_id.clear();
+        s.avatar.clear();
+        s.discord_id.clear();
+        s.discord_avatar.clear();
         s.is_staff = false;
         s.is_dev = false;
         s.is_tester = false;
@@ -177,16 +181,143 @@ pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, S
     if body.get("ok").and_then(|v| v.as_bool()) == Some(true) {
         if let Some(username) = body.get("username").and_then(|v| v.as_str()) {
             let account = read_account(&body, username);
+            // Avatar + Discord are only updated when /auth actually returns them
+            // (an older sidecar omits them), so an out-of-band change shows up on
+            // the 60s refresh without a re-login, and a blip never clears them.
+            let avatar = body.get("avatar").and_then(|v| v.as_str()).map(str::to_string);
+            let discord_id = body.get("discord_id").and_then(|v| v.as_str()).map(str::to_string);
+            let discord_avatar = body.get("discord_avatar").and_then(|v| v.as_str()).map(str::to_string);
             settings::mutate(&app, |s| {
                 s.username = account.username.clone();
                 s.is_staff = account.is_staff;
                 s.is_dev = account.is_dev;
                 s.is_tester = account.is_tester;
+                if let Some(a) = &avatar { s.avatar = a.clone(); }
+                if let Some(d) = &discord_id { s.discord_id = d.clone(); }
+                if let Some(d) = &discord_avatar { s.discord_avatar = d.clone(); }
             })?;
             return Ok(Some(account));
         }
     }
     Ok(None)
+}
+
+/// Email/password sign-in (the same account the website uses). POSTs to the
+/// public `/login` endpoint (no shared key: the launcher is a client), which
+/// returns the token + profile. On success the token/username/avatar/roles are
+/// stored, so play and the account pill work exactly as after a token paste —
+/// only now the identity comes from an email + password instead of a pasted
+/// token. Returns Err(message) on any auth failure so the modal can show it
+/// without saving or closing.
+#[tauri::command]
+#[specta::specta]
+pub async fn login_email(
+    app: tauri::AppHandle,
+    email: String,
+    password: String,
+) -> Result<TokenResult, String> {
+    let email = email.trim().to_string();
+    if email.is_empty() || password.is_empty() {
+        return Err("Enter your email and password.".into());
+    }
+
+    let s = settings::load(&app);
+    let url = {
+        let u = s.login_url.trim();
+        if !u.is_empty() {
+            u.to_string()
+        } else {
+            // Derive from the auth URL's origin if login_url was blanked.
+            match s.auth_url.trim().strip_suffix("/auth") {
+                Some(base) => format!("{base}/login"),
+                None => return Err("Sign-in is not configured.".into()),
+            }
+        }
+    };
+
+    let resp = client()?
+        .post(&url)
+        .json(&serde_json::json!({ "email": email, "password": password }))
+        .send()
+        .await
+        .map_err(|e| format!("Couldn't reach the sign-in service: {e}"))?;
+
+    let body: serde_json::Value = resp.json().await.unwrap_or_default();
+    if body.get("ok").and_then(|v| v.as_bool()) != Some(true) {
+        let err = body.get("error").and_then(|v| v.as_str()).unwrap_or("");
+        return Err(match err {
+            "invalid_credentials" => "Wrong email or password.",
+            "email_unverified" => "Verify your email first — check your inbox for the code.",
+            "banned" => "This account is banned.",
+            "rate_limited" => "Too many attempts. Please wait a few minutes.",
+            _ => "Sign-in failed. Please try again.",
+        }
+        .to_string());
+    }
+
+    let token = body
+        .get("token")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    if token.is_empty() {
+        return Err("Sign-in failed. Please try again.".into());
+    }
+    let username = body
+        .get("username")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let account = read_account(&body, &username);
+    let str_field = |k: &str| {
+        body.get(k)
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+    let spellbreak_id = str_field("spellbreak_id");
+    let avatar = str_field("avatar");
+    let discord_id = str_field("discord_id");
+    let discord_avatar = str_field("discord_avatar");
+
+    settings::mutate(&app, |s| {
+        s.auth_token = token.clone();
+        s.username = account.username.clone();
+        s.spellbreak_id = spellbreak_id.clone();
+        s.avatar = avatar.clone();
+        s.discord_id = discord_id.clone();
+        s.discord_avatar = discord_avatar.clone();
+        s.is_staff = account.is_staff;
+        s.is_dev = account.is_dev;
+        s.is_tester = account.is_tester;
+    })?;
+
+    Ok(TokenResult {
+        username: Some(account.username),
+        is_staff: account.is_staff,
+        is_dev: account.is_dev,
+        is_tester: account.is_tester,
+        verified: true,
+        warning: None,
+    })
+}
+
+/// Sign out: clear the stored identity (token, name, avatar, roles, Discord).
+#[tauri::command]
+#[specta::specta]
+pub async fn logout(app: tauri::AppHandle) -> Result<(), String> {
+    settings::mutate(&app, |s| {
+        s.auth_token.clear();
+        s.username.clear();
+        s.spellbreak_id.clear();
+        s.avatar.clear();
+        s.discord_id.clear();
+        s.discord_avatar.clear();
+        s.is_staff = false;
+        s.is_dev = false;
+        s.is_tester = false;
+    })?;
+    Ok(())
 }
 
 /// Base URL of the players sidecar (where /friends lives), derived from the

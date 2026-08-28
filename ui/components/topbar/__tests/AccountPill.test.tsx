@@ -14,6 +14,8 @@ const commands = vi.hoisted(() => ({
   friendAccept: vi.fn(),
   friendRemove: vi.fn(),
   applyToken: vi.fn(),
+  loginEmail: vi.fn(),
+  logout: vi.fn(),
 }));
 
 vi.mock("@/generated/bindings", () => ({ commands }));
@@ -77,7 +79,7 @@ describe("AccountPill", () => {
     renderPill();
     await settled();
     await waitFor(() =>
-      expect(pill().textContent).toContain("Token not verified")
+      expect(pill().textContent).toContain("Not signed in")
     );
 
     fireEvent.click(pill());
@@ -94,7 +96,7 @@ describe("AccountPill", () => {
     );
     renderPill();
     await settled();
-    expect(pill().textContent).toContain("No token set");
-    expect(pill().textContent).not.toContain("Token not verified");
+    expect(pill().textContent).toContain("Sign in");
+    expect(pill().textContent).not.toContain("Not signed in");
   });
 });
