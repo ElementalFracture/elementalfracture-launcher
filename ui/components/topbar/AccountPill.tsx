@@ -108,6 +108,9 @@ export function AccountPill() {
             <div className="account-drawer-body">
               <Separator />
               <FriendList />
+            </div>
+
+            <div className="account-drawer-foot">
               <Separator />
               <Button
                 variant="ghost"

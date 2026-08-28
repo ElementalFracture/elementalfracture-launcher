@@ -16,12 +16,19 @@
   color: var(--muted-foreground);
 }
 
-/* The scrolling middle of the drawer: header and footer stay put, the list
+/* The scrolling middle of the drawer: header and foot stay put, the list
    between them takes the rest of the height. */
 .account-drawer-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding: 0 16px;
+}
+
+.account-drawer-foot {
+  display: flex;
+  flex-direction: column;
+  flex: none;
   padding: 0 16px;
 }
 .friend-self {
@@ -51,10 +58,9 @@
   color: var(--muted-foreground);
 }
 
-/* Sign out at the foot of the account drawer. */
 .account-signout {
   margin: 10px 0 14px;
-  align-self: flex-start;
+  align-self: flex-end;
   color: var(--muted-foreground);
 }
 .account-signout:hover {
