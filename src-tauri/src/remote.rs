@@ -156,6 +156,31 @@ pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, S
     }
 }
 
+/// Build the user-facing suspension message from a `{"error":"banned", ...}`
+/// body. `ends` (a human date string) or a non-null `expires_at` marks a timed
+/// suspension; both null means permanent. A meaningful `reason` (non-empty and
+/// not the literal "banned") is appended on its own line. No em-dashes.
+fn suspension_message(body: &serde_json::Value) -> String {
+    let ends = body.get("ends").and_then(|v| v.as_str()).unwrap_or("").trim();
+    let has_expiry = !ends.is_empty()
+        || body.get("expires_at").and_then(|v| v.as_i64()).is_some();
+
+    let mut msg = if has_expiry && !ends.is_empty() {
+        format!("This account has been suspended. The suspension will end on {ends}.")
+    } else if has_expiry {
+        // A timestamp with no human date: state it ends without a date.
+        "This account has been suspended.".to_string()
+    } else {
+        "This account has been permanently suspended.".to_string()
+    };
+
+    let reason = body.get("reason").and_then(|v| v.as_str()).unwrap_or("").trim();
+    if !reason.is_empty() && !reason.eq_ignore_ascii_case("banned") {
+        msg.push_str(&format!("\nReason: {reason}"));
+    }
+    msg
+}
+
 /// Email/password sign-in (the same account the website uses). POSTs to the
 /// public `/login` endpoint (no shared key: the launcher is a client), which
 /// returns the token + profile. On success the token/username/avatar/roles are
@@ -199,10 +224,14 @@ pub async fn login_email(
     let body: serde_json::Value = resp.json().await.unwrap_or_default();
     if body.get("ok").and_then(|v| v.as_bool()) != Some(true) {
         let err = body.get("error").and_then(|v| v.as_str()).unwrap_or("");
+        // A ban carries richer fields (a human end date and a free-text reason),
+        // so it gets its own message instead of the flat catch-all string.
+        if err == "banned" {
+            return Err(suspension_message(&body));
+        }
         return Err(match err {
             "invalid_credentials" => "Wrong email or password.",
-            "email_unverified" => "Verify your email first — check your inbox for the code.",
-            "banned" => "This account is banned.",
+            "email_unverified" => "Verify your email first, check your inbox for the code.",
             "rate_limited" => "Too many attempts. Please wait a few minutes.",
             _ => "Sign-in failed. Please try again.",
         }

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Windows installer for the Elemental Fracture launcher, built on Linux
-  with msitools:  wixl -a x64 -D Version=... -D ExeSource=... -D DllSource=...
-                       -o ElementalFractureInstall.msi ElementalFractureInstall.wxs
+  Windows installer for the Elemental Fracture launcher, built on Linux with
+  msitools. Use scripts/build-msi.sh rather than calling wixl by hand; it
+  regenerates License.rtf and the bitmaps first and passes every -D this file
+  needs.
 
-  Per-user install (LocalAppData\Programs\Elemental Fracture) so the
-  launcher's self-updater can replace its own binary without elevation.
+  Per-user install (LocalAppData\Programs\Elemental Fracture) so the launcher's
+  self-updater can replace its own binary without elevation.
+
+  The wizard is Welcome -> Terms of Service -> Install Location -> Ready ->
+  Progress -> Finish; the dialogs live in packaging/wixui/ui and are wired
+  together by WixUI_EFInstallDir there.
 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*"
@@ -15,7 +20,9 @@
            Language="1033"
            UpgradeCode="f1265ac0-9fa0-423b-99e1-dea78f9c30eb">
 
-    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" />
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser"
+             Description="Elemental Fracture Launcher $(var.Version)"
+             Comments="Elemental Fracture is a non-commercial, volunteer-run preservation community." />
     <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -29,6 +36,20 @@
             </Component>
           </Directory>
         </Directory>
+      </Directory>
+      <Directory Id="DesktopFolder">
+        <Component Id="DesktopShortcut" Guid="3b9f0c47-51ad-4e2a-9f6c-8d1e5a7c2b40">
+          <!-- Ticked on the Install Location page. Unticking clears the
+               property, which drops this component from the install. -->
+          <Condition>INSTALLDESKTOPSHORTCUT</Condition>
+          <Shortcut Id="DesktopAppShortcut"
+                    Name="Elemental Fracture"
+                    Description="Elemental Fracture launcher"
+                    Target="[INSTALLDIR]Elemental Fracture.exe"
+                    WorkingDirectory="INSTALLDIR" />
+          <RegistryValue Root="HKCU" Key="Software\ElementalFracture\Launcher"
+                         Name="desktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
       </Directory>
       <Directory Id="ProgramMenuFolder">
         <Directory Id="AppMenuDir" Name="Elemental Fracture">
@@ -49,6 +70,48 @@
     <Feature Id="Complete" Level="1">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
     </Feature>
+
+    <!-- Add or Remove Programs entry -->
+    <Icon Id="AppIcon.exe" SourceFile="$(var.IconSource)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.exe" />
+    <Property Id="ARPURLINFOABOUT" Value="https://elefrac.com" />
+
+    <!-- Wizard. WIXUI_INSTALLDIR names the directory the Install Location
+         dialog edits; its default is the INSTALLDIR path declared above. -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+    <Property Id="INSTALLDESKTOPSHORTCUT" Value="1" />
+    <UIRef Id="WixUI_EFInstallDir" />
+
+    <!-- Replace any previously installed build rather than registering a
+         second product against the same UpgradeCode. Without this, a second
+         install leaves the old one in Add or Remove Programs, and because the
+         launcher exe carries no version resource, Windows Installer's
+         unversioned-file rules can leave the OLD binary on disk. Removing the
+         old product first means the new binary is always written. -->
+    <Upgrade Id="f1265ac0-9fa0-423b-99e1-dea78f9c30eb">
+      <UpgradeVersion Minimum="0.0.0" IncludeMinimum="yes"
+                      Maximum="$(var.Version)" IncludeMaximum="yes"
+                      Property="PREVIOUSVERSIONINSTALLED" MigrateFeatures="yes" />
+    </Upgrade>
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallValidate" />
+    </InstallExecuteSequence>
+
+    <!-- Finish dialog's "Launch" checkbox, ticked by default.
+
+         This has to be an Exe-from-property custom action (type 50), not
+         Exe-from-file (type 18). A file-key action fails with error 2753 here:
+         the Finish button fires in the UI sequence after ExecuteAction, by
+         which point the install script has torn down and the File table entry
+         can no longer be resolved. SetLaunchTarget resolves the path into a
+         property first, which survives. -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Elemental Fracture" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <CustomAction Id="SetLaunchTarget" Property="LAUNCHTARGET"
+                  Value="[INSTALLDIR]Elemental Fracture.exe" />
+    <CustomAction Id="LaunchApplication" Property="LAUNCHTARGET" ExeCommand=""
+                  Execute="immediate" Return="asyncNoWait" Impersonate="yes" />
   </Product>
 </Wix>

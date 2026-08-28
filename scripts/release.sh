@@ -42,7 +42,11 @@ echo "==> Building Linux AppImage"
 ( cd "$ROOT" && cargo tauri build --bundles appimage )
 
 echo "==> Building Windows exe"
-( cd "$SRC" && cargo build --release --target x86_64-pc-windows-gnu )
+# MUST use `cargo tauri build`, not plain `cargo build`: on Tauri v2 a raw cargo build
+# produces a DEV binary that loads devUrl (http://localhost:1420) and shows
+# "localhost refused to connect" instead of the embedded frontend. The tauri CLI is what
+# sets the production context that serves the bundled UI. --no-bundle = just the exe.
+( cd "$ROOT" && cargo tauri build --target x86_64-pc-windows-gnu --no-bundle )
 
 echo "==> Staging artifacts -> $DIST"
 mkdir -p "$DIST"
