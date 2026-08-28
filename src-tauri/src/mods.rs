@@ -128,6 +128,13 @@ fn install_from_zip(root: &Path, bytes: &[u8]) -> Result<Vec<String>, String> {
     fs::create_dir_all(&dlls_dir).map_err(|e| e.to_string())?;
     fs::create_dir_all(&cmds_dir).map_err(|e| e.to_string())?;
 
+    // Perpetual paks bundled in mod.zip (e.g. EFCrouch_P.pak + its .sig) install
+    // into g3/Content/Paks and stay put: the version swapper (game.rs) only ever
+    // parks/activates ElefracBalance/ElefracTest, and the purge above only removes
+    // Mods/dlls/*.dll, so these are never touched across Classic/EF/Playtest switches.
+    let paks = crate::game::paks_dir(root);
+    fs::create_dir_all(&paks).map_err(|e| e.to_string())?;
+
     // Purge stale mod DLLs so removed mods from older versions can't linger.
     // Only *.dll inside Mods/dlls — configs and logs are left alone.
     if let Ok(rd) = fs::read_dir(&dlls_dir) {
@@ -162,24 +169,42 @@ fn install_from_zip(root: &Path, bytes: &[u8]) -> Result<Vec<String>, String> {
         v
     };
     let mut count = 0usize;
+    let mut pak_count = 0usize;
     let mut loader_ok = false;
     for name in &names {
         let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
-        if !base.to_ascii_lowercase().ends_with(".dll") {
-            continue; // skip dirs / non-DLL payload
+        let lower = base.to_ascii_lowercase();
+        let is_dll = lower.ends_with(".dll");
+        let is_pak = lower.ends_with(".pak") || lower.ends_with(".sig");
+        if !is_dll && !is_pak {
+            continue; // skip dirs / other payload
         }
-        let is_loader = base.eq_ignore_ascii_case(LOADER_DLL);
-        let dest = if is_loader { win64.join(base) } else { dlls_dir.join(base) };
+        let is_loader = is_dll && base.eq_ignore_ascii_case(LOADER_DLL);
+        let dest = if is_loader {
+            win64.join(base)
+        } else if is_dll {
+            dlls_dir.join(base)
+        } else {
+            paks.join(base) // perpetual pak/sig → g3/Content/Paks
+        };
         if extract_one(&mut zip, name, &dest)? {
-            log.push(format!("Installed {base}{}", if is_loader { " (loader → Win64)" } else { "" }));
-            count += 1;
-            loader_ok |= is_loader;
+            if is_dll {
+                log.push(format!("Installed {base}{}", if is_loader { " (loader → Win64)" } else { "" }));
+                count += 1;
+                loader_ok |= is_loader;
+            } else {
+                log.push(format!("Installed {base} (pak → Content/Paks)"));
+                pak_count += 1;
+            }
         }
     }
     if !loader_ok {
         log.push(format!("WARNING: {LOADER_DLL} (loader) not found in package"));
     }
     log.push(format!("{count} DLL(s) installed"));
+    if pak_count > 0 {
+        log.push(format!("{pak_count} pak file(s) installed"));
+    }
 
     // ef_server.txt from the package is deliberately NOT installed anymore —
     // the launcher provides the server via the environment.
