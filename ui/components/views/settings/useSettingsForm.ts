@@ -29,7 +29,7 @@ export interface SettingsForm {
 /**
  * Holds the Settings form. The fields live here rather than in the cards that
  * draw them because one Save button writes them all at once — game_path is the
- * exception, written on the spot by its own Browse button.
+ * exception, written on the spot from Game & Mods.
  */
 export function useSettingsForm(): SettingsForm {
   const { settings, wrappers, saveSettings } = useSettings();
@@ -95,8 +95,6 @@ export function useSettingsForm(): SettingsForm {
     if (!settings) {
       return;
     }
-    // game_path is written by its own Browse button (and by Mods & Install);
-    // spreading the current settings keeps that rather than a stale copy.
     const next = {
       ...settings,
       minimize_on_close: minimizeOnClose,

@@ -13,7 +13,7 @@ import { Spinner } from "@/components/shadcn/spinner";
 import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
-import { atLeast } from "@/lib/spin";
+import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 
 /** Where the game lives, which version it is, and the ways to get or move one. */

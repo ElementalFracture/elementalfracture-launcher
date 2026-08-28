@@ -4,7 +4,6 @@ import { useUI } from "@/context/UIContext";
 import { AdvancedCard } from "./AdvancedCard";
 import { AdvancedToggleCard } from "./AdvancedToggleCard";
 import { LauncherCard } from "./LauncherCard";
-import { LauncherVersionCard } from "./LauncherVersionCard";
 import { ResetButton } from "./ResetButton";
 import { useSettingsForm } from "./useSettingsForm";
 import "./SettingsView.css";
@@ -19,7 +18,6 @@ export function SettingsView() {
   return (
     <section className={"view" + (view === "settings" ? " active" : "")}>
       <LauncherCard form={form} />
-      <LauncherVersionCard />
       <AdvancedToggleCard
         shown={showAdvanced}
         onShownChange={setShowAdvanced}

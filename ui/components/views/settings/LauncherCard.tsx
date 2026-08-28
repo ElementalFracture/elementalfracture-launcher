@@ -1,63 +1,76 @@
+import { useState } from "react";
 import { Button } from "@/components/shadcn/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card";
-import { Input } from "@/components/shadcn/input";
-import { Label } from "@/components/shadcn/label";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/shadcn/card";
+import { Spinner } from "@/components/shadcn/spinner";
 import { Switch } from "@/components/shadcn/switch";
 import { InfoPopover } from "@/components/InfoPopover";
-import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
-import * as rust from "@/lib/rust";
+import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import type { SettingsForm } from "./useSettingsForm";
 
-/** Game folder plus the two window-behaviour toggles. */
 export function LauncherCard({ form }: { form: SettingsForm }) {
-  const { settings, saveSettings } = useSettings();
-  const { refreshStatus, provisionInstall } = useGame();
+  const {
+    launcherInfo,
+    checkLauncherUpdate,
+    refreshVersions,
+    setLauncherUpdatePop,
+  } = useGame();
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
 
-  /* Change the game folder from Settings → Launcher. Saved on the spot rather
-     than with the rest of the form: the install work below depends on it. */
-  const onBrowseGame = async () => {
-    if (!settings) {
-      return;
-    }
+  const onCheckLauncherUpdates = async () => {
+    setCheckingUpdates(true);
     try {
-      const dir = await rust.pickGameDir("Select your Spellbreak folder");
-      if (!dir) {
-        return;
+      const info = await atLeast(checkLauncherUpdate());
+      await refreshVersions();
+      if (!info?.remote) {
+        toast(
+          "Couldn't reach the update server, check the CDN base in Advanced.",
+          true
+        );
+      } else if (info.remote !== info.current) {
+        setLauncherUpdatePop(true);
+      } else {
+        toast("Launcher is up to date");
       }
-      await saveSettings({ ...settings, game_path: dir });
-      const fresh = await refreshStatus();
-      if (fresh?.exe_present) {
-        await provisionInstall();
-      }
-      toast("Game folder updated");
-    } catch (e) {
-      toast(String(e), true);
+    } finally {
+      setCheckingUpdates(false);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Launcher Location</CardTitle>
+        <CardTitle>
+          Launcher
+          {launcherInfo?.current && (
+            <span className="title-note"> (v{launcherInfo.current})</span>
+          )}
+        </CardTitle>
+        <CardAction className="panel-actions">
+          <Button
+            variant="secondary"
+            disabled={checkingUpdates}
+            onClick={onCheckLauncherUpdates}
+          >
+            {checkingUpdates ? (
+              <>
+                <Spinner />
+                Checking…
+              </>
+            ) : (
+              "Check for launcher updates"
+            )}
+          </Button>
+        </CardAction>
       </CardHeader>
-      <CardContent>
-        <div className="field">
-          <Label htmlFor="game-folder">Game folder</Label>
-          <div className="form-row">
-            <Input
-              id="game-folder"
-              type="text"
-              readOnly
-              placeholder="Not set"
-              value={settings?.game_path ?? ""}
-            />
-            <Button variant="secondary" onClick={onBrowseGame}>
-              Browse…
-            </Button>
-          </div>
-        </div>
+      <CardContent className="switch-list">
         <div className="switch-row">
           <span className="switch-text">
             <span>Minimize to taskbar when closing (X)</span>

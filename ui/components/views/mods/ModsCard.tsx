@@ -12,7 +12,7 @@ import {
 import { useUI } from "@/context/UIContext";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
-import { atLeast } from "@/lib/spin";
+import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import type { FileCheck } from "@/lib/rust";
 import "./ModsCard.css";

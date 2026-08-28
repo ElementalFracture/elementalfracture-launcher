@@ -17,6 +17,7 @@ const commands = vi.hoisted(() => ({
   updatePatch: vi.fn(),
   verifyInstall: vi.fn(),
   installMods: vi.fn(),
+  pickGameDir: vi.fn(),
 }));
 
 vi.mock("@/generated/bindings", () => ({ commands }));
@@ -200,6 +201,34 @@ describe("check for game updates", () => {
   });
 });
 
+describe("picking the install location", () => {
+  it("saves a newly picked folder on the spot", async () => {
+    // Not part of any Save form: the install work that follows needs it
+    // written first. Moved here with the field itself, from Settings.
+    commands.pickGameDir.mockResolvedValue("/games/new-spellbreak");
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+    renderMods();
+
+    fireEvent.click(await screen.findByText("Browse…"));
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ game_path: "/games/new-spellbreak" })
+      )
+    );
+  });
+
+  it("leaves the folder alone when the picker is dismissed", async () => {
+    commands.pickGameDir.mockResolvedValue(null);
+    renderMods();
+    // Earlier tests in this file save too; only this run's calls matter.
+    commands.saveSettings.mockClear();
+
+    fireEvent.click(await screen.findByText("Browse…"));
+    await waitFor(() => expect(commands.pickGameDir).toHaveBeenCalled());
+    expect(commands.saveSettings).not.toHaveBeenCalled();
+  });
+});
+
 describe("editing the install location", () => {
   const box = () => screen.getByLabelText("Install location");
 
@@ -217,6 +246,34 @@ describe("editing the install location", () => {
     // "was touched" would leave the button stranded here.
     fireEvent.change(box(), { target: { value: "/games/spellbreak" } });
     expect(screen.queryByText("Save")).toBeNull();
+  });
+
+  /* Browsing writes on the spot rather than waiting for a Save: there is
+     nothing to confirm about a folder you just picked, and the provisioning
+     that follows needs it written first. Moved here with the field itself,
+     which used to live in Settings → Launcher. */
+  it("saves a picked folder on the spot", async () => {
+    commands.pickGameDir.mockResolvedValue("/games/new-spellbreak");
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+    renderMods();
+
+    fireEvent.click(await screen.findByText("Browse…"));
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ game_path: "/games/new-spellbreak" })
+      )
+    );
+  });
+
+  it("leaves the folder alone when the picker is dismissed", async () => {
+    commands.pickGameDir.mockResolvedValue(null);
+    renderMods();
+    // Earlier tests in this file save too, and nothing clears between them.
+    commands.saveSettings.mockClear();
+
+    fireEvent.click(await screen.findByText("Browse…"));
+    await waitFor(() => expect(commands.pickGameDir).toHaveBeenCalled());
+    expect(commands.saveSettings).not.toHaveBeenCalled();
   });
 
   it("writes the typed path, trimmed", async () => {

@@ -10,10 +10,14 @@
 .switch-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
   font-size: 13px;
   font-weight: 600;
+}
+.switch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 /* Row label plus its "i" button, laid out inline. */
 .switch-text {
