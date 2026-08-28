@@ -7,7 +7,10 @@ import { openLink } from "@/lib/links";
 import { toast } from "@/lib/toast";
 import "./Dialog.css";
 
-const DISCORD_URL = "https://dsc.gg/elefrac";
+// The account website (registration, email verification, password reset).
+const SITE = "https://elefrac.com";
+const REGISTER_URL = `${SITE}/register`;
+const RESET_URL = `${SITE}/reset`;
 
 export function AccountModal({
   open,
@@ -16,29 +19,37 @@ export function AccountModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { applyToken } = useSettings();
-  const [token, setToken] = useState("");
+  const { loginEmail } = useSettings();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
-    const trimmed = token.trim();
-    if (!trimmed) {
-      toast("Paste your token first.", true);
+  const reset = () => {
+    setEmail("");
+    setPassword("");
+  };
+
+  const signIn = async () => {
+    if (!email.trim() || !password) {
+      toast("Enter your email and password.", true);
       return;
     }
     setSaving(true);
     try {
-      const res = await applyToken(trimmed);
-      if (res.verified && res.username) {
-        const badge = res.is_dev ? " (dev)" : res.is_staff ? " (staff)" : "";
-        toast(`Welcome, ${res.username}${badge}! Token saved.`);
-      } else {
-        toast(res.warning ?? "Token saved.", Boolean(res.warning));
-      }
-      setToken("");
+      const res = await loginEmail(email.trim(), password);
+      const badge = res.is_dev
+        ? " (dev)"
+        : res.is_staff
+          ? " (staff)"
+          : res.is_tester
+            ? " (tester)"
+            : "";
+      toast(`Welcome back, ${res.username}${badge}!`);
+      reset();
       onOpenChange(false);
     } catch (e) {
-      toast(String(e), true);
+      // loginEmail throws a friendly message on any auth failure.
+      toast(e instanceof Error ? e.message : String(e), true);
     } finally {
       setSaving(false);
     }
@@ -49,7 +60,7 @@ export function AccountModal({
       open={open}
       onOpenChange={(next) => {
         if (!next) {
-          setToken("");
+          reset();
         }
         onOpenChange(next);
       }}
@@ -60,22 +71,32 @@ export function AccountModal({
         showOverlay={false}
       >
         <div className="wizard-step">
-          <h2>Please enter your auth token</h2>
+          <h2>Sign in to Elemental Fracture</h2>
           <p className="muted">
-            Identifies you on Elemental Fracture. Only change this token when
-            rotated by either yourself on Discord or by a mod.
+            Use your Elemental Fracture email and password — the same account as
+            the website.
           </p>
           <Input
+            type="email"
+            placeholder="Email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && signIn()}
+          />
+          <Input
             type="password"
-            placeholder="Paste your token…"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && save()}
+            placeholder="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && signIn()}
           />
           <p className="wizard-tooltip">
-            Don’t have a token?{" "}
-            <a onClick={() => openLink(DISCORD_URL)}>Join the Discord</a> to get
-            one.
+            <a onClick={() => openLink(RESET_URL)}>Forgot password?</a>
+            {"  ·  "}
+            No account?{" "}
+            <a onClick={() => openLink(REGISTER_URL)}>Create one</a>
           </p>
           <div className="wizard-actions">
             <Button
@@ -85,8 +106,8 @@ export function AccountModal({
             >
               Cancel
             </Button>
-            <Button disabled={saving} onClick={save}>
-              Save
+            <Button disabled={saving} onClick={signIn}>
+              {saving ? "Signing in…" : "Sign in"}
             </Button>
           </div>
         </div>

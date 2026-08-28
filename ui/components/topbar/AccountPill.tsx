@@ -12,8 +12,19 @@ import { Separator } from "@/components/shadcn/separator";
 import { AccountModal } from "@/components/modals/AccountModal";
 import { useFriends } from "@/context/FriendsContext";
 import { useSettings } from "@/context/SettingsContext";
+import { avatarUrl } from "@/lib/avatar";
+import { toast } from "@/lib/toast";
 import { FriendList } from "./FriendList";
 import "./AccountPill.css";
+
+/** Avatar image when one is set, else the initials fallback. */
+function Avatar({ url, initials }: { url: string | null; initials: string }) {
+  return (
+    <span className="avatar">
+      {url ? <img src={url} alt="" draggable={false} /> : initials}
+    </span>
+  );
+}
 
 /**
  * With a verified account it opens the friend list in a drawer off the right
@@ -21,10 +32,21 @@ import "./AccountPill.css";
  * account to show yet.
  */
 export function AccountPill() {
-  const { settings } = useSettings();
+  const { settings, logout } = useSettings();
   const { friends, refreshFriends } = useFriends();
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
+  const avUrl = avatarUrl(settings);
+
+  const signOut = async () => {
+    try {
+      await logout();
+      setAccountDrawerOpen(false);
+      toast("Signed out.");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), true);
+    }
+  };
 
   const name = settings?.username?.trim();
   /* A stored token is not an account: apply_token keeps the token even when the
@@ -36,7 +58,9 @@ export function AccountPill() {
     ? "Developer"
     : settings?.is_staff
       ? "Staff"
-      : "";
+      : settings?.is_tester
+        ? "Tester"
+        : "";
   const initials = (name || "EF").slice(0, 2).toUpperCase();
 
   const selfName = friends?.me?.username || name || "You";
@@ -57,7 +81,7 @@ export function AccountPill() {
           }}
         >
           <DrawerTrigger className="pill account" title="Account">
-            <span className="avatar">{initials}</span>
+            <Avatar url={avUrl} initials={initials} />
             <div className="pill-text">
               <strong>{name || "Guest"}</strong>
               {role && <small>{role}</small>}
@@ -67,7 +91,7 @@ export function AccountPill() {
           <DrawerContent className="account-drawer">
             <DrawerHeader className="account-drawer-head">
               <div className="friend-self">
-                <span className="avatar">{selfInitials}</span>
+                <Avatar url={avUrl} initials={selfInitials} />
                 <div className="friend-meta">
                   <strong>{selfName}</strong>
                   {role && <small>{role}</small>}
@@ -84,6 +108,15 @@ export function AccountPill() {
             <div className="account-drawer-body">
               <Separator />
               <FriendList />
+              <Separator />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="account-signout"
+                onClick={signOut}
+              >
+                Sign out
+              </Button>
             </div>
           </DrawerContent>
         </Drawer>
@@ -96,7 +129,7 @@ export function AccountPill() {
           <span className="avatar">{initials}</span>
           <div className="pill-text">
             <strong>Guest</strong>
-            <small>{hasToken ? "Token not verified" : "No token set"}</small>
+            <small>{hasToken ? "Not signed in" : "Sign in"}</small>
           </div>
         </button>
       )}

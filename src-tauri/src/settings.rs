@@ -34,6 +34,17 @@ pub struct Settings {
     /// The auth token itself — kept here so it survives before a game
     /// folder exists and gets written into Mods/commands when one does.
     pub auth_token: String,
+    /// Public "Spellbreak ID" (the unique username), from email sign-in.
+    pub spellbreak_id: String,
+    /// Chosen avatar: a headshot id (e.g. "ArchLich"), the "discord" sentinel,
+    /// or empty (initials). Resolved to an image by the account pill.
+    pub avatar: String,
+    /// Linked Discord id + avatar hash, so the pill can render the real Discord
+    /// profile picture when the avatar is "discord".
+    pub discord_id: String,
+    pub discord_avatar: String,
+    /// Public email/password sign-in endpoint (POST {"email","password"}).
+    pub login_url: String,
     /// First-boot wizard completed.
     pub onboarded: bool,
     /// Optional behaviors (off by default — user opts in via Settings):
@@ -98,6 +109,11 @@ impl Default for Settings {
             is_dev: false,
             is_tester: false,
             auth_token: String::new(),
+            spellbreak_id: String::new(),
+            avatar: String::new(),
+            discord_id: String::new(),
+            discord_avatar: String::new(),
+            login_url: format!("{}/login", portal_base()),
             onboarded: false,
             minimize_on_close: false,
             close_on_launch: false,

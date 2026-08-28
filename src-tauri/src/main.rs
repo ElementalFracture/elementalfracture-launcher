@@ -55,6 +55,8 @@ fn main() {
         remote::get_events,
         remote::get_news,
         remote::apply_token,
+        remote::login_email,
+        remote::logout,
         remote::refresh_account,
         remote::friends_list,
         remote::friend_add,
