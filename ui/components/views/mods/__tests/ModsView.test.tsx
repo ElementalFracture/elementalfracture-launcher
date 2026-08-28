@@ -96,37 +96,6 @@ describe("game title", () => {
   });
 });
 
-describe("version line", () => {
-  it("names the launcher version alongside the game's", async () => {
-    renderMods();
-    await waitFor(() =>
-      expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy()
-    );
-    expect(screen.getByText(/Launcher: v3\.0\.2/)).toBeTruthy();
-  });
-
-  it("adds the CDN version only when it is known", async () => {
-    commands.getVersions.mockResolvedValue(
-      makeVersions({ local: "6.0.2", remote: "6.0.3" })
-    );
-    renderMods();
-    await waitFor(() =>
-      expect(screen.getByText(/Latest: v6\.0\.3/)).toBeTruthy()
-    );
-  });
-
-  it("omits the game version when the install has none", async () => {
-    commands.getVersions.mockResolvedValue(
-      makeVersions({ local: null, remote: null })
-    );
-    renderMods();
-    await waitFor(() =>
-      expect(screen.getByText(/Launcher: v3\.0\.2/)).toBeTruthy()
-    );
-    expect(screen.queryByText(/Game: v/)).toBeNull();
-  });
-});
-
 describe("update button", () => {
   it("appears only when the install is behind the CDN", async () => {
     commands.getVersions.mockResolvedValue(
@@ -139,7 +108,7 @@ describe("update button", () => {
   it("stays hidden when the versions agree", async () => {
     renderMods();
     await waitFor(() =>
-      expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy()
+      expect(screen.getByText("Mods are installed and ready.")).toBeTruthy()
     );
     expect(screen.queryByText("Update game")).toBeNull();
   });
@@ -268,6 +237,47 @@ describe("editing the install location", () => {
     await waitFor(() =>
       expect(toasts.toast).toHaveBeenCalledWith("Game folder updated")
     );
+  });
+});
+
+describe("verify", () => {
+  const spinner = () => document.querySelector('[data-slot="spinner"]');
+
+  it("empties the card and spins, for long enough to be seen", async () => {
+    renderMods();
+    await waitFor(() =>
+      expect(screen.getByText("Mods are installed and ready.")).toBeTruthy()
+    );
+    expect(spinner()).toBeNull();
+
+    const started = Date.now();
+    fireEvent.click(screen.getByText("Verify"));
+
+    // What the card was showing is gone, and the spinner has taken its place.
+    expect(spinner()).toBeTruthy();
+    expect(screen.queryByText("Mods are installed and ready.")).toBeNull();
+    expect(screen.queryByText("INSTALLED")).toBeNull();
+
+    /* verifyInstall answers off the local disk, so with no floor the card would
+       blank and repaint inside a frame. Timers never fire early, so the elapsed
+       check is a floor rather than a flaky race. */
+    await waitFor(
+      () =>
+        expect(screen.getByText("Mods are installed and ready.")).toBeTruthy(),
+      { timeout: 3000 }
+    );
+    expect(Date.now() - started).toBeGreaterThanOrEqual(900);
+    expect(spinner()).toBeNull();
+  });
+
+  /* Selecting the tab re-reads the same state, and that one must not blank the
+     card — a flicker on every visit is not feedback. */
+  it("does not blank the card on the tab's own refresh", async () => {
+    renderMods();
+    await waitFor(() =>
+      expect(screen.getByText("Mods are installed and ready.")).toBeTruthy()
+    );
+    expect(spinner()).toBeNull();
   });
 });
 

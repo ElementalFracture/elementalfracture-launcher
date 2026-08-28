@@ -13,9 +13,8 @@ import { Spinner } from "@/components/shadcn/spinner";
 import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
+import { atLeast } from "@/lib/spin";
 import { toast } from "@/lib/toast";
-
-const MIN_SPIN_MS = 1000;
 
 /** Where the game lives, which version it is, and the ways to get or move one. */
 export function GameCard() {
@@ -76,10 +75,7 @@ export function GameCard() {
   const onCheckGameUpdates = async () => {
     setCheckingUpdates(true);
     try {
-      const [{ remote, outdated }] = await Promise.all([
-        checkGameUpdate(),
-        new Promise((resolve) => setTimeout(resolve, MIN_SPIN_MS)),
-      ]);
+      const { remote, outdated } = await atLeast(checkGameUpdate());
       if (!remote) {
         toast(
           "Couldn't reach the update server, check the CDN base in Advanced.",
