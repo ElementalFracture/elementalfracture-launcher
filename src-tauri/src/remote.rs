@@ -431,13 +431,61 @@ fn tag_content(block: &str, tag: &str) -> Option<String> {
     if let Some(s) = text.strip_prefix("<![CDATA[") {
         text = s.strip_suffix("]]>").unwrap_or(s).trim().to_string();
     }
-    Some(
-        text.replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&#39;", "'"),
-    )
+    Some(decode_entities(&text))
+}
+
+/// Decode HTML entities in RSS text. WordPress emits typographic characters as
+/// NUMERIC references (`&#8211;` en-dash, `&#8217;` apostrophe, curly quotes,
+/// `&#8230;` ellipsis) which the old fixed `&amp;/&lt;/…` list left raw, so they
+/// showed up literally in the "What's new" cards. This handles decimal and hex
+/// numeric refs plus the common named ones, left to right so nothing double-
+/// decodes; an unrecognised `&…;` is left untouched.
+fn decode_entities(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let tail = &rest[amp..];
+        // Entities are short; only look a little way ahead for the ';'.
+        let decoded = tail.get(..tail.len().min(12)).and_then(|w| w.find(';')).and_then(|semi| {
+            let ent = &tail[1..semi];
+            let ch = if let Some(hex) = ent.strip_prefix("#x").or_else(|| ent.strip_prefix("#X")) {
+                u32::from_str_radix(hex, 16).ok().and_then(char::from_u32)
+            } else if let Some(dec) = ent.strip_prefix('#') {
+                dec.parse::<u32>().ok().and_then(char::from_u32)
+            } else {
+                match ent {
+                    "amp" => Some('&'),
+                    "lt" => Some('<'),
+                    "gt" => Some('>'),
+                    "quot" => Some('"'),
+                    "apos" => Some('\''),
+                    "nbsp" => Some('\u{00A0}'),
+                    "ndash" => Some('\u{2013}'),
+                    "mdash" => Some('\u{2014}'),
+                    "hellip" => Some('\u{2026}'),
+                    "lsquo" => Some('\u{2018}'),
+                    "rsquo" => Some('\u{2019}'),
+                    "ldquo" => Some('\u{201C}'),
+                    "rdquo" => Some('\u{201D}'),
+                    _ => None,
+                }
+            };
+            ch.map(|c| (c, semi))
+        });
+        match decoded {
+            Some((c, semi)) => {
+                out.push(c);
+                rest = &tail[semi + 1..];
+            }
+            None => {
+                out.push('&');
+                rest = &tail[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 // "Sun, 24 Aug 2025 00:00:00 GMT" → "24 Aug 2025"
