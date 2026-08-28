@@ -129,7 +129,7 @@ export function AccountPill() {
           <span className="avatar">{initials}</span>
           <div className="pill-text">
             <strong>Guest</strong>
-            <small>{hasToken ? "Not signed in" : "Sign in"}</small>
+            <small>{hasToken ? "Session expired" : "Sign in"}</small>
           </div>
         </button>
       )}
