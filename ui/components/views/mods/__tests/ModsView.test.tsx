@@ -48,55 +48,99 @@ beforeEach(() => {
   commands.detectWrappers.mockResolvedValue([]);
   commands.getStatus.mockResolvedValue(makeStatus());
   commands.getVersions.mockResolvedValue(makeVersions());
-  commands.getLauncherUpdate.mockResolvedValue({ current: "3.0.2", remote: null, update: false });
-  commands.verifyInstall.mockResolvedValue([{ name: "Elefrac.dll", present: true }]);
+  commands.getLauncherUpdate.mockResolvedValue({
+    current: "3.0.2",
+    remote: null,
+    update: false,
+  });
+  commands.verifyInstall.mockResolvedValue([
+    { name: "Elefrac.dll", present: true },
+  ]);
 });
 
-describe("game version field", () => {
-  it("prefers the CDN version over what is installed", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+describe("game title", () => {
+  /* The version is its own dimmed span, so the title's text is split across
+     elements and getByText can't see it whole — read the heading itself. */
+  const title = () =>
+    Array.from(document.querySelectorAll('[data-slot="card-title"]')).find(
+      (node) => node.textContent?.startsWith("Game")
+    );
+
+  it("carries the installed version in brackets", async () => {
     renderMods();
-    await waitFor(() => expect(screen.getByDisplayValue("v6.0.3")).toBeTruthy());
+    await waitFor(() => expect(title()?.textContent).toBe("Game (v6.0.2)"));
+    // And it is the faded span that carries it, not the title proper.
+    expect(title()?.querySelector(".title-note")?.textContent).toBe(
+      " (v6.0.2)"
+    );
   });
 
-  it("falls back to the installed version when the CDN is unreachable", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+  /* The title says what you have, not what the CDN offers — "Latest:" on the
+     Mods card is where the remote version belongs, and two disagreeing version
+     numbers on one screen is how you get a bug report. */
+  it("stays on the installed version when the CDN is ahead", async () => {
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     renderMods();
-    await waitFor(() => expect(screen.getByDisplayValue("v6.0.2 (installed)")).toBeTruthy());
+    await waitFor(() => expect(title()?.textContent).toBe("Game (v6.0.2)"));
+  });
+
+  it("is bare when the install has no version", async () => {
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: null, remote: null })
+    );
+    renderMods();
+    await waitFor(() => expect(title()?.textContent).toBe("Game"));
+    expect(title()?.querySelector(".title-note")).toBeNull();
   });
 });
 
 describe("version line", () => {
   it("names the launcher version alongside the game's", async () => {
     renderMods();
-    await waitFor(() => expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy()
+    );
     expect(screen.getByText(/Launcher: v3\.0\.2/)).toBeTruthy();
   });
 
   it("adds the CDN version only when it is known", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     renderMods();
-    await waitFor(() => expect(screen.getByText(/Latest: v6\.0\.3/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Latest: v6\.0\.3/)).toBeTruthy()
+    );
   });
 
   it("omits the game version when the install has none", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: null, remote: null }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: null, remote: null })
+    );
     renderMods();
-    await waitFor(() => expect(screen.getByText(/Launcher: v3\.0\.2/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Launcher: v3\.0\.2/)).toBeTruthy()
+    );
     expect(screen.queryByText(/Game: v/)).toBeNull();
   });
 });
 
 describe("update button", () => {
   it("appears only when the install is behind the CDN", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     renderMods();
     await waitFor(() => expect(screen.getByText("Update game")).toBeTruthy());
   });
 
   it("stays hidden when the versions agree", async () => {
     renderMods();
-    await waitFor(() => expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Game: v6\.0\.2/)).toBeTruthy()
+    );
     expect(screen.queryByText("Update game")).toBeNull();
   });
 });
@@ -108,10 +152,18 @@ describe("check for game updates", () => {
     fireEvent.click(button);
   };
 
+  /* The button spins for a second before it reports (MIN_SPIN_MS in GameCard),
+     which outlasts waitFor's own 1s default — so every assertion about the
+     result has to be given room to outwait the floor. */
+  const reported = (assertion: () => void) =>
+    waitFor(assertion, { timeout: 3000 });
+
   it("names the version it found — the check used to answer with silence", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     await press();
-    await waitFor(() =>
+    await reported(() =>
       expect(toasts.toast).toHaveBeenCalledWith(
         "Game update available (v6.0.3) — Launch it from Home."
       )
@@ -120,19 +172,101 @@ describe("check for game updates", () => {
 
   it("says so when the install is current", async () => {
     await press();
-    await waitFor(() =>
+    await reported(() =>
       expect(toasts.toast).toHaveBeenCalledWith("Game is up to date")
     );
   });
 
   it("blames the CDN, not the install, when the version can't be read", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: null })
+    );
     await press();
-    await waitFor(() =>
+    await reported(() =>
       expect(toasts.toast).toHaveBeenCalledWith(
         "Couldn't reach the update server, check the CDN base in Advanced.",
         true
       )
+    );
+  });
+
+  /* The fixture answers instantly, which is exactly the case the floor is for:
+     without it the spinner would come and go inside a frame and the click would
+     read as a no-op. */
+  it("spins for a beat even when the answer is instant", async () => {
+    const spinner = () => document.querySelector('[data-slot="spinner"]');
+    renderMods();
+    const button = await screen.findByText("Check for game updates");
+    toasts.toast.mockClear();
+
+    const started = Date.now();
+    fireEvent.click(button);
+    expect(spinner()).toBeTruthy();
+
+    /* Long past the point the fixture's check has resolved, and still holding.
+       Asserting only that the toast isn't *synchronous* would pass with no
+       floor at all, since even a 0ms timer defers past the click. */
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(toasts.toast).not.toHaveBeenCalled();
+    expect(spinner()).toBeTruthy();
+
+    await reported(() =>
+      expect(toasts.toast).toHaveBeenCalledWith("Game is up to date")
+    );
+    // Timers never fire early, so this is a floor, not a flaky race.
+    expect(Date.now() - started).toBeGreaterThanOrEqual(900);
+    expect(spinner()).toBeNull();
+    expect(screen.getByText("Check for game updates")).toBeTruthy();
+  });
+
+  /* Nothing to check against a folder with no game in it — the button only
+     turns up once one has actually been found there. */
+  it("is offered only once a game has been found", async () => {
+    commands.getStatus.mockResolvedValue(makeStatus({ exe_present: false }));
+    renderMods();
+    await waitFor(() =>
+      expect(screen.getByText("Locate install")).toBeTruthy()
+    );
+    expect(screen.queryByText("Check for game updates")).toBeNull();
+  });
+});
+
+describe("editing the install location", () => {
+  const box = () => screen.getByLabelText("Install location");
+
+  it("offers Save only while the box differs from what is saved", async () => {
+    renderMods();
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("/games/spellbreak")).toBeTruthy()
+    );
+    expect(screen.queryByText("Save")).toBeNull();
+
+    fireEvent.change(box(), { target: { value: "/games/elsewhere" } });
+    expect(screen.getByText("Save")).toBeTruthy();
+
+    // Typed back to the saved value, so there is nothing to save again —
+    // "was touched" would leave the button stranded here.
+    fireEvent.change(box(), { target: { value: "/games/spellbreak" } });
+    expect(screen.queryByText("Save")).toBeNull();
+  });
+
+  it("writes the typed path, trimmed", async () => {
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+    renderMods();
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("/games/spellbreak")).toBeTruthy()
+    );
+
+    fireEvent.change(box(), { target: { value: "  /games/elsewhere  " } });
+    fireEvent.click(screen.getByText("Save"));
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ game_path: "/games/elsewhere" })
+      )
+    );
+    await waitFor(() =>
+      expect(toasts.toast).toHaveBeenCalledWith("Game folder updated")
     );
   });
 });
@@ -140,7 +274,9 @@ describe("check for game updates", () => {
 describe("mod status", () => {
   it("reports a complete install", async () => {
     renderMods();
-    await waitFor(() => expect(screen.getByText("Mods are installed and ready.")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("Mods are installed and ready.")).toBeTruthy()
+    );
     expect(screen.getByText("INSTALLED")).toBeTruthy();
   });
 
@@ -150,7 +286,9 @@ describe("mod status", () => {
       { name: "Injector.dll", present: false },
     ]);
     renderMods();
-    await waitFor(() => expect(screen.getByText("Some mod files are missing.")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("Some mod files are missing.")).toBeTruthy()
+    );
     expect(screen.getByText("MISSING")).toBeTruthy();
     expect(screen.getByText(/1 of 2 file\(s\) missing/)).toBeTruthy();
   });
@@ -161,32 +299,47 @@ describe("mod status", () => {
       { name: "Injector.dll", present: false },
     ]);
     renderMods();
-    await waitFor(() => expect(screen.getByText("Mods are not installed.")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("Mods are not installed.")).toBeTruthy()
+    );
   });
 
   it("asks for a game folder first when none is set", async () => {
-    commands.getStatus.mockResolvedValue(makeStatus({ game_path: "", exe_present: false }));
+    commands.getStatus.mockResolvedValue(
+      makeStatus({ game_path: "", exe_present: false })
+    );
     renderMods();
-    await waitFor(() => expect(screen.getByText(/Set the game folder first/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Set the game folder first/)).toBeTruthy()
+    );
     expect(screen.queryByText("INSTALLED")).toBeNull();
   });
 });
 
 describe("game panel", () => {
-  it("shows the configured folder", async () => {
+  it("shows the configured folder in the editable box", async () => {
     renderMods();
-    await waitFor(() => expect(screen.getByText(/Game folder: \/games\/spellbreak/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("/games/spellbreak")).toBeTruthy()
+    );
+    // The line under it used to repeat the path; now it only speaks up when
+    // there is nothing set, or a download has something to say.
+    expect(screen.queryByText(/Game folder:/)).toBeNull();
   });
 
   it("prompts to locate or download when no folder is set", async () => {
     commands.getSettings.mockResolvedValue(makeSettings({ game_path: "" }));
     renderMods();
-    await waitFor(() => expect(screen.getByText(/No game folder set/)).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/No game folder set/)).toBeTruthy()
+    );
   });
 
   it("offers both entry points", async () => {
     renderMods();
-    await waitFor(() => expect(screen.getByText("Locate install")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText("Locate install")).toBeTruthy()
+    );
     expect(screen.getByText("Download game…")).toBeTruthy();
   });
 });

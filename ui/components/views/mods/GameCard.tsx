@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/shadcn/button";
 import {
   Card,
@@ -8,35 +9,46 @@ import {
 } from "@/components/shadcn/card";
 import { Input } from "@/components/shadcn/input";
 import { Label } from "@/components/shadcn/label";
+import { Spinner } from "@/components/shadcn/spinner";
 import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
 
-/** Where the game lives, and the two ways to get one. */
+const MIN_SPIN_MS = 1000;
+
+/** Where the game lives, which version it is, and the ways to get or move one. */
 export function GameCard() {
   const {
+    status,
+    versions,
     installBusy,
     installNotice,
     refreshStatus,
     locateGame,
     downloadGame,
     provisionInstall,
+    checkGameUpdate,
   } = useGame();
   const { settings, saveSettings } = useSettings();
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
 
-  /* Repoint the install from here. Saved on the spot rather than behind a
-     Save button: the provisioning below depends on the new folder. */
-  const onBrowseGame = async () => {
+  const savedPath = settings?.game_path ?? "";
+
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? savedPath;
+  const edited = draft !== null && draft.trim() !== savedPath.trim();
+
+  const located = Boolean(status?.exe_present);
+
+  /** Point the install at a folder and re-provision if a game is really there. */
+  const applyPath = async (dir: string) => {
     if (!settings) {
       return;
     }
     try {
-      const dir = await rust.pickGameDir("Select your Spellbreak folder");
-      if (!dir) {
-        return;
-      }
       await saveSettings({ ...settings, game_path: dir });
+      setDraft(null);
       const fresh = await refreshStatus();
       if (fresh?.exe_present) {
         await provisionInstall();
@@ -47,16 +59,57 @@ export function GameCard() {
     }
   };
 
+  const onBrowseGame = async () => {
+    if (!settings) {
+      return;
+    }
+    try {
+      const dir = await rust.pickGameDir("Select your Spellbreak folder");
+      if (dir) {
+        await applyPath(dir);
+      }
+    } catch (e) {
+      toast(String(e), true);
+    }
+  };
+
+  const onCheckGameUpdates = async () => {
+    setCheckingUpdates(true);
+    try {
+      const [{ remote, outdated }] = await Promise.all([
+        checkGameUpdate(),
+        new Promise((resolve) => setTimeout(resolve, MIN_SPIN_MS)),
+      ]);
+      if (!remote) {
+        toast(
+          "Couldn't reach the update server, check the CDN base in Advanced.",
+          true
+        );
+      } else if (outdated) {
+        toast(`Game update available (v${remote}) — Launch it from Home.`);
+      } else {
+        toast("Game is up to date");
+      }
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
+
   const gameLine =
     installNotice ??
-    (settings?.game_path?.trim()
-      ? "Game folder: " + settings.game_path.trim()
+    (savedPath.trim()
+      ? ""
       : "No game folder set — Locate or Download the game.");
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Game</CardTitle>
+        <CardTitle>
+          Game
+          {versions?.local && (
+            <span className="title-note"> (v{versions.local})</span>
+          )}
+        </CardTitle>
         <CardAction className="panel-actions">
           <Button
             variant="secondary"
@@ -65,6 +118,22 @@ export function GameCard() {
           >
             Locate install
           </Button>
+          {located && (
+            <Button
+              variant="secondary"
+              disabled={checkingUpdates}
+              onClick={onCheckGameUpdates}
+            >
+              {checkingUpdates ? (
+                <>
+                  <Spinner />
+                  Checking…
+                </>
+              ) : (
+                "Check for game updates"
+              )}
+            </Button>
+          )}
           <Button disabled={installBusy} onClick={downloadGame}>
             Download game…
           </Button>
@@ -77,16 +146,26 @@ export function GameCard() {
             <Input
               id="install-location"
               type="text"
-              readOnly
               placeholder="Not set"
-              value={settings?.game_path ?? ""}
+              value={shown}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && edited) {
+                  applyPath(shown.trim());
+                } else if (e.key === "Escape") {
+                  setDraft(null);
+                }
+              }}
             />
             <Button variant="secondary" onClick={onBrowseGame}>
               Browse…
             </Button>
+            {edited && (
+              <Button onClick={() => applyPath(shown.trim())}>Save</Button>
+            )}
           </div>
         </div>
-        <div className="muted">{gameLine}</div>
+        {gameLine && <div className="muted">{gameLine}</div>}
       </CardContent>
     </Card>
   );
