@@ -27,10 +27,10 @@ export function AdvancedWarnModal({
             you know what you’re doing!
           </p>
           <div className="wizard-actions">
-            <Button onClick={onContinue}>Continue</Button>
             <Button variant="secondary" onClick={onBack}>
               Back
             </Button>
+            <Button onClick={onContinue}>Continue</Button>
           </div>
         </div>
       </DialogContent>

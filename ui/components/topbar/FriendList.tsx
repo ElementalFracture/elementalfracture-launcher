@@ -285,6 +285,9 @@ export function FriendList() {
               This will remove {userToRemove} from your friends list.
             </p>
             <div className="wizard-actions">
+              <Button variant="secondary" onClick={() => setUserToRemove(null)}>
+                Cancel
+              </Button>
               <Button
                 onClick={async () => {
                   const name = userToRemove ?? "";
@@ -293,9 +296,6 @@ export function FriendList() {
                 }}
               >
                 Remove
-              </Button>
-              <Button variant="secondary" onClick={() => setUserToRemove(null)}>
-                Cancel
               </Button>
             </div>
           </div>
