@@ -8,7 +8,7 @@ const FALLBACK_NEWS: NewsItem[] = [
     title: "Launcher 1.0",
     body: "The launcher has been rewritten from scratch: one app now handles installing, patching, tokens and launching, on Windows and Linux.",
     date: "18 Jul 2026",
-    url: "https://docs.elefrac.com/patchnotes",
+    url: "https://elefrac.com/patchnotes",
   },
 ];
 

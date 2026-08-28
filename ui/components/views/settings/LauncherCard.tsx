@@ -40,7 +40,7 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Launcher</CardTitle>
+        <CardTitle>Launcher Location</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="field">

@@ -64,10 +64,6 @@ export async function resetSettings(): Promise<Settings> {
   return unwrap(await commands.resetSettings());
 }
 
-export async function applyToken(token: string): Promise<TokenResult> {
-  return unwrap(await commands.applyToken(token));
-}
-
 /** Email/password sign-in (the account the website uses). Throws on auth failure. */
 export async function loginEmail(email: string, password: string): Promise<TokenResult> {
   return unwrap(await commands.loginEmail(email, password));

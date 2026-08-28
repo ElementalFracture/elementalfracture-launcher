@@ -5,7 +5,7 @@ import "./SocialRow.css";
 const LINKS = {
   discord: "https://dsc.gg/elefrac",
   donate: "https://patreon.com/elementalfracture",
-  patchnotes: "https://docs.elefrac.com/patchnotes",
+  patchnotes: "https://elefrac.com/patchnotes",
   x: "https://x.com/elefracture",
   twitch: "https://twitch.tv/elementalfracture",
   youtube: "https://youtube.com/@elementalfracture",

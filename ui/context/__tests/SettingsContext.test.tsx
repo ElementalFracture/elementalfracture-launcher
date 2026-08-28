@@ -8,7 +8,7 @@ const commands = vi.hoisted(() => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   resetSettings: vi.fn(),
-  applyToken: vi.fn(),
+  loginEmail: vi.fn(),
   refreshAccount: vi.fn(),
   detectWrappers: vi.fn(),
 }));
@@ -145,21 +145,21 @@ describe("saveSettings", () => {
   });
 });
 
-describe("applyToken", () => {
-  it("re-reads settings so the username the portal resolved shows up", async () => {
+describe("loginEmail", () => {
+  it("re-reads settings so the account the portal resolved shows up", async () => {
     const { result } = renderSettings();
     await waitFor(() => expect(result.current.settings).not.toBeNull());
 
-    commands.applyToken.mockResolvedValue({
+    commands.loginEmail.mockResolvedValue({
       status: "ok",
       data: { username: "Breaker", is_staff: true, is_dev: false, verified: true, warning: null },
     });
     commands.getSettings.mockResolvedValue(makeSettings({ username: "Breaker", is_staff: true }));
 
     await act(async () => {
-      await result.current.applyToken("tok-123");
+      await result.current.loginEmail("breaker@example.com", "hunter2");
     });
-    expect(commands.applyToken).toHaveBeenCalledWith("tok-123");
+    expect(commands.loginEmail).toHaveBeenCalledWith("breaker@example.com", "hunter2");
     expect(result.current.settings?.username).toBe("Breaker");
     expect(result.current.settings?.is_staff).toBe(true);
   });

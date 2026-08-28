@@ -134,7 +134,7 @@ describe("friend actions", () => {
     await act(async () => {
       error = await result.current.runFriendAction("add", "Nobody");
     });
-    expect(error).toBe("No player with that username.");
+    expect(error).toBe("No player with that Spellbreak ID.");
   });
 
   it("hands every failure back rather than toasting it — the UI renders it in place", async () => {
@@ -149,8 +149,8 @@ describe("friend actions", () => {
       addError = await result.current.runFriendAction("add", "Nobody");
       removeError = await result.current.runFriendAction("remove", "Nobody");
     });
-    expect(addError).toBe("No player with that username.");
-    expect(removeError).toBe("No player with that username.");
+    expect(addError).toBe("No player with that Spellbreak ID.");
+    expect(removeError).toBe("No player with that Spellbreak ID.");
     expect(toast).not.toHaveBeenCalled();
   });
 
