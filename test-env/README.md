@@ -2,9 +2,10 @@
 
 A local backend to run the launcher against, so you can drive the parts of the
 app that normally need the live services — and put them in states the live ones
-won't give you on demand. Right now that means the friend graph, token
-validation, and the update flow — the version check and the download/install
-path, including a stall that reproduces a frozen updater (see below).
+won't give you on demand. Right now that means signing in — as any of a roster
+of people, including ones the portal refuses — the friend graph, and the update
+flow: the version check and the download/install path, including a stall that
+reproduces a frozen updater (see below).
 
 It serves the endpoints `src-tauri/src/remote.rs` calls, so nothing in the app
 is mocked or bypassed — the Tauri command, the HTTP call, `FriendsContext`, and
@@ -17,29 +18,37 @@ npm run test-env          # listens on 8787
 PORT=9000 npm run test-env
 ```
 
-<http://localhost:8787/> is a dashboard over everything it serves — friends,
-tokens, the online count, events — so a scenario is a few clicks rather than a
+<http://localhost:8787/> is a dashboard over everything it serves — accounts,
+friends, the online count, events — so a scenario is a few clicks rather than a
 hand-edit. The next section is what it's a front end for; the two are
 interchangeable and you can use both at once.
 
 Debug builds already point here — `portal_base()` in `src-tauri/src/settings.rs`
-defaults the two account endpoints at this port, so `npm run tauri-dev` talks to
+defaults the account endpoints at this port, so `npm run tauri-dev` talks to
 the fixture with nothing to configure:
 
 | Setting     | Debug default                   | Release default                    |
 | ----------- | ------------------------------- | ---------------------------------- |
 | players URL | `http://localhost:8787/players` | `https://play.elefrac.com/players` |
+| login URL   | `http://localhost:8787/login`   | `https://play.elefrac.com/login`   |
 | auth URL    | `http://localhost:8787/auth`    | `https://play.elefrac.com/auth`    |
 | CDN base    | `http://localhost:8787`         | `https://cdn.elefrac.com`          |
 
 `sidecar_base()` in `remote.rs` strips the trailing `/players` to get the base
-the friend endpoints hang off. The auth URL is used as-is, and `cdn_base` is the
-root the four update assets hang off (`cdn_base()` in `settings.rs`).
+the friend endpoints hang off. The login and auth URLs are used as-is, and
+`cdn_base` is the root the four update assets hang off (`cdn_base()` in
+`settings.rs`).
 
-That's only where a profile _starts_. Both stay editable under **Settings →
-Advanced** and the change sticks, so a dev build can be aimed at production when
-that's what you want to test — and on a non-default `PORT` you'll have to, since
-the default hardcodes 8787. The flip side: a debug build with no test env
+That's only where a profile _starts_. **Settings → Advanced** edits the players
+URL, the auth URL and the CDN base, and the change sticks, so a dev build can be
+aimed at production when that's what you want to test — and on a non-default
+`PORT` you'll have to, since the default hardcodes 8787. Note the one that isn't
+there: **Advanced has no login URL field**, so pointing a dev build at
+production leaves sign-in aimed wherever `login_url` in its `settings.json`
+already pointed. `login_email` falls back to the auth URL's origin only when
+that key is blank, and nothing in the UI can blank it — edit the profile's
+`settings.json`, or start from `dev-profile.sh signed-out`, which drops the key
+so the default takes over. The flip side: a debug build with no test env
 running fails every account and friend call, which is its own state worth seeing
 but surprising the first time.
 
@@ -58,8 +67,8 @@ With no test env running, a debug build simply finds no remote version: nothing
 is offered and nothing is downloaded.
 
 The friend endpoints take any non-empty token — they only check that one is
-set, so whatever you already have saved is fine. `/auth` is the strict one, and
-it's the point of the next section.
+set, so whatever you already have saved is fine. `/login` and `/auth` are the
+strict ones, and they're the point of the section after next.
 
 Note that the in-game server host is _derived_ from the auth URL
 (`game_host()` in `settings.rs`), so on a debug build that host is `localhost`.
@@ -71,18 +80,18 @@ Edit `data.json`, or use the dashboard — both end up in the same place. The
 file is re-read whenever it changes, so a save shows up on the next request:
 the drawer polls every 60s, and reopening it refreshes immediately. No restart.
 
-| Field             | What it feeds                                                    |
-| ----------------- | ---------------------------------------------------------------- |
-| `me`              | Your status, and the account row for tokens `/auth` doesn't know |
-| `friends`         | Accepted friends — the Friends / Offline sections                |
-| `incoming`        | Requests waiting on you, with accept + decline                   |
-| `outgoing`        | Requests you've sent, with cancel                                |
-| `reject`          | Names that always fail, and how (see below)                      |
-| `auth`            | Which tokens validate, and as whom (see below)                   |
-| `update`          | The version tracks and the update download/stall (see below)     |
-| `players.online`  | The online count on the home view                                |
-| `players.servers` | The in-game pill's per-mode, per-region breakdown                |
-| `events`          | The events list on the home view                                 |
+| Field             | What it feeds                                                       |
+| ----------------- | ------------------------------------------------------------------- |
+| `me`              | Your status, and the account row when no account claims the token   |
+| `friends`         | Accepted friends — the Friends / Offline sections                   |
+| `incoming`        | Requests waiting on you, with accept + decline                      |
+| `outgoing`        | Requests you've sent, with cancel                                   |
+| `reject`          | Names that always fail, and how (see below)                         |
+| `auth.accounts`   | The people you can sign in as, and how each one answers (see below) |
+| `update`          | The version tracks and the update download/stall (see below)        |
+| `players.online`  | The online count on the home view                                   |
+| `players.servers` | The in-game pill's per-mode, per-region breakdown                   |
+| `events`          | The events list on the home view                                    |
 
 A server's mode comes from its name — `MODE_MATCHERS` in
 `ui/components/topbar/players.ts` reads "solo" / "duo" / "squad" /
@@ -103,8 +112,8 @@ Emptying a list is the way to see each empty state; emptying `friends`,
 
 ## The dashboard
 
-<http://localhost:8787/> is the same state with controls on it: friends and
-their statuses, pending requests either way, tokens and their flags,
+<http://localhost:8787/> is the same state with controls on it: the accounts
+you can sign in as, friends and their statuses, pending requests either way,
 rejections, the online count, the servers behind the in-game pill, events, and
 the game/launcher versions the updater compares against.
 It polls every 2s, so it and the launcher agree — accept a request in the
@@ -128,8 +137,8 @@ curl -X POST localhost:8787/admin/reload
 ```
 
 A patch is a path into the state and one of `value`, `push` or `remove`;
-missing levels along the way are created, so `["auth","accounts","new"]` works
-on a `data.json` with no `auth` at all. Send a list of them to have them land
+missing levels along the way are created, so pushing onto `["auth","accounts"]`
+works on a `data.json` with no `auth` at all. Send a list of them to have them land
 together or not at all — that's what a rename is. Both routes answer with the
 whole state, which is what the page re-renders from.
 
@@ -145,57 +154,110 @@ tab you've just clicked away from, which is exactly the moment this is for. A
 patch that can't apply is refused up front rather than failing quietly ten
 seconds later.
 
-## Token validation
+## Signing in
 
-`apply_token` in `remote.rs` POSTs `{"token"}` to the auth URL and expects
-`{"ok", "username", "is_staff", "is_dev"}` back. It treats a token as verified
-only when `ok` is true **and** `username` is a string; anything else is a
-warning the UI shows as an error toast. Each token in `auth.accounts` is
-whatever you say it is:
+Sign-in is an email and a password, the same account as the website.
+`login_email` in `remote.rs` POSTs `{"email","password"}` to the login URL and
+expects `{"ok", "token", "username", "is_staff", "is_dev", "is_tester"}` back.
+It stores the token, and everything afterwards presents that instead of the
+password: `refresh_account` re-validates it against `/auth` every minute, and
+the friend routes carry it.
+
+So one row of `auth.accounts` is one person, holding both halves — what you type
+to become them, and what the server says about them once you have:
 
 ```json
 "auth": {
-  "accounts": {
-    "dev": { "username": "Lytion", "is_dev": true },
-    "staff": { "username": "Marla", "is_staff": true },
-    "tester": { "username": "Wrenlow", "is_tester": true },
-    "player": { "username": "Aurelith" },
-    "nameless": {}
-  },
-  "stall": ["stall"]
+  "accounts": [
+    {
+      "email": "dev@elefrac.com",
+      "password": "dev",
+      "token": "tok-dev",
+      "username": "Lytion",
+      "spellbreak_id": "Lytion",
+      "avatar": "ArchLich",
+      "is_dev": true
+    }
+  ]
 }
 ```
 
-Paste the key — `dev`, `staff`, `player` — into the token field. Between them
-these reach every branch of the three places that call `applyToken`
-(`AccountModal`, `AuthTokenCard`, and the onboarding `Wizard`):
+| Field                                                     | What it does                                                                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `email` + `password`                                      | What you type into the launcher. The email matches case-insensitively, and by local part too; the password exactly |
+| `token`                                                   | What sign-in hands back, and every later call presents. Blank it for a sign-in that succeeds with nothing to store |
+| `username`                                                | The name on the account pill. Omit it to sign in unnamed                                                           |
+| `is_dev` / `is_staff` / `is_tester`                       | The pill's subheading, and the Playtest channel                                                                    |
+| `spellbreak_id`, `avatar`, `discord_id`, `discord_avatar` | The rest of the profile the pill renders. An omitted one is left alone by a refresh rather than cleared            |
+| `error`                                                   | Refuse this account, with that code (below)                                                                        |
+| `stall`                                                   | Never answer at all, on either endpoint                                                                            |
 
-| Token           | What comes back         | What you see                                             |
-| --------------- | ----------------------- | -------------------------------------------------------- |
-| `dev`           | ok, with `is_dev`       | "Welcome, Lytion (dev)!" — and the Developer subheading  |
-| `staff`         | ok, with `is_staff`     | "Welcome, Marla (staff)!" — the Staff subheading         |
-| `tester`        | ok, with `is_tester`    | no badge, but the Playtest channel appears in the pill   |
-| `player`        | ok, no flags            | "Welcome, Aurelith!", no subheading on the pill          |
-| `nameless`      | `{"ok": true}`, no name | "doesn't recognize it" — the `username` half failing     |
-| _anything else_ | `{"ok": false}`         | "doesn't recognize it" — the `ok` half failing           |
-| `stall`         | no response at all      | "account lookup failed" once the 6s client timeout fires |
+The seeded roster covers the branches worth reaching. Every password is the
+part of the email before the `@` — and so is the least you can type into the
+email box, since the fixture matches a bare local part as well as a full
+address. `dev` / `dev` signs you in as `dev@elefrac.com`. Nothing upstream
+objects: no `<form>` wraps the launcher's two inputs, so the `type="email"` on
+them never runs a constraint check, and `login_email` only asks that neither
+field is empty. A full address is matched first, so a shorthand can never
+shadow someone else's real one.
 
-Whichever you sign in with is who the friend endpoints then take you for: `me`
-is resolved through this same table, so the drawer's account row agrees with the
-pill and `cannot_friend_self` refuses the right name. A token `/auth` doesn't
-know falls back to `me` from `data.json`, since the friend routes accept any
-non-empty one.
+| Sign in as               | What you get                                                                |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `dev@elefrac.com`        | "Welcome back, Lytion (dev)!" — and the Developer subheading                |
+| `staff@elefrac.com`      | "Welcome back, Marla (staff)!" — the Staff subheading                       |
+| `tester@elefrac.com`     | no badge, but the Playtest channel appears in the variant pill              |
+| `player@elefrac.com`     | "Welcome back, Aurelith!", no subheading, a headshot avatar                 |
+| `discord@elefrac.com`    | the same, with a linked Discord profile picture instead                     |
+| `nameless@elefrac.com`   | `ok` with no name — signed in, and the pill still says Guest                |
+| `unverified@elefrac.com` | "Verify your email first, check your inbox for the code."                   |
+| `banned@elefrac.com`     | the suspension message, with its end date and its reason                    |
+| `throttled@elefrac.com`  | "Too many attempts. Please wait a few minutes."                             |
+| `slow@elefrac.com`       | no response at all — "Couldn't reach the sign-in service" at the 6s timeout |
+| _a wrong password_       | "Wrong email or password." An unknown email fails identically, on purpose   |
 
-Two behaviours worth knowing while you poke at this. The token is stored
-**before** the lookup and kept even when it fails — deliberate, so play still
-works when the portal is unreachable. What a failed lookup does clear is the
-name and the role flags, so the previous account can't leave its badge or its
-name behind. That's also what the UI reads: a stored token with no name behind
-it is not an account, so the pill says "Token not verified" and the friend
-drawer stays shut rather than filling with `invalid_token` errors.
+The four refusals above are just `error` and `stall`, and the dashboard can put
+either on any account. The codes `login_email` has wording for are
+`invalid_credentials`, `email_unverified`, `rate_limited`, and `banned` — which
+also reads `ends` and `reason`, so clearing `ends` gives you the permanent
+suspension wording instead of the dated one. Anything else falls back to the
+flat "Sign-in failed. Please try again.", which is the more interesting case,
+since that's what a player sees when the portal grows a code the launcher hasn't
+learned yet.
+
+`error` refuses `/auth` as much as `/login`, and that's the half worth playing
+with: a ban that only stopped new sign-ins would leave an already-open session
+running. Set **Refuse with** on the account a running launcher is signed in as
+and its next minute-ly refresh clears the name, so the pill drops to "Session
+expired" under a launcher nobody touched. `stall` works on both the same way.
+
+**Who you are then follows you around.** Whoever you signed in as is who the
+friend endpoints take you for: `me` resolves through the same roster, so the
+drawer's account row agrees with the pill and `cannot_friend_self` refuses the
+right name. A token no account holds — one typed straight into `settings.json` —
+still works there, since the friend routes only check that one is set; it falls
+back to `me` from `data.json`.
+
+**Adding a person.** The box at the bottom of the Accounts card takes an email
+and derives the rest from it, so a new row is signable-in-as immediately:
+`kestrel@elefrac.com` becomes password `kestrel`, token `tok-kestrel`, username
+`Kestrel`. Edit any of the four afterwards.
+
+**Which one am I on right now?** The Accounts card says so. The server remembers
+the token of the last call the launcher made and marks the row that holds it, so
+switching accounts doesn't mean alt-tabbing to check it took. It's the last call
+and not the current session on purpose: a sign-out never reaches this server, so
+the marker outlives one.
+
+Two behaviours worth knowing while you poke at this. The token is kept even when
+a later `/auth` fails — deliberate, so play still works when the portal is
+unreachable. What a failed refresh does clear is the name and the role flags, so
+the previous account can't leave its badge or its name behind. That's also what
+the UI reads: a stored token with no name behind it is not an account, so the
+pill says "Session expired" and the friend drawer stays shut rather than filling
+with `invalid_token` errors.
 
 Stopping the server entirely reaches the same place as `stall`, but takes the
-friend endpoints down with it; `stall` fails only the auth call.
+friend endpoints down with it; `stall` fails only the account that carries it.
 
 ## What the buttons do
 
@@ -204,7 +266,7 @@ would, so the list reacts as you click. Those edits last until the process
 exits — or until you save `data.json`, which replaces them wholesale.
 
 Adding someone already in `incoming` auto-accepts, as the real one does, and
-adding **yourself** — whoever the token you signed in with resolves to — answers
+adding **yourself** — whoever you're signed in as — answers
 `cannot_friend_self`.
 
 ## Rejecting names
@@ -235,10 +297,10 @@ refusal the server means, and the launcher can only report vaguely.
 ## The playtest channel
 
 The variant pill's third option — **Playtest** — is hidden unless the account
-holds `is_tester` (a dev sees it too, holding it implicitly). Sign in with the
-`tester` token above to reach it, or flip **tester** on any token's row in the
+holds `is_tester` (a dev sees it too, holding it implicitly). Sign in as
+`tester@elefrac.com` to reach it, or flip **tester** on any account's row in the
 dashboard: `refresh_account` re-checks the stored token every minute, so the tab
-appears without a restart or a re-paste.
+appears without a restart or a second sign-in.
 
 Its label follows the pak on disk: **Enable Playtest** downloads
 `{cdn}/patch/dev.zip` (the CDN key kept its old name) and switches onto it,
@@ -264,10 +326,11 @@ Debug builds already keep their settings apart from the launcher you play with
 only ever reads your real `settings.json` — the token in it is safe.
 `signed-out` copies it with `auth_token` / `username` / `is_staff` / `is_dev`
 blanked, so game path and wrapper carry over and only the login differs. It
-leaves the two URLs out of the copy rather than blanking them, so they fall
+leaves the account URLs out of the copy rather than blanking them, so they fall
 back to the debug defaults and land here even if your real profile points at
-production. Then sign back in with one of the tokens above, as many times as
-you like.
+production — `login_url` included, which matters because Settings → Advanced has
+no field for it. Then sign back in as anyone in the roster above, as many times
+and as many people as you like.
 
 ## Update testing
 
@@ -345,6 +408,8 @@ honored, so that path works too). Leave it at 0 for a quick single-stream run.
 
 ## What it doesn't do
 
-Real auth (the tokens are a lookup table, and the friend endpoints accept any
-non-empty one), rate limits, TLS, persistence, and presence that changes on its
-own. It's a fixture with routes, not a server.
+Real auth — passwords sit in `data.json` in the clear, the tokens are fixed
+strings rather than anything issued, and the friend endpoints accept any
+non-empty one. Nor real rate limits (`rate_limited` is a fixture answer, not a
+counter), TLS, persistence, or presence that changes on its own. It's a fixture
+with routes, not a server.

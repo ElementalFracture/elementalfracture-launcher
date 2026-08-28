@@ -13,11 +13,12 @@
 #
 # `signed-out` copies your real settings.json with the four identity fields
 # blanked, so game path and wrapper carry over and only the login differs — no
-# re-onboarding to get to the Guest pill. The auth, players and CDN URLs are
-# left out of the copy so they fall back to the debug defaults, which point at
-# this test env; sign back in with one of its tokens (README.md). The real
-# profile is only ever read from. Log in inside the dev profile if you want; the
-# next `signed-out` run blanks it again, which is what the name promises.
+# re-onboarding to get to the Guest pill. The login, auth, players and CDN URLs
+# are left out of the copy so they fall back to the debug defaults, which point
+# at this test env; sign back in with one of its email/password pairs
+# (README.md). The real profile is only ever read from. Log in inside the dev
+# profile if you want; the next `signed-out` run blanks it again, which is what
+# the name promises.
 #
 # Note what the CDN default means once the test env is up: an update installs
 # fixture paks into whatever game_path came across in the copy. Point that at a
@@ -42,7 +43,7 @@ case "$PROFILE" in
     if [ ! -f "$APP/settings.json" ]; then
       echo "no settings at $APP/settings.json — nothing to derive from." >&2
       echo "run '$0 fresh' and onboard in the dev profile instead." >&2
-      # (or point auth_url at the test env and use one of its tokens — README.md)
+      # (or point the account URLs at the test env and use its accounts — README.md)
       exit 1
     fi
     mkdir -p "$DEV"
@@ -53,6 +54,11 @@ case "$PROFILE" in
       // Dropped rather than blanked: Settings is #[serde(default)], so a missing
       // key takes the debug default, which already aims at the test env. Written
       // out they would pin whatever your real profile happens to point at.
+      //
+      // login_url belongs on this list as much as the rest: Settings → Advanced
+      // has no field for it, so a copy that kept it would send every sign-in to
+      // production while auth and players talked to the test env.
+      delete s.login_url;
       delete s.auth_url;
       delete s.players_url;
       delete s.cdn_base;

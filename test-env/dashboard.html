@@ -309,6 +309,19 @@
         "no_pending_request",
         "blocked_by_user",
       ];
+      /* What an account can be pinned to refuse with. The blank first option is
+         "signs in fine"; then the four `login_email` in remote.rs has wording
+         for, and one it hasn't — the interesting case again, since that's the
+         flat "Sign-in failed. Please try again." a player gets when the portal
+         grows a code the launcher doesn't know. */
+      const REFUSALS = [
+        "",
+        "invalid_credentials",
+        "email_unverified",
+        "banned",
+        "rate_limited",
+        "account_disabled",
+      ];
 
       const app = document.getElementById("app");
 
@@ -358,7 +371,7 @@
           const answer = await res.json();
           connected(true);
           if (!answer.ok) return toast(answer.error || "rejected");
-          render(answer.state);
+          render(answer.state, answer.seen);
         } catch {
           connected(false);
           toast("test env isn't answering — still running?");
@@ -406,7 +419,9 @@
           "select",
           { dataset: { key }, onchange: (e) => apply(e.target.value) },
           all.map((option) =>
-            el("option", { value: option, textContent: option })
+            // An empty option is a real choice here — "no refusal" — and an
+            // empty label would be an unclickable sliver of a menu.
+            el("option", { value: option, textContent: option || "—" })
           )
         );
         node.value = value ?? "";
@@ -499,7 +514,7 @@
         const me = s.me ?? {};
         return card(
           "You",
-          "a token /auth knows overrides the name",
+          "the signed-in account's name overrides this one",
           el(
             "div",
             { className: "grid" },
@@ -598,99 +613,190 @@
         );
       }
 
-      function tokens(s) {
-        const accounts = s.auth?.accounts ?? {};
-        const stall = s.auth?.stall ?? [];
-        // Stall is a list of its own, and the fixture's `stall` token has no
-        // account behind it — so the rows are the union, not just the accounts.
-        const names = [...new Set([...Object.keys(accounts), ...stall])];
+      /* The people you can sign in as. One row is one account: the email and
+         password you type into the launcher, the token the sign-in hands back
+         (and every later call presents), the profile that comes with it, and
+         the ways it can refuse. Switching accounts is signing out in the
+         launcher and typing the next row's pair. */
+      function accounts(s, seen) {
+        const people = Array.isArray(s.auth?.accounts) ? s.auth.accounts : [];
+        const path = (i, ...rest) => ["auth", "accounts", i, ...rest];
 
-        const row = (token) => {
-          const has = Object.hasOwn(accounts, token);
-          const held = has ? accounts[token] : null;
-          const stalled = stall.indexOf(token);
-          const path = ["auth", "accounts", token];
+        /* Emptying a box removes the field rather than setting "": the server
+           only reports what a row actually carries, and `refresh_account`
+           leaves an omitted avatar or name alone instead of clearing it. */
+        const optional = (person, i, key) => (v) =>
+          v
+            ? set(path(i, key), v)
+            : person[key] !== undefined && drop(path(i, key));
 
-          const rename = (next) => {
-            if (!next || next === token) return;
-            if (Object.hasOwn(accounts, next))
-              return toast(`${next} already exists`);
-            const ops = [];
-            if (has)
-              ops.push(
-                { path, remove: true },
-                { path: [...path.slice(0, 2), next], value: held }
-              );
-            if (stalled !== -1)
-              ops.push(
-                { path: ["auth", "stall", stalled], remove: true },
-                { path: ["auth", "stall"], push: next }
-              );
-            patch(ops);
+        const row = (person, i) => {
+          // Rows are addressed by index, so the key that survives a re-render
+          // has to be the email — the one thing about a row that is its own.
+          const id = person.email || `row.${i}`;
+          const here = seen?.known && seen.token === person.token;
+
+          const rename = (v) => {
+            if (!v || v === person.email) return;
+            if (people.some((other, j) => j !== i && other.email === v)) {
+              return toast(`${v} already signs in`);
+            }
+            set(path(i, "email"), v);
           };
 
           return el(
             "li",
             { className: "row stack" },
-            text(`auth.${token}`, token, rename),
-            text(
-              `auth.${token}.username`,
-              held?.username,
-              (v) =>
-                v
-                  ? set([...path, "username"], v)
-                  : held?.username !== undefined && drop([...path, "username"]),
-              has
-                ? "no username → “doesn't recognize it”"
-                : "not an account → invalid_token"
+            el(
+              "div",
+              { className: "row line" },
+              here &&
+                el("span", {
+                  className: "dot",
+                  title: "the launcher's last call came in as this account",
+                }),
+              field(
+                "Email",
+                text(
+                  `acct.${id}.email`,
+                  person.email,
+                  rename,
+                  "someone@elefrac.com"
+                )
+              ),
+              field(
+                "Password",
+                text(
+                  `acct.${id}.password`,
+                  person.password,
+                  (v) => set(path(i, "password"), v),
+                  "anything"
+                )
+              )
             ),
             el(
               "div",
               { className: "row line" },
-              toggle(`auth.${token}.dev`, "dev", held?.is_dev, (on) =>
-                set([...path, "is_dev"], on)
+              field(
+                "Name",
+                text(
+                  `acct.${id}.username`,
+                  person.username,
+                  optional(person, i, "username"),
+                  "none → signs in unnamed"
+                )
               ),
-              toggle(`auth.${token}.staff`, "staff", held?.is_staff, (on) =>
-                set([...path, "is_staff"], on)
+              field(
+                "Token",
+                text(
+                  `acct.${id}.token`,
+                  person.token,
+                  optional(person, i, "token"),
+                  "none → sign-in fails"
+                )
+              )
+            ),
+            el(
+              "div",
+              { className: "row line" },
+              toggle(`acct.${id}.dev`, "dev", person.is_dev, (on) =>
+                set(path(i, "is_dev"), on)
+              ),
+              toggle(`acct.${id}.staff`, "staff", person.is_staff, (on) =>
+                set(path(i, "is_staff"), on)
               ),
               // The badge that reveals the Playtest channel in the variant
               // pill. Devs see it too, so `dev` on its own is enough to test
               // the visible half — this is the tester-only path.
-              toggle(`auth.${token}.tester`, "tester", held?.is_tester, (on) =>
-                set([...path, "is_tester"], on)
+              toggle(`acct.${id}.tester`, "tester", person.is_tester, (on) =>
+                set(path(i, "is_tester"), on)
               ),
               toggle(
-                `auth.${token}.stall`,
+                `acct.${id}.stall`,
                 "stall (no reply)",
-                stalled !== -1,
+                person.stall,
                 (on) =>
-                  on
-                    ? push(["auth", "stall"], token)
-                    : drop(["auth", "stall", stalled])
+                  on ? set(path(i, "stall"), true) : drop(path(i, "stall"))
+              ),
+              field(
+                "Refuse with",
+                choice(
+                  `acct.${id}.error`,
+                  person.error ?? "",
+                  REFUSALS,
+                  (v) =>
+                    v
+                      ? set(path(i, "error"), v)
+                      : person.error !== undefined && drop(path(i, "error"))
+                )
               ),
               el("span", { className: "spacer" }),
-              remover(() =>
-                patch([
-                  ...(has ? [{ path, remove: true }] : []),
-                  ...(stalled !== -1
-                    ? [{ path: ["auth", "stall", stalled], remove: true }]
-                    : []),
-                ])
+              remover(() => drop(path(i)))
+            ),
+            /* A suspension is the one refusal with more to say. An empty
+               `Ends` is what makes the message permanent rather than dated,
+               and a reason is appended to it on its own line. */
+            person.error === "banned" &&
+              el(
+                "div",
+                { className: "row line" },
+                field(
+                  "Ends",
+                  text(
+                    `acct.${id}.ends`,
+                    person.ends,
+                    optional(person, i, "ends"),
+                    "empty → permanent"
+                  )
+                ),
+                field(
+                  "Reason",
+                  text(
+                    `acct.${id}.reason`,
+                    person.reason,
+                    optional(person, i, "reason"),
+                    "no reason given"
+                  )
+                )
               )
-            )
           );
         };
 
+        /* Nothing here tells the launcher who to be — only it can do that, by
+           being typed into. What this says is who it last called as, which is
+           the answer you'd otherwise get by alt-tabbing. It's the last call and
+           not the current session on purpose: a sign-out never reaches this
+           server, so the marker outlives one. */
+        const who = !seen
+          ? "no launcher call yet — sign in with one of these"
+          : seen.known
+            ? `launcher last called as ${seen.username || "an account with no name"}`
+            : `launcher last called with a token nothing here holds (${seen.token})`;
+
         return card(
-          "Tokens",
-          "paste the token itself into the launcher's token field",
+          "Accounts",
+          "sign in with a pair — the part before the @ is enough",
+          el("p", { className: "empty", textContent: who }),
           rows(
-            names.map(row),
-            "no tokens — every sign-in fails with invalid_token"
+            people.map(row),
+            "nobody — every sign-in fails with invalid_credentials"
           ),
-          adder("add.token", "token", (token) =>
-            set(["auth", "accounts", token], {})
-          )
+          adder("add.account", "email", (email) => {
+            if (people.some((person) => person.email === email)) {
+              return toast(`${email} already signs in`);
+            }
+            // A new row has to be signable-in-as immediately, so the three
+            // fields that make that work are derived rather than left blank.
+            const local =
+              email.split("@")[0].replace(/[^a-z0-9]+/gi, "").toLowerCase() ||
+              "player";
+            push(["auth", "accounts"], {
+              email,
+              password: local,
+              token: `tok-${local}`,
+              username: local[0].toUpperCase() + local.slice(1),
+            });
+          })
         );
       }
 
@@ -996,9 +1102,13 @@
       let state = null;
       let shown = "";
 
-      function render(next) {
+      /* `seen` rides along with the state but isn't part of it — it's live,
+         and Copy JSON must not carry it into data.json. It still belongs in
+         the diff below, or the signed-in marker would sit on the wrong row
+         until something else happened to change. */
+      function render(next, seen = null) {
         state = next;
-        const json = JSON.stringify(next);
+        const json = JSON.stringify([next, seen]);
         // Nothing moved — leave the DOM (and whatever is half-typed) alone.
         // This is what makes a 2s poll harmless to type through.
         if (json === shown) return;
@@ -1013,7 +1123,7 @@
 
         app.replaceChildren(
           account(next),
-          tokens(next),
+          accounts(next, seen),
           friends(next),
           pending(next, "incoming", "Incoming", "requests waiting on you"),
           pending(next, "outgoing", "Outgoing", "requests you've sent"),
@@ -1041,7 +1151,7 @@
           const res = await fetch("/admin/state");
           const answer = await res.json();
           connected(true);
-          render(answer.state);
+          render(answer.state, answer.seen);
         } catch {
           connected(false);
         }

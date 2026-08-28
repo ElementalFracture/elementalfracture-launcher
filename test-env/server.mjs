@@ -7,9 +7,10 @@
  *
  *     npm run test-env
  *
- * Today it covers the players sidecar: friends, the online count, and events.
- * Everything it serves comes from data.json next to this file. Edit that and
- * the next request picks it up — no restart. See README.md.
+ * Today it covers sign-in (email + password, and the token it hands back) and
+ * the players sidecar: friends, the online count, and events. Everything it
+ * serves comes from data.json next to this file. Edit that and the next
+ * request picks it up — no restart. See README.md.
  *
  * http://localhost:8787/ is a dashboard over the same data, for setting a
  * scenario up without leaving the keyboard on JSON. Its edits are in-memory,
@@ -58,21 +59,150 @@ function data() {
    socket stays open until the request gives up. */
 const STALL = Symbol("stall");
 
+/* ── Accounts ──────────────────────────────────────────────────────────────
+   `auth.accounts` is a list of people, not a token→name map, because a sign-in
+   now has two halves the player types (email + password) and a third the server
+   hands back (the token). One row holds all three, so "be someone else" is one
+   row's worth of fixture rather than an entry in three places.
+
+   Two lookups fall out of that, and they are the whole model: /login finds a
+   person by email, and everything after it finds the same person by the token
+   that sign-in returned. */
+
+const roster = (s) => (Array.isArray(s.auth?.accounts) ? s.auth.accounts : []);
+
+/* By email, case-insensitively — as any real login form matches — and by the
+   bare local part as well, so the addresses in the fixture can stay realistic
+   without you typing `@elefrac.com` twenty times an afternoon: `dev` signs you
+   in as `dev@elefrac.com`.
+
+   A full address is tried first and wins, so adding someone whose local part
+   collides with another row's address can never shadow it. Nothing upstream
+   cares either way — no `<form>` wraps the launcher's inputs, so the `type=
+   "email"` on them never runs a constraint check, and `login_email` only asks
+   that the field isn't empty. */
+function byEmail(s, email) {
+  const want = String(email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!want) {
+    return undefined;
+  }
+  const of = (a) =>
+    String(a.email ?? "")
+      .trim()
+      .toLowerCase();
+  return (
+    roster(s).find((a) => of(a) === want) ??
+    roster(s).find((a) => of(a).split("@")[0] === want)
+  );
+}
+
+function byToken(s, token) {
+  const want = String(token ?? "").trim();
+  return want
+    ? roster(s).find((a) => String(a.token ?? "").trim() === want)
+    : undefined;
+}
+
+/* The profile half of an account: what /login and /auth both report, and what
+   remote.rs then writes into Settings. Role flags always go out, since absent
+   and false mean the same thing there. The string fields only go out when the
+   fixture sets one — `refresh_account` deliberately leaves an omitted avatar or
+   Discord link alone instead of clearing it, and sending "" would defeat that. */
+const PROFILE = [
+  "username",
+  "spellbreak_id",
+  "avatar",
+  "discord_id",
+  "discord_avatar",
+];
+
+function profile(account) {
+  const out = {
+    is_staff: !!account.is_staff,
+    is_dev: !!account.is_dev,
+    is_tester: !!account.is_tester,
+  };
+  for (const key of PROFILE) {
+    if (account[key] !== undefined) {
+      out[key] = account[key];
+    }
+  }
+  return out;
+}
+
+/* An account pinned to a refusal: `{ok:false, error}` plus the extra fields a
+   suspension carries (`suspension_message` in remote.rs reads `ends` and
+   `reason`, and no `ends` is what makes the wording permanent).
+
+   It applies to /auth as much as to /login. A ban that only stopped new
+   sign-ins would leave an already-open session running, and the session going
+   sour under a launcher that is sitting there logged in — the pill flipping to
+   "session expired" on its next 60s refresh — is the half worth watching. */
+function refusal(account) {
+  const error = String(account.error ?? "").trim();
+  if (!error) {
+    return null;
+  }
+  const out = { ok: false, error };
+  for (const key of ["ends", "reason"]) {
+    if (account[key] !== undefined) {
+      out[key] = account[key];
+    }
+  }
+  return out;
+}
+
+/** Stall, refuse, or answer with the profile — the three endings both account
+ *  routes share, in the order the real portal would reach them. */
+function answerFor(account, extra) {
+  if (account.stall) {
+    console.log("  stalling — no response, expect the 6s client timeout");
+    return STALL;
+  }
+  const no = refusal(account);
+  if (no) {
+    console.log(`  refused: ${no.error}`);
+    return no;
+  }
+  console.log(`  → ${account.username || "(no username)"}`);
+  return { ok: true, ...extra, ...profile(account) };
+}
+
 /* Who the sidecar takes you for. The real one resolves this from the token, so
    signing in as one account and finding another in the drawer would be a
    launcher bug — here it was just the fixture answering `me` from data.json no
-   matter who asked. Resolving it through the same account table /auth uses
-   keeps the pill and the drawer's account row agreeing.
+   matter who asked. Resolving it through the same roster /auth uses keeps the
+   pill and the drawer's account row agreeing.
 
-   Tokens /auth doesn't know still fall back to `me`, since the friend routes
-   deliberately accept any non-empty token — that's what keeps them usable
-   without going through token entry first. `status` stays data.json's, as
+   A token no account holds still falls back to `me`, since the friend routes
+   deliberately accept any non-empty one — that's what keeps them usable against
+   a token typed straight into settings.json. `status` stays data.json's, as
    there's nowhere else for it to come from. */
 function self(s, token) {
-  const accounts = s.auth?.accounts ?? {};
-  // hasOwn, or a token of "constructor" would resolve on the prototype.
-  const account = Object.hasOwn(accounts, token) ? accounts[token] : null;
+  const account = byToken(s, token);
   return account?.username ? { ...s.me, username: account.username } : s.me;
+}
+
+/* The last token a launcher call carried, so the dashboard can say who you are
+   currently signed in as without you alt-tabbing to find out. Live, not
+   fixture: deliberately outside `state`, so Copy JSON can't carry it back into
+   data.json. It survives a sign-out — nothing tells this server about one —
+   which is why the page words it as the last call, not the current session. */
+let seen = null;
+
+function whoami() {
+  if (!seen) {
+    return null;
+  }
+  const account = byToken(data(), seen.token);
+  return {
+    token: seen.token,
+    username: account?.username ?? "",
+    known: Boolean(account),
+    at: seen.at,
+  };
 }
 
 /** Drop a username from every list. Returns whether it was anywhere. */
@@ -181,28 +311,40 @@ function patch(s, { path: keys, value, push, remove }) {
    {ok:false, error:"<code>"}, where the codes are the ones FRIEND_ERRORS in
    ui/context/FriendsContext.tsx has wording for. */
 const routes = {
-  /* Token validation, as apply_token in src-tauri/src/remote.rs expects it:
-     POST {token} → {ok, username, is_staff, is_dev}. It counts a token as
-     verified only when `ok` is true AND `username` is a string, so the two
-     halves are worth failing separately — hence a `nameless` account that
-     answers ok with no name. The token is stored either way, before the call
-     is even made, so it's the name coming back that decides whether the app
-     treats you as signed in. */
-  "/auth": (s, { token }) => {
-    const auth = s.auth ?? {};
-    if ((auth.stall ?? []).includes(token)) {
-      console.log("  stalling — no response, expect the 6s client timeout");
-      return STALL;
+  /* Email/password sign-in, as login_email in src-tauri/src/remote.rs expects
+     it: POST {email, password} → {ok, token, username, roles…}. The token it
+     answers with is the account's own, so the very next /auth recognises the
+     same person and the friend routes resolve `me` to them.
+
+     An unknown email and a wrong password fail identically, on purpose: the
+     real portal won't say which half was wrong, and a fixture that did would
+     let a launcher leaking that difference look fine here. */
+  "/login": (s, { email, password }) => {
+    const account = byEmail(s, email);
+    if (!account || String(account.password ?? "") !== String(password ?? "")) {
+      console.log("  invalid_credentials");
+      return { ok: false, error: "invalid_credentials" };
     }
-    // hasOwn, or a token of "constructor" would resolve on the prototype.
-    const known = Object.hasOwn(auth.accounts ?? {}, token);
-    if (!known) {
+    // An account with no token signs in with nothing to store, which
+    // login_email refuses as a failed sign-in: the answer that looks fine and
+    // isn't. Blank the token on a row to reach it.
+    return answerFor(account, { token: String(account.token ?? "").trim() });
+  },
+
+  /* Token validation, as refresh_account in src-tauri/src/remote.rs expects
+     it: POST {token} → {ok, username, is_staff, is_dev}. It counts a token as
+     verified only when `ok` is true AND `username` is a string, so the two
+     halves are worth failing separately — hence a nameless account that answers
+     ok with no name. The token was stored the moment /login handed it over, so
+     it's the name coming back here that decides whether the app goes on
+     treating you as signed in. */
+  "/auth": (s, { token }) => {
+    const account = byToken(s, token);
+    if (!account) {
       console.log("  unknown token");
       return { ok: false, error: "invalid_token" };
     }
-    const account = auth.accounts[token];
-    console.log(`  → ${account.username ?? "(no username)"}`);
-    return { ok: true, ...account };
+    return answerFor(account);
   },
 
   "/friends": (s, { token }) => ({
@@ -284,7 +426,7 @@ createServer(async (req, res) => {
     }
   }
   if (req.method === "GET" && path === "/admin/state") {
-    return send({ ok: true, state: data() });
+    return send({ ok: true, state: data(), seen: whoami() });
   }
   if (req.method === "POST" && path === "/admin/patch") {
     const sent = await body(req);
@@ -314,7 +456,7 @@ createServer(async (req, res) => {
       }
       setTimeout(apply, after).unref?.();
       console.log(`admin: in ${after}ms →`);
-      return send({ ok: true, scheduled: after, state: data() });
+      return send({ ok: true, scheduled: after, state: data(), seen: whoami() });
     }
     try {
       apply();
@@ -322,14 +464,14 @@ createServer(async (req, res) => {
       console.error(`admin: ${e.message}`);
       return send({ ok: false, error: e.message }, 400);
     }
-    return send({ ok: true, state: data() });
+    return send({ ok: true, state: data(), seen: whoami() });
   }
   if (req.method === "POST" && path === "/admin/reload") {
     // Back to the file, throwing away everything the dashboard and the friend
     // routes have done since. `data()` reloads on the next call now.
     state = null;
     console.log("admin: reset to data.json");
-    return send({ ok: true, state: data() });
+    return send({ ok: true, state: data(), seen: whoami() });
   }
 
   // The two GETs that hang off the same base. They keep the home view from
@@ -357,12 +499,19 @@ createServer(async (req, res) => {
   }
 
   const sent = await body(req);
-  // remote.rs won't even call without a stored token, so an empty one here
-  // means you're testing the guest path.
-  if (!String(sent.token || "").trim()) {
-    return send({ ok: false, error: "invalid_token" });
+  if (path === "/login") {
+    console.log(`${path} → ${String(sent.email ?? "").trim() || "(no email)"}`);
+  } else {
+    // remote.rs won't even call without a stored token, so an empty one here
+    // means you're testing the guest path. /login is the one exception: it's
+    // the route that issues a token, so it can't be asked to present one.
+    const token = String(sent.token || "").trim();
+    if (!token) {
+      return send({ ok: false, error: "invalid_token" });
+    }
+    seen = { token, at: Date.now() };
+    console.log(`${path}${sent.username ? ` → ${sent.username}` : ""}`);
   }
-  console.log(`${path}${sent.username ? ` → ${sent.username}` : ""}`);
 
   /* Names listed in `reject` fail with the code they map to, whichever
      endpoint they're aimed at — that's how you reach an error path on
@@ -379,11 +528,18 @@ createServer(async (req, res) => {
   if (answer === STALL) {
     return;
   }
+  // A sign-in is the launcher's new identity: take it from the answer rather
+  // than waiting for the next /auth, so the dashboard's marker moves the
+  // moment the modal closes.
+  if (path === "/login" && answer.ok && answer.token) {
+    seen = { token: answer.token, at: Date.now() };
+  }
   send(answer);
 }).listen(PORT, () => {
   console.log(`test env on http://localhost:${PORT}`);
   console.log(`dashboard   → http://localhost:${PORT}/`);
   console.log(`players URL → http://localhost:${PORT}/players`);
+  console.log(`login URL   → http://localhost:${PORT}/login`);
   console.log(`auth URL    → http://localhost:${PORT}/auth`);
   console.log(`CDN base    → http://localhost:${PORT}  (set cdn_base to test updates)`);
 });
