@@ -8,9 +8,27 @@
   gap: 16px;
 }
 
+/* The logo is a button to elefrac.com; it should still read as the plain
+   wordmark it was, so the button itself draws nothing. */
 #topbar-logo {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+#topbar-logo img {
   height: 58px;
   object-fit: contain;
+}
+#topbar-logo:hover {
+  opacity: 0.85;
+}
+#topbar-logo:focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
 }
 
 .top-pills {
