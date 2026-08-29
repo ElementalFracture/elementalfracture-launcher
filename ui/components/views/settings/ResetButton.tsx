@@ -8,7 +8,7 @@ import { toast } from "@/lib/toast";
 
 /** Wipes the config back to a first-run state. Arms on the first click and
     disarms itself again shortly after, so it can't go off by accident. */
-export function ResetButton({ onReset }: { onReset: () => void }) {
+export function ResetButton() {
   const { setView } = useUI();
   const { resetSettings } = useSettings();
   const { refreshStatus } = useGame();
@@ -34,8 +34,6 @@ export function ResetButton({ onReset }: { onReset: () => void }) {
       return;
     }
     toast("Configuration reset");
-    // Back to a first-run state, advanced options included.
-    onReset();
     refreshStatus();
     refreshPlayers();
     setView("home");

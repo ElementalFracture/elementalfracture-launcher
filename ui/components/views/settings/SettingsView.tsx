@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { useUI } from "@/context/UIContext";
-import { AdvancedCard } from "./AdvancedCard";
-import { AdvancedToggleCard } from "./AdvancedToggleCard";
+import { isWindows } from "@/lib/platform";
 import { LauncherCard } from "./LauncherCard";
 import { ResetButton } from "./ResetButton";
+import { UrlsCard } from "./UrlsCard";
+import { WrapperCard } from "./WrapperCard";
 import { useSettingsForm } from "./useSettingsForm";
 import "./SettingsView.css";
 
@@ -13,19 +13,16 @@ import "./SettingsView.css";
 export function SettingsView() {
   const { view } = useUI();
   const form = useSettingsForm();
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
     <section className={"view" + (view === "settings" ? " active" : "")}>
       <LauncherCard form={form} />
-      <AdvancedToggleCard
-        shown={showAdvanced}
-        onShownChange={setShowAdvanced}
-      />
-      {showAdvanced && <AdvancedCard form={form} />}
+      {/* Both of its fields are Wine's; on Windows there is nothing to show. */}
+      {!isWindows && <WrapperCard form={form} />}
+      <UrlsCard form={form} />
 
       <div className="reset-row">
-        <ResetButton onReset={() => setShowAdvanced(false)} />
+        <ResetButton />
       </div>
     </section>
   );

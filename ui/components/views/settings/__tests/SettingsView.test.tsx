@@ -50,18 +50,6 @@ beforeEach(() => {
   commands.getNews.mockResolvedValue({ status: "ok", data: [] });
 });
 
-/** The Launcher panel has switches of its own, so every switch query here
- *  names the row it belongs to. */
-const ADVANCED = { name: "Show advanced options" };
-
-/** Advanced is opt-in behind a warning dialog; click through to reveal it. */
-async function openAdvanced() {
-  render(<SettingsView />, { wrapper: Providers });
-  (await screen.findByRole("switch", ADVANCED)).click();
-  (await screen.findByText("Continue")).click();
-  await screen.findByText("Advanced");
-}
-
 describe("launch wrapper picker", () => {
   it("keeps the picker on screen when the saved command is a custom one", async () => {
     // Replacing the picker with a bare text box strands the user on Custom —
@@ -73,7 +61,7 @@ describe("launch wrapper picker", () => {
       makeSettings({ launch_command: "steam steam://rungameid/1815016993" })
     );
 
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
     expect(await screen.findByRole("combobox")).toBeTruthy();
     expect(
       await screen.findByDisplayValue("steam steam://rungameid/1815016993")
@@ -88,7 +76,7 @@ describe("launch wrapper picker", () => {
       makeSettings({ launch_command: "umu-run" })
     );
 
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
     expect(await screen.findByRole("combobox")).toBeTruthy();
     expect(screen.queryByPlaceholderText(/umu-run/)).toBeNull();
   });
@@ -99,7 +87,7 @@ describe("launch wrapper picker", () => {
       makeSettings({ launch_command: "" })
     );
 
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
     expect(await screen.findByPlaceholderText(/none detected/)).toBeTruthy();
     expect(screen.queryByRole("combobox")).toBeNull();
   });
@@ -158,39 +146,6 @@ describe("launcher panel", () => {
         })
       )
     );
-  });
-});
-
-describe("advanced options gate", () => {
-  it("stays hidden until the warning is accepted", async () => {
-    render(<SettingsView />, { wrapper: Providers });
-    expect(screen.queryByText("Advanced")).toBeNull();
-
-    (await screen.findByRole("switch", ADVANCED)).click();
-    await waitFor(() => expect(screen.getByText("Continue")).toBeTruthy());
-    // The switch reads as on while the warning is up, so it doesn't flick
-    // back. The open dialog aria-hides the rest of the tree, hence hidden.
-    expect(
-      screen
-        .getByRole("switch", { ...ADVANCED, hidden: true })
-        .getAttribute("data-state")
-    ).toBe("checked");
-    expect(screen.queryByText("Advanced")).toBeNull();
-  });
-
-  it("backing out of the warning leaves the panel closed and the switch off", async () => {
-    render(<SettingsView />, { wrapper: Providers });
-
-    (await screen.findByRole("switch", ADVANCED)).click();
-    await waitFor(() => expect(screen.getByText("Back")).toBeTruthy());
-    screen.getByText("Back").click();
-
-    await waitFor(() =>
-      expect(
-        screen.getByRole("switch", ADVANCED).getAttribute("data-state")
-      ).toBe("unchecked")
-    );
-    expect(screen.queryByText("Advanced")).toBeNull();
   });
 });
 
@@ -261,8 +216,8 @@ describe("checking for a launcher update", () => {
 });
 
 /* The text fields are the half that must not write per keystroke: each save is
-   a disk write, and the URL ones re-pull what reads them. */
-describe("advanced text fields", () => {
+   a disk write, and these re-pull what reads them. */
+describe("URL text fields", () => {
   const cdnBox = () => screen.getByLabelText(/CDN base/);
 
   beforeEach(() => {
@@ -270,7 +225,8 @@ describe("advanced text fields", () => {
   });
 
   it("holds the draft while you type", async () => {
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
+    await screen.findByLabelText(/CDN base/);
     commands.saveSettings.mockClear();
 
     fireEvent.change(cdnBox(), { target: { value: "http://localhost:9000" } });
@@ -278,7 +234,8 @@ describe("advanced text fields", () => {
   });
 
   it("writes it once you leave the field", async () => {
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
+    await screen.findByLabelText(/CDN base/);
     fireEvent.change(cdnBox(), { target: { value: "http://localhost:9000" } });
     fireEvent.blur(cdnBox());
 
@@ -290,7 +247,8 @@ describe("advanced text fields", () => {
   });
 
   it("trims what it writes", async () => {
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
+    await screen.findByLabelText(/CDN base/);
     fireEvent.change(cdnBox(), {
       target: { value: "  http://localhost:9000  " },
     });
@@ -304,7 +262,8 @@ describe("advanced text fields", () => {
   });
 
   it("costs nothing to tab through a field you didn't change", async () => {
-    await openAdvanced();
+    render(<SettingsView />, { wrapper: Providers });
+    await screen.findByLabelText(/CDN base/);
     commands.saveSettings.mockClear();
 
     fireEvent.blur(cdnBox());

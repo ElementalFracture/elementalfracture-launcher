@@ -31,7 +31,7 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
       await refreshVersions();
       if (!info?.remote) {
         toast(
-          "Couldn't reach the update server, check the CDN base in Advanced.",
+          "Couldn't reach the update server, check the CDN base in Settings.",
           true
         );
       } else if (info.remote !== info.current) {

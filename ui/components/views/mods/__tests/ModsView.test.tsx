@@ -154,7 +154,7 @@ describe("check for game updates", () => {
     await press();
     await reported(() =>
       expect(toasts.toast).toHaveBeenCalledWith(
-        "Couldn't reach the update server, check the CDN base in Advanced.",
+        "Couldn't reach the update server, check the CDN base in Settings.",
         true
       )
     );

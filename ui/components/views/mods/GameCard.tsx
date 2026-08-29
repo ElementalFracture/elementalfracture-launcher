@@ -78,7 +78,7 @@ export function GameCard() {
       const { remote, outdated } = await atLeast(checkGameUpdate());
       if (!remote) {
         toast(
-          "Couldn't reach the update server, check the CDN base in Advanced.",
+          "Couldn't reach the update server, check the CDN base in Settings.",
           true
         );
       } else if (outdated) {

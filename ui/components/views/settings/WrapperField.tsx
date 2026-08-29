@@ -31,8 +31,7 @@ export function WrapperField({
   return (
     <div className="field">
       <Label htmlFor="launch-wrapper">
-        Launch wrapper{" "}
-        <small>(Linux only; runs the game exe — Proton-GE recommended)</small>
+        Command <small>(runs the game exe — Proton-GE recommended)</small>
       </Label>
       {/* The picker stays put once "Custom…" is chosen — the free-text
           box appears beside it rather than replacing it, so a detected

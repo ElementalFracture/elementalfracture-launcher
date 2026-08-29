@@ -57,7 +57,7 @@ pub struct Settings {
 /// Base the account endpoints hang off. Debug builds aim at the local test env
 /// (`npm run test-env`), which serves `/auth`, `/players` and the friend routes,
 /// so a fresh dev profile talks to the fixture without anyone hand-editing
-/// Settings → Advanced. Both are overridable there and the override sticks —
+/// Settings → URLs. Both are overridable there and the override sticks —
 /// this only decides where a profile starts.
 ///
 /// `play_base` stays live even in debug: the test env has no patch notes or
@@ -82,7 +82,7 @@ fn portal_base() -> &'static str {
 /// debug build simply has no remote version — nothing is offered, nothing is
 /// downloaded. And with one running, an update installs *fixture* paks and a
 /// stub loader into whatever `game_path` the profile points at, so point that
-/// at a copy. Overridable in Settings → Advanced either way.
+/// at a copy. Overridable in Settings → URLs either way.
 fn cdn_base() -> &'static str {
     if cfg!(debug_assertions) {
         "http://localhost:8787"
