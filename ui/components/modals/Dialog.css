@@ -98,6 +98,13 @@
   text-align: center;
   opacity: 0.85;
 }
+.about-heart {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.15em;
+  fill: currentColor;
+}
 
 .wizard-result {
   margin-top: 12px;

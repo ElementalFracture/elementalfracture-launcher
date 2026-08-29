@@ -1,3 +1,4 @@
+import { Heart } from "lucide-react";
 import { Button } from "@/components/shadcn/button";
 import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import { useGame } from "@/context/GameContext";
@@ -62,7 +63,11 @@ export function AboutModal({
           <div className="wizard-actions">
             <Button onClick={onClose}>Close</Button>
           </div>
-          <p className="about-made">Made with &lt;3 by Doobs</p>
+          <p className="about-made">
+            Made with{" "}
+            <Heart className="about-heart" role="img" aria-label="love" /> by
+            Doobs &amp; Lytion
+          </p>
         </div>
       </DialogContent>
     </Dialog>
