@@ -1,3 +1,4 @@
+use crate::error::{AppError, AppResult, ErrorCode};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -52,6 +53,10 @@ pub struct Settings {
     pub minimize_on_close: bool,
     /// quit the launcher when the game starts.
     pub close_on_launch: bool,
+    /// UI language: a tag the frontend catalogues know ("en", "fr"), or ""
+    /// for "follow the OS". Resolved in the UI, which is the only side that
+    /// holds prose — the backend never reads this.
+    pub language: String,
 }
 
 /// Base the account endpoints hang off. Debug builds aim at the local test env
@@ -117,6 +122,8 @@ impl Default for Settings {
             onboarded: false,
             minimize_on_close: false,
             close_on_launch: false,
+            // Empty = follow the OS; the picker in Settings writes a tag.
+            language: String::new(),
         }
     }
 }
@@ -175,15 +182,16 @@ pub fn load(app: &tauri::AppHandle) -> Settings {
 /// Crash-safe write: serialize to a temp file, then rename over settings.json,
 /// so an interrupted write can never leave a half-written config for the next
 /// load to treat as corrupt.
-fn write_atomic(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(s).map_err(|e| e.to_string())?;
+fn write_atomic(app: &tauri::AppHandle, s: &Settings) -> AppResult<()> {
+    let json = serde_json::to_string_pretty(s)?;
     let path = settings_path(app);
     let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, json).map_err(|e| format!("{}: {e}", tmp.display()))?;
-    fs::rename(&tmp, &path).map_err(|e| format!("{}: {e}", path.display()))
+    fs::write(&tmp, json)?;
+    fs::rename(&tmp, &path)?;
+    Ok(())
 }
 
-pub fn store(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
+pub fn store(app: &tauri::AppHandle, s: &Settings) -> AppResult<()> {
     let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     write_atomic(app, s)
 }
@@ -194,7 +202,7 @@ pub fn store(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
 pub fn mutate(
     app: &tauri::AppHandle,
     f: impl FnOnce(&mut Settings),
-) -> Result<Settings, String> {
+) -> AppResult<Settings> {
     let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut s = load(app);
     f(&mut s);
@@ -218,7 +226,7 @@ pub fn get_settings(app: tauri::AppHandle) -> Settings {
 
 #[tauri::command]
 #[specta::specta]
-pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
+pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> AppResult<()> {
     store(&app, &settings)
 }
 
@@ -226,7 +234,7 @@ pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), St
 /// settings so the frontend can re-run first-boot onboarding.
 #[tauri::command]
 #[specta::specta]
-pub fn reset_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+pub fn reset_settings(app: tauri::AppHandle) -> AppResult<Settings> {
     let s = Settings::default();
     store(&app, &s)?;
     Ok(s)
@@ -339,12 +347,13 @@ mod tests {
 
 #[tauri::command]
 #[specta::specta]
-pub fn open_url(url: String) -> Result<(), String> {
+pub fn open_url(url: String) -> AppResult<()> {
     if !url.starts_with("https://") && !url.starts_with("http://") {
-        return Err("only http(s) links can be opened".into());
+        return Err(AppError::new(ErrorCode::UnsupportedLinkScheme));
     }
     if host_open(&url) {
         return Ok(());
     }
-    open::that_detached(&url).map_err(|e| e.to_string())
+    open::that_detached(&url)?;
+    Ok(())
 }

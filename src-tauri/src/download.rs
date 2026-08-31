@@ -1,3 +1,4 @@
+use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{game, settings};
 use serde::Serialize;
 use std::fs::{self, File};
@@ -51,15 +52,15 @@ fn human(bytes: u64) -> String {
     format!("{v:.1} {}", UNITS[u])
 }
 
-fn http() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
+fn http() -> AppResult<reqwest::Client> {
+    let c = reqwest::Client::builder()
         .user_agent(concat!("ef-launcher/", env!("CARGO_PKG_VERSION")))
         // Timeout after 15s if no connexion established
         .connect_timeout(Duration::from_secs(15))
         // Timeout if no byte received after 1min.
         .read_timeout(Duration::from_secs(60))
-        .build()
-        .map_err(|e| e.to_string())
+        .build()?;
+    Ok(c)
 }
 
 /// Download `url` to `dest`. Probes for HTTP range support first: servers
@@ -70,7 +71,7 @@ async fn download_to_file(
     stage: &str,
     url: &str,
     dest: &Path,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let client = http()?;
 
     let probe = client
@@ -79,7 +80,7 @@ async fn download_to_file(
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map_err(|e| format!("download failed ({url}): {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::DownloadFailed, e).with("url", url))?;
 
     let ranged_total = if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT {
         probe
@@ -107,22 +108,22 @@ async fn download_sequential(
     client: &reqwest::Client,
     url: &str,
     dest: &Path,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let mut resp = client
         .get(url)
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map_err(|e| format!("download failed ({url}): {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::DownloadFailed, e).with("url", url))?;
 
     let total = resp.content_length().unwrap_or(0);
-    let mut file = File::create(dest).map_err(|e| format!("{}: {e}", dest.display()))?;
+    let mut file = File::create(dest)?;
     let mut done: u64 = 0;
     let mut last = Instant::now();
     let mut last_bytes = 0u64;
 
-    while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
-        file.write_all(&chunk).map_err(|e| e.to_string())?;
+    while let Some(chunk) = resp.chunk().await? {
+        file.write_all(&chunk)?;
         done += chunk.len() as u64;
         let delta_time = last.elapsed();
         if delta_time.as_millis() >= 150 {
@@ -157,12 +158,12 @@ async fn download_range(
     start: u64,
     end: u64,
     done: &AtomicU64,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .open(dest)
-        .map_err(|e| format!("{}: {e}", dest.display()))?;
-    file.seek(SeekFrom::Start(start)).map_err(|e| e.to_string())?;
+?;
+    file.seek(SeekFrom::Start(start))?;
 
     let mut pos = start;
     let mut attempts = 0u32;
@@ -171,7 +172,9 @@ async fn download_range(
         let pos_before = pos;
         attempts += 1;
         if attempts > 5 {
-            return Err(format!("download stalled (range {start}-{end}, {} left)", human(end + 1 - pos)));
+            return Err(AppError::new(ErrorCode::DownloadStalled)
+                .with("range", format!("{start}-{end}"))
+                .with("remaining", human(end + 1 - pos)));
         }
 
         let resp = client
@@ -185,7 +188,7 @@ async fn download_range(
             Ok(mut r) if r.status() == reqwest::StatusCode::PARTIAL_CONTENT => loop {
                 match r.chunk().await {
                     Ok(Some(chunk)) => {
-                        file.write_all(&chunk).map_err(|e| e.to_string())?;
+                        file.write_all(&chunk)?;
                         pos += chunk.len() as u64;
                         done.fetch_add(chunk.len() as u64, Ordering::Relaxed);
                     }
@@ -193,7 +196,7 @@ async fn download_range(
                     Err(_) => break, // connection dropped — retry from pos
                 }
             },
-            Ok(_) => return Err("server stopped honoring range requests".into()),
+            Ok(_) => return Err(AppError::new(ErrorCode::RangeRequestsUnsupported)),
             Err(_) => {}
         }
 
@@ -201,7 +204,7 @@ async fn download_range(
             attempts = 0; // making progress — keep going
         }
         if pos <= end {
-            file.seek(SeekFrom::Start(pos)).map_err(|e| e.to_string())?;
+            file.seek(SeekFrom::Start(pos))?;
             tokio::time::sleep(Duration::from_secs(2)).await;
         }
     }
@@ -215,11 +218,11 @@ async fn download_segmented(
     url: &str,
     dest: &Path,
     total: u64,
-) -> Result<(), String> {
+) -> AppResult<()> {
     // Preallocate so every worker can write into its own region.
     File::create(dest)
         .and_then(|f| f.set_len(total).map(|_| ()))
-        .map_err(|e| format!("{}: {e}", dest.display()))?;
+?;
 
     let segments = SEGMENTS.min(total / MIN_SEGMENT).max(2);
     let done = Arc::new(AtomicU64::new(0));
@@ -266,12 +269,14 @@ async fn download_segmented(
         }));
     }
 
-    let mut result: Result<(), String> = Ok(());
+    let mut result: AppResult<()> = Ok(());
     for w in workers {
         match w.await {
             Ok(Ok(())) => {}
             Ok(Err(e)) => result = result.and(Err(e)),
-            Err(e) => result = result.and(Err(e.to_string())),
+            Err(e) => {
+                result = result.and(Err(AppError::detail(ErrorCode::BackgroundTaskFailed, e)))
+            }
         }
     }
     finished.store(true, Ordering::Relaxed);
@@ -312,9 +317,9 @@ fn safe_rel_path(name: &str) -> Option<PathBuf> {
     (!out.as_os_str().is_empty()).then_some(out)
 }
 
-fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path) -> Result<(), String> {
-    let file = File::open(zip_path).map_err(|e| e.to_string())?;
-    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
+fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path) -> AppResult<()> {
+    let file = File::open(zip_path)?;
+    let mut zip = zip::ZipArchive::new(file)?;
     let total = zip.len();
 
     // Total UNCOMPRESSED bytes, read from the central directory (no decompression).
@@ -323,7 +328,7 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
     // that last file copies. Byte progress (updated DURING the copy) moves smoothly.
     let mut total_bytes: u64 = 0;
     for i in 0..total {
-        total_bytes += zip.by_index(i).map_err(|e| e.to_string())?.size();
+        total_bytes += zip.by_index(i)?.size();
     }
     let total_bytes = total_bytes.max(1);
 
@@ -338,31 +343,31 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
     let mut last = Instant::now();
 
     for i in 0..total {
-        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        let mut entry = zip.by_index(i)?;
         let name = entry.name().to_string();
         if entry.is_dir() {
             if let Some(rel) = safe_rel_path(&name) {
-                fs::create_dir_all(dest.join(rel)).map_err(|e| e.to_string())?;
+                fs::create_dir_all(dest.join(rel))?;
             }
             continue;
         }
         expected_files += 1;
         // A real file MUST resolve to a path — never silently skipped.
         let rel = safe_rel_path(&name)
-            .ok_or_else(|| format!("archive entry has an unusable name: {name:?}"))?;
+            .ok_or_else(|| AppError::detail(ErrorCode::BadArchiveEntry, format!("{name:?}")))?;
         let out = dest.join(rel);
         if let Some(parent) = out.parent() {
-            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            fs::create_dir_all(parent)?;
         }
-        let mut f = File::create(&out).map_err(|e| format!("{}: {e}", out.display()))?;
+        let mut f = File::create(&out)?;
         // Copy in chunks and report progress DURING the file, so a multi-GB pak
         // shows a moving bar instead of looking hung on the final entry.
         loop {
-            let n = entry.read(&mut buf).map_err(|e| format!("{name}: {e}"))?;
+            let n = entry.read(&mut buf)?;
             if n == 0 {
                 break;
             }
-            f.write_all(&buf[..n]).map_err(|e| format!("{name}: {e}"))?;
+            f.write_all(&buf[..n])?;
             bytes_done += n as u64;
             if last.elapsed().as_millis() >= 150 {
                 emit(
@@ -380,10 +385,9 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
     }
 
     if written != expected_files {
-        return Err(format!(
-            "extraction incomplete: wrote {written} of {expected_files} files. \
-             The download is likely corrupt — delete the install folder and download again."
-        ));
+        return Err(AppError::new(ErrorCode::ExtractionIncomplete)
+            .with("written", written)
+            .with("expected", expected_files));
     }
     emit(app, stage, format!("{written} files extracted"), 100.0, total_bytes, total_bytes);
     Ok(())
@@ -391,20 +395,20 @@ fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path
 
 /// Extract every file of a zip flat into one directory (used for the balance
 /// patch, whose paks belong directly in g3/Content/Paks).
-fn extract_flat(zip_path: &Path, dest: &Path) -> Result<Vec<String>, String> {
-    let file = File::open(zip_path).map_err(|e| e.to_string())?;
-    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
+fn extract_flat(zip_path: &Path, dest: &Path) -> AppResult<Vec<String>> {
+    let file = File::open(zip_path)?;
+    let mut zip = zip::ZipArchive::new(file)?;
     let mut names = Vec::new();
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        let mut entry = zip.by_index(i)?;
         if entry.is_dir() {
             continue;
         }
         let Some(rel) = entry.enclosed_name() else { continue };
         let Some(base) = rel.file_name() else { continue };
         let out = dest.join(base);
-        let mut f = File::create(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-        std::io::copy(&mut entry, &mut f).map_err(|e| e.to_string())?;
+        let mut f = File::create(&out)?;
+        std::io::copy(&mut entry, &mut f)?;
         names.push(base.to_string_lossy().into_owned());
     }
     Ok(names)
@@ -413,13 +417,13 @@ fn extract_flat(zip_path: &Path, dest: &Path) -> Result<Vec<String>, String> {
 /// Pull the pak/sig out of the playtest archive under the names the playtest
 /// variant looks for, whatever they're called inside it. Returns what it
 /// found, for the progress line.
-fn stage_test_pak(zip_path: &Path, paks: &Path) -> Result<String, String> {
-    let file = File::open(zip_path).map_err(|e| e.to_string())?;
-    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
+fn stage_test_pak(zip_path: &Path, paks: &Path) -> AppResult<String> {
+    let file = File::open(zip_path)?;
+    let mut zip = zip::ZipArchive::new(file)?;
     let mut pak = false;
     let mut sig = false;
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        let mut entry = zip.by_index(i)?;
         if entry.is_dir() {
             continue;
         }
@@ -440,11 +444,11 @@ fn stage_test_pak(zip_path: &Path, paks: &Path) -> Result<String, String> {
         } else {
             continue;
         };
-        let mut f = File::create(&dest).map_err(|e| format!("{}: {e}", dest.display()))?;
-        std::io::copy(&mut entry, &mut f).map_err(|e| e.to_string())?;
+        let mut f = File::create(&dest)?;
+        std::io::copy(&mut entry, &mut f)?;
     }
     if !pak {
-        return Err("the playtest archive didn't contain a .pak file.".into());
+        return Err(AppError::new(ErrorCode::PlaytestArchiveEmpty));
     }
     Ok(if sig {
         "pak + sig".into()
@@ -463,15 +467,15 @@ fn stage_test_pak(zip_path: &Path, paks: &Path) -> Result<String, String> {
 /// one. Only what the launcher calls the channel changed.
 #[tauri::command]
 #[specta::specta]
-pub async fn install_playtest_build(app: tauri::AppHandle) -> Result<String, String> {
+pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
-        return Err("Set the game folder first (Settings).".into());
+        return Err(AppError::new(ErrorCode::NoGameFolder));
     }
     let root = PathBuf::from(&s.game_path);
     let paks = game::paks_dir(&root);
     if !paks.is_dir() {
-        return Err(format!("Paks folder not found: {}", paks.display()));
+        return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
     }
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
 
@@ -482,7 +486,7 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> Result<String, Str
     let (tmp2, paks2) = (tmp.clone(), paks.clone());
     let staged = tauri::async_runtime::spawn_blocking(move || stage_test_pak(&tmp2, &paks2))
         .await
-        .map_err(|e| e.to_string())??;
+        .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     let _ = fs::remove_file(&tmp);
     emit(
         &app,
@@ -570,10 +574,10 @@ pub async fn get_remote_config(app: tauri::AppHandle) -> std::collections::HashM
 /// a half-provisioned install keeps looking outdated and gets retried.
 /// Shared by fresh installs, manual updates, newly-pointed-at game folders,
 /// and the automatic startup update check.
-async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<String, String> {
+async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> AppResult<String> {
     let paks = game::paks_dir(root);
     if !paks.is_dir() {
-        return Err(format!("Paks folder not found: {}", paks.display()));
+        return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
     }
 
     let remote_version = fetch_remote_game_version(&http()?, cdn).await;
@@ -585,7 +589,7 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
     let (tmp2, paks2) = (tmp.clone(), paks.clone());
     let names = tauri::async_runtime::spawn_blocking(move || extract_flat(&tmp2, &paks2))
         .await
-        .map_err(|e| e.to_string())??;
+        .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     let _ = fs::remove_file(&tmp);
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
 
@@ -598,7 +602,7 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
     match remote_version {
         Some(v) => {
             fs::write(root.join("version.txt"), &v)
-                .map_err(|e| format!("patch applied, but couldn't write version.txt: {e}"))?;
+                .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
             Ok(v)
         }
         None => Ok("unknown".into()),
@@ -608,11 +612,11 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
 /// Fresh install: base game zip → dest, then patch + version bump.
 #[tauri::command]
 #[specta::specta]
-pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String, String> {
+pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<String> {
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
     let dest = PathBuf::from(dest);
-    fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dest)?;
 
     let tmp_zip = dest.join("_elefracbase.zip.part");
     emit(&app, "download-base", "Starting download…".into(), 0.0, 0, 0);
@@ -621,19 +625,18 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String
     let (app2, dest2, zip2) = (app.clone(), dest.clone(), tmp_zip.clone());
     tauri::async_runtime::spawn_blocking(move || extract_all(&app2, "extract-base", &zip2, &dest2))
         .await
-        .map_err(|e| e.to_string())??;
+        .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     let _ = fs::remove_file(&tmp_zip);
 
     // The zip may either contain g3/Engine at its root or a single wrapper dir.
     let root = if dest.join("g3").is_dir() {
         dest.clone()
     } else {
-        fs::read_dir(&dest)
-            .map_err(|e| e.to_string())?
+        fs::read_dir(&dest)?
             .flatten()
             .map(|e| e.path())
             .find(|p| p.join("g3").is_dir())
-            .ok_or("Extracted files don't contain a g3 folder: unexpected archive layout.")?
+            .ok_or_else(|| AppError::new(ErrorCode::ArchiveMissingGameFolder))?
     };
 
     apply_patch(&app, &cdn, &root).await?;
@@ -657,10 +660,10 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> Result<String
 /// Re-apply the latest balance patch to an existing install.
 #[tauri::command]
 #[specta::specta]
-pub async fn update_patch(app: tauri::AppHandle) -> Result<String, String> {
+pub async fn update_patch(app: tauri::AppHandle) -> AppResult<String> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
-        return Err("Set the game folder first (Settings).".into());
+        return Err(AppError::new(ErrorCode::NoGameFolder));
     }
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
     let version = apply_patch(&app, &cdn, Path::new(&s.game_path)).await?;
@@ -713,8 +716,8 @@ fn tar_octal(bytes: &[u8]) -> Option<u64> {
 /// USTAR 512-byte headers and take the one regular file named `umu-run`. Kept
 /// dependency-free (the zip crate can't read tar, and pulling in a tar crate
 /// for two entries isn't worth it).
-fn extract_umu_run(tar_path: &Path, dest: &Path) -> Result<(), String> {
-    let data = fs::read(tar_path).map_err(|e| format!("{}: {e}", tar_path.display()))?;
+fn extract_umu_run(tar_path: &Path, dest: &Path) -> AppResult<()> {
+    let data = fs::read(tar_path)?;
     let mut off = 0usize;
     while off + 512 <= data.len() {
         let header = &data[off..off + 512];
@@ -723,26 +726,27 @@ fn extract_umu_run(tar_path: &Path, dest: &Path) -> Result<(), String> {
             break;
         }
         let name = tar_str(&header[0..100]);
-        let size = tar_octal(&header[124..136]).ok_or("bad tar size field")?;
+        let size = tar_octal(&header[124..136])
+            .ok_or_else(|| AppError::new(ErrorCode::RuntimeArchiveCorrupt))?;
         let typeflag = header[156];
         let data_start = off + 512;
         let data_end = data_start
             .checked_add(size as usize)
             .filter(|&e| e <= data.len())
-            .ok_or("truncated runtime archive")?;
+            .ok_or_else(|| AppError::new(ErrorCode::RuntimeArchiveCorrupt))?;
 
         // Regular file ('0' or legacy NUL typeflag) whose basename is umu-run.
         let is_regular = typeflag == b'0' || typeflag == 0;
         let base = name.rsplit('/').next().unwrap_or(&name);
         if is_regular && base == "umu-run" {
-            return fs::write(dest, &data[data_start..data_end])
-                .map_err(|e| format!("{}: {e}", dest.display()));
+            fs::write(dest, &data[data_start..data_end])?;
+            return Ok(());
         }
 
         // Advance past this entry's data, padded up to the next 512 boundary.
         off = data_start + ((size as usize + 511) & !511);
     }
-    Err("umu-run was not found inside the runtime archive.".into())
+    Err(AppError::new(ErrorCode::RuntimeMissingUmu))
 }
 
 /// Ensure a usable Linux game runtime exists before launch.
@@ -759,7 +763,7 @@ fn extract_umu_run(tar_path: &Path, dest: &Path) -> Result<(), String> {
 /// so it never touches or corrupts an existing runtime.
 #[tauri::command]
 #[specta::specta]
-pub async fn ensure_runtime(app: tauri::AppHandle) -> Result<String, String> {
+pub async fn ensure_runtime(app: tauri::AppHandle) -> AppResult<String> {
     if cfg!(windows) {
         return Ok("Windows: no external game runtime is needed.".into());
     }
@@ -791,20 +795,16 @@ pub async fn ensure_runtime(app: tauri::AppHandle) -> Result<String, String> {
     // by default). Fail with a clear, actionable message if it's genuinely
     // absent rather than downloading something that can't run.
     if !game::command_present("python3") {
-        return Err(
-            "No game runtime was found and python3 is missing (umu / Proton needs it). \
-             Install python3 with your package manager, or install Wine, then try again."
-                .into(),
-        );
+        return Err(AppError::new(ErrorCode::RuntimeNeedsPython));
     }
 
     use tauri::Manager;
     let data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|e| format!("no app data dir available: {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::NoAppDataDir, e))?;
     let runtime_dir = data_dir.join("runtime");
-    fs::create_dir_all(&runtime_dir).map_err(|e| format!("{}: {e}", runtime_dir.display()))?;
+    fs::create_dir_all(&runtime_dir)?;
     let umu_run = runtime_dir.join("umu-run");
 
     // Allow the CDN to redirect the runtime URL without shipping a new launcher.
@@ -827,14 +827,14 @@ pub async fn ensure_runtime(app: tauri::AppHandle) -> Result<String, String> {
     let (tar2, umu2) = (tar_path.clone(), umu_run.clone());
     tauri::async_runtime::spawn_blocking(move || extract_umu_run(&tar2, &umu2))
         .await
-        .map_err(|e| e.to_string())??;
+        .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     let _ = fs::remove_file(&tar_path);
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&umu_run, fs::Permissions::from_mode(0o755))
-            .map_err(|e| format!("couldn't make umu-run executable: {e}"))?;
+            .map_err(|e| AppError::detail(ErrorCode::RuntimeNotExecutable, e))?;
     }
 
     // Point the launcher at the runtime we just installed. An absolute path is
@@ -937,11 +937,11 @@ fn launcher_version_marker(app: &tauri::AppHandle) -> PathBuf {
 /// A plain binary swaps itself; an AppImage's mount is read-only, so we
 /// swap the .AppImage file it was launched from ($APPIMAGE, set by the
 /// AppImage runtime).
-fn update_target() -> Result<(PathBuf, &'static str), String> {
+fn update_target() -> AppResult<(PathBuf, &'static str)> {
     if let Some(appimage) = std::env::var_os("APPIMAGE") {
         return Ok((PathBuf::from(appimage), "ef-launcher.AppImage"));
     }
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe = std::env::current_exe()?;
     Ok((exe, if cfg!(windows) { "ef-launcher.exe" } else { "ef-launcher" }))
 }
 
@@ -1008,18 +1008,18 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
 /// not overwriting), bump the local version marker, restart.
 #[tauri::command]
 #[specta::specta]
-pub async fn update_launcher(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
     // The check being off means the binary under us is a local build; swapping
     // it for a CDN one would throw away what cargo just produced.
     if !self_update_checked() {
-        return Err("Launcher self-update is off in dev builds (set EF_LAUNCHER_UPDATE=1).".into());
+        return Err(AppError::new(ErrorCode::LauncherUpdateDisabledInDev));
     }
 
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
     let remote = fetch_remote_launcher_version(&http()?, &cdn)
         .await
-        .ok_or("Couldn't read the launcher version from the CDN.")?;
+        .ok_or_else(|| AppError::new(ErrorCode::LauncherVersionUnreadable))?;
 
     let (exe, binary) = update_target()?;
     let staged = exe.with_extension("new");
@@ -1028,7 +1028,7 @@ pub async fn update_launcher(app: tauri::AppHandle) -> Result<(), String> {
     let size = fs::metadata(&staged).map(|m| m.len()).unwrap_or(0);
     if size < 1024 * 1024 {
         let _ = fs::remove_file(&staged);
-        return Err("Downloaded launcher is suspiciously small: the CDN may have returned an error page.".into());
+        return Err(AppError::new(ErrorCode::LauncherArchiveTooSmall));
     }
 
     #[cfg(unix)]
@@ -1039,17 +1039,17 @@ pub async fn update_launcher(app: tauri::AppHandle) -> Result<(), String> {
 
     let parked = exe.with_extension("old");
     let _ = fs::remove_file(&parked);
-    fs::rename(&exe, &parked).map_err(|e| format!("couldn't stage the running binary: {e}"))?;
+    fs::rename(&exe, &parked).map_err(|e| AppError::detail(ErrorCode::LauncherStageFailed, e))?;
     if let Err(e) = fs::rename(&staged, &exe) {
         let _ = fs::rename(&parked, &exe); // roll back so the install stays runnable
-        return Err(format!("couldn't install the new binary: {e}"));
+        return Err(AppError::detail(ErrorCode::LauncherInstallFailed, e));
     }
 
     let _ = fs::write(launcher_version_marker(&app), &remote);
 
     std::process::Command::new(&exe)
         .spawn()
-        .map_err(|e| format!("updated, but couldn't restart the launcher: {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::LauncherRestartFailed, e))?;
     app.exit(0);
     Ok(())
 }

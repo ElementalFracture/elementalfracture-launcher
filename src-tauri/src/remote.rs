@@ -1,15 +1,16 @@
+use crate::error::{AppError, AppResult, ErrorCode};
 use crate::settings;
 use serde::Serialize;
 use std::time::Duration;
 
 const FEED_URL: &str = "https://elefrac.com/patchnotes/feed/";
 
-fn client() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
+fn client() -> AppResult<reqwest::Client> {
+    let c = reqwest::Client::builder()
         .timeout(Duration::from_secs(6))
         .user_agent(concat!("ef-launcher/", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(|e| e.to_string())
+        .build()?;
+    Ok(c)
 }
 
 /// Total online players from the players sidecar (players_sidecar.py),
@@ -17,7 +18,7 @@ fn client() -> Result<reqwest::Client, String> {
 /// Discord bot's match tracker consumes. Falls back to the portal HTTP API.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_players(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+pub async fn get_players(app: tauri::AppHandle) -> AppResult<serde_json::Value> {
     let s = settings::load(&app);
 
     if !s.players_url.trim().is_empty() {
@@ -35,11 +36,10 @@ pub async fn get_players(app: tauri::AppHandle) -> Result<serde_json::Value, Str
         .get(&url)
         .send()
         .await
-        .and_then(|r| r.error_for_status())
-        .map_err(|e| e.to_string())?
+        .and_then(|r| r.error_for_status())?
         .json()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[derive(Serialize, specta::Type)]
@@ -86,7 +86,7 @@ fn read_account(body: &serde_json::Value, username: &str) -> Account {
 /// (returns `None`) — a blip must never cost someone their badge.
 #[tauri::command]
 #[specta::specta]
-pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, String> {
+pub async fn refresh_account(app: tauri::AppHandle) -> AppResult<Option<Account>> {
     let s = settings::load(&app);
     let token = s.auth_token.trim().to_string();
     if token.is_empty() {
@@ -156,29 +156,29 @@ pub async fn refresh_account(app: tauri::AppHandle) -> Result<Option<Account>, S
     }
 }
 
-/// Build the user-facing suspension message from a `{"error":"banned", ...}`
-/// body. `ends` (a human date string) or a non-null `expires_at` marks a timed
-/// suspension; both null means permanent. A meaningful `reason` (non-empty and
-/// not the literal "banned") is appended on its own line. No em-dashes.
-fn suspension_message(body: &serde_json::Value) -> String {
+/// Classify a `{"error":"banned", ...}` body into the suspension code that
+/// fits it, carrying the parts the sentence needs. `ends` (a human date) or a
+/// non-null `expires_at` marks a timed suspension; both null means permanent.
+/// A meaningful `reason` (non-empty and not the literal "banned") rides along
+/// for the catalogue to append; the UI leaves it off when it isn't there.
+fn suspension_error(body: &serde_json::Value) -> AppError {
     let ends = body.get("ends").and_then(|v| v.as_str()).unwrap_or("").trim();
-    let has_expiry = !ends.is_empty()
-        || body.get("expires_at").and_then(|v| v.as_i64()).is_some();
+    let has_expiry =
+        !ends.is_empty() || body.get("expires_at").and_then(|v| v.as_i64()).is_some();
 
-    let mut msg = if has_expiry && !ends.is_empty() {
-        format!("This account has been suspended. The suspension will end on {ends}.")
-    } else if has_expiry {
-        // A timestamp with no human date: state it ends without a date.
-        "This account has been suspended.".to_string()
+    // A timestamp with no human date reads as "suspended", not "until when" —
+    // there is no date to put in that sentence.
+    let mut err = if has_expiry && !ends.is_empty() {
+        AppError::new(ErrorCode::AccountSuspendedUntil).with("ends", ends)
     } else {
-        "This account has been permanently suspended.".to_string()
+        AppError::new(ErrorCode::AccountSuspended).with("permanent", !has_expiry)
     };
 
     let reason = body.get("reason").and_then(|v| v.as_str()).unwrap_or("").trim();
     if !reason.is_empty() && !reason.eq_ignore_ascii_case("banned") {
-        msg.push_str(&format!("\nReason: {reason}"));
+        err = err.with("reason", reason);
     }
-    msg
+    err
 }
 
 /// Email/password sign-in (the same account the website uses). POSTs to the
@@ -194,10 +194,10 @@ pub async fn login_email(
     app: tauri::AppHandle,
     email: String,
     password: String,
-) -> Result<TokenResult, String> {
+) -> AppResult<TokenResult> {
     let email = email.trim().to_string();
     if email.is_empty() || password.is_empty() {
-        return Err("Enter your email and password.".into());
+        return Err(AppError::new(ErrorCode::EnterEmailAndPassword));
     }
 
     let s = settings::load(&app);
@@ -209,7 +209,7 @@ pub async fn login_email(
             // Derive from the auth URL's origin if login_url was blanked.
             match s.auth_url.trim().strip_suffix("/auth") {
                 Some(base) => format!("{base}/login"),
-                None => return Err("Sign-in is not configured.".into()),
+                None => return Err(AppError::new(ErrorCode::SignInNotConfigured)),
             }
         }
     };
@@ -219,7 +219,7 @@ pub async fn login_email(
         .json(&serde_json::json!({ "email": email, "password": password }))
         .send()
         .await
-        .map_err(|e| format!("Couldn't reach the sign-in service: {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::SignInUnreachable, e))?;
 
     let body: serde_json::Value = resp.json().await.unwrap_or_default();
     if body.get("ok").and_then(|v| v.as_bool()) != Some(true) {
@@ -227,15 +227,14 @@ pub async fn login_email(
         // A ban carries richer fields (a human end date and a free-text reason),
         // so it gets its own message instead of the flat catch-all string.
         if err == "banned" {
-            return Err(suspension_message(&body));
+            return Err(suspension_error(&body));
         }
-        return Err(match err {
-            "invalid_credentials" => "Wrong email or password.",
-            "email_unverified" => "Verify your email first, check your inbox for the code.",
-            "rate_limited" => "Too many attempts. Please wait a few minutes.",
-            _ => "Sign-in failed. Please try again.",
-        }
-        .to_string());
+        return Err(AppError::new(match err {
+            "invalid_credentials" => ErrorCode::WrongCredentials,
+            "email_unverified" => ErrorCode::EmailUnverified,
+            "rate_limited" => ErrorCode::RateLimited,
+            _ => ErrorCode::SignInFailed,
+        }));
     }
 
     let token = body
@@ -244,7 +243,7 @@ pub async fn login_email(
         .unwrap_or("")
         .to_string();
     if token.is_empty() {
-        return Err("Sign-in failed. Please try again.".into());
+        return Err(AppError::new(ErrorCode::SignInFailed));
     }
     let username = body
         .get("username")
@@ -288,7 +287,7 @@ pub async fn login_email(
 /// Sign out: clear the stored identity (token, name, avatar, roles, Discord).
 #[tauri::command]
 #[specta::specta]
-pub async fn logout(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn logout(app: tauri::AppHandle) -> AppResult<()> {
     settings::mutate(&app, |s| {
         s.auth_token.clear();
         s.username.clear();
@@ -323,13 +322,14 @@ async fn friend_call(
     app: &tauri::AppHandle,
     path: &str,
     username: Option<String>,
-) -> Result<serde_json::Value, String> {
+) -> AppResult<serde_json::Value> {
     let s = settings::load(app);
     let token = s.auth_token.trim().to_string();
     if token.is_empty() {
-        return Err("No account token set.".into());
+        return Err(AppError::new(ErrorCode::NoAccountToken));
     }
-    let base = sidecar_base(&s).ok_or("players URL not configured")?;
+    let base = sidecar_base(&s)
+        .ok_or_else(|| AppError::new(ErrorCode::PlayersUrlNotConfigured))?;
     let mut body = serde_json::json!({ "token": token });
     if let Some(name) = username {
         body["username"] = serde_json::Value::String(name);
@@ -338,38 +338,37 @@ async fn friend_call(
         .post(format!("{base}{path}"))
         .json(&body)
         .send()
-        .await
-        .map_err(|e| e.to_string())?
+        .await?
         .json()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Friend list + statuses (also serves as the launcher presence heartbeat).
 #[tauri::command]
 #[specta::specta]
-pub async fn friends_list(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+pub async fn friends_list(app: tauri::AppHandle) -> AppResult<serde_json::Value> {
     friend_call(&app, "/friends", None).await
 }
 
 /// Send a friend request to (or auto-accept a reciprocal request from) a username.
 #[tauri::command]
 #[specta::specta]
-pub async fn friend_add(app: tauri::AppHandle, username: String) -> Result<serde_json::Value, String> {
+pub async fn friend_add(app: tauri::AppHandle, username: String) -> AppResult<serde_json::Value> {
     friend_call(&app, "/friends/add", Some(username)).await
 }
 
 /// Accept a pending incoming request from a username.
 #[tauri::command]
 #[specta::specta]
-pub async fn friend_accept(app: tauri::AppHandle, username: String) -> Result<serde_json::Value, String> {
+pub async fn friend_accept(app: tauri::AppHandle, username: String) -> AppResult<serde_json::Value> {
     friend_call(&app, "/friends/accept", Some(username)).await
 }
 
 /// Unfriend / decline / cancel — drops any relationship with a username.
 #[tauri::command]
 #[specta::specta]
-pub async fn friend_remove(app: tauri::AppHandle, username: String) -> Result<serde_json::Value, String> {
+pub async fn friend_remove(app: tauri::AppHandle, username: String) -> AppResult<serde_json::Value> {
     friend_call(&app, "/friends/remove", Some(username)).await
 }
 
@@ -377,11 +376,11 @@ pub async fn friend_remove(app: tauri::AppHandle, username: String) -> Result<se
 /// Discord bot). The endpoint lives next to /players on the same service.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_events(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+pub async fn get_events(app: tauri::AppHandle) -> AppResult<serde_json::Value> {
     let s = settings::load(&app);
     let base = s.players_url.trim();
     if base.is_empty() {
-        return Err("players URL not configured".into());
+        return Err(AppError::new(ErrorCode::PlayersUrlNotConfigured));
     }
     let url = match base.strip_suffix("/players") {
         Some(prefix) => format!("{prefix}/events"),
@@ -391,11 +390,10 @@ pub async fn get_events(app: tauri::AppHandle) -> Result<serde_json::Value, Stri
         .get(&url)
         .send()
         .await
-        .and_then(|r| r.error_for_status())
-        .map_err(|e| e.to_string())?
+        .and_then(|r| r.error_for_status())?
         .json()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[derive(Serialize, specta::Type)]
@@ -409,16 +407,14 @@ pub struct NewsItem {
 /// "What's new" straight from the patchnotes RSS feed on elefrac.com (the WordPress blog).
 #[tauri::command]
 #[specta::specta]
-pub async fn get_news() -> Result<Vec<NewsItem>, String> {
+pub async fn get_news() -> AppResult<Vec<NewsItem>> {
     let xml = client()?
         .get(FEED_URL)
         .send()
         .await
-        .and_then(|r| r.error_for_status())
-        .map_err(|e| e.to_string())?
+        .and_then(|r| r.error_for_status())?
         .text()
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
     Ok(parse_rss(&xml))
 }
 

@@ -1,3 +1,4 @@
+use crate::error::{AppError, AppResult, ErrorCode};
 use crate::settings;
 use serde::Serialize;
 use std::fs;
@@ -59,9 +60,9 @@ pub fn verify_install(app: tauri::AppHandle) -> Vec<FileCheck> {
 /// Port of install.bat: purge old Mods/dlls/*.dll, drop the loader into
 /// g3/Binaries/Win64, copy the mod DLLs. Shared by the Mods-view button
 /// and the install/update pipeline (patch → mods → version bump).
-pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> Result<Vec<String>, String> {
+pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> AppResult<Vec<String>> {
     if !win64_dir(&root).is_dir() {
-        return Err("That folder doesn't look like a Spellbreak install (missing g3/Binaries/Win64).".into());
+        return Err(AppError::new(ErrorCode::NotSpellbreakInstall));
     }
 
     let url = format!("{}/patch/mod/mod.zip", cdn_base.trim_end_matches('/'));
@@ -71,32 +72,32 @@ pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> Result<Vec<Stri
         // Timeout if no byte received after 1min.
         .read_timeout(std::time::Duration::from_secs(60))
         .build()
-        .map_err(|e| format!("mod download failed: {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::ModDownloadFailed, e))?;
     let resp = client
         .get(&url)
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map_err(|e| format!("mod download failed: {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::ModDownloadFailed, e))?;
     let bytes = resp
         .bytes()
         .await
-        .map_err(|e| format!("mod download failed: {e}"))?;
+        .map_err(|e| AppError::detail(ErrorCode::ModDownloadFailed, e))?;
     if bytes.len() < 1024 {
-        return Err("Downloaded mod.zip is suspiciously small: the CDN may have returned an error page.".into());
+        return Err(AppError::new(ErrorCode::ModArchiveTooSmall));
     }
 
     tauri::async_runtime::spawn_blocking(move || install_from_zip(&root, &bytes))
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| AppError::detail(ErrorCode::ModDownloadFailed, e))?
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn install_mods(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+pub async fn install_mods(app: tauri::AppHandle) -> AppResult<Vec<String>> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
-        return Err("Set the game folder first (Settings).".into());
+        return Err(AppError::new(ErrorCode::NoGameFolder));
     }
     fetch_and_install(&s.cdn_base, PathBuf::from(&s.game_path)).await
 }
@@ -105,35 +106,34 @@ fn extract_one(
     zip: &mut zip::ZipArchive<Cursor<&[u8]>>,
     name: &str,
     dest: &Path,
-) -> Result<bool, String> {
+) -> AppResult<bool> {
     match zip.by_name(name) {
         Ok(mut f) => {
             let mut buf = Vec::with_capacity(f.size() as usize);
-            std::io::copy(&mut f, &mut buf).map_err(|e| e.to_string())?;
-            fs::write(dest, buf).map_err(|e| format!("{}: {e}", dest.display()))?;
+            std::io::copy(&mut f, &mut buf)?;
+            fs::write(dest, buf)?;
             Ok(true)
         }
         Err(zip::result::ZipError::FileNotFound) => Ok(false),
-        Err(e) => Err(e.to_string()),
+        Err(e) => Err(e.into()),
     }
 }
 
-fn install_from_zip(root: &Path, bytes: &[u8]) -> Result<Vec<String>, String> {
-    let mut zip =
-        zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("bad zip: {e}"))?;
+fn install_from_zip(root: &Path, bytes: &[u8]) -> AppResult<Vec<String>> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))?;
     let mut log = Vec::new();
 
     let dlls_dir = root.join("Mods").join("dlls");
     let cmds_dir = root.join("Mods").join("commands");
-    fs::create_dir_all(&dlls_dir).map_err(|e| e.to_string())?;
-    fs::create_dir_all(&cmds_dir).map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dlls_dir)?;
+    fs::create_dir_all(&cmds_dir)?;
 
     // Perpetual paks bundled in mod.zip (e.g. EFCrouch_P.pak + its .sig) install
     // into g3/Content/Paks and stay put: the version swapper (game.rs) only ever
     // parks/activates ElefracBalance/ElefracTest, and the purge above only removes
     // Mods/dlls/*.dll, so these are never touched across Classic/EF/Playtest switches.
     let paks = crate::game::paks_dir(root);
-    fs::create_dir_all(&paks).map_err(|e| e.to_string())?;
+    fs::create_dir_all(&paks)?;
 
     // Purge stale mod DLLs so removed mods from older versions can't linger.
     // Only *.dll inside Mods/dlls — configs and logs are left alone.

@@ -1,3 +1,4 @@
+use crate::error::{AppError, AppResult, ErrorCode};
 use crate::settings;
 use serde::Serialize;
 use std::fs;
@@ -168,21 +169,21 @@ pub fn auto_find_game() -> Option<String> {
 /// restoring the one we do, exactly like the old rename.bat / restore.bat did.
 #[tauri::command]
 #[specta::specta]
-pub fn set_variant(app: tauri::AppHandle, variant: String) -> Result<String, String> {
+pub fn set_variant(app: tauri::AppHandle, variant: String) -> AppResult<String> {
     let s = settings::load(&app);
     switch_to(&s.game_path, &variant)
 }
 
 /// Core of set_variant, reusable by the Playtest installer: apply the
 /// variant's pak layout and refresh the `.ef_mode` marker to match.
-pub fn switch_to(game_path: &str, variant: &str) -> Result<String, String> {
+pub fn switch_to(game_path: &str, variant: &str) -> AppResult<String> {
     if game_path.is_empty() {
-        return Err("Set the game folder first (Settings).".into());
+        return Err(AppError::new(ErrorCode::NoGameFolder));
     }
     let root = Path::new(game_path);
     let paks = paks_dir(root);
     if !paks.is_dir() {
-        return Err(format!("Paks folder not found: {}", paks.display()));
+        return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
     }
 
     apply_variant(&paks, variant)?;
@@ -204,14 +205,14 @@ fn parked_path(paks: &Path, name: &str) -> Option<PathBuf> {
 /// Make `name` the active file: if it's parked and not already active, restore
 /// it; if it's already active, drop any stale parked copies (updates can
 /// re-deliver the real file while a copy is still parked). No-op when absent.
-fn activate(paks: &Path, name: &str) -> Result<(), String> {
+fn activate(paks: &Path, name: &str) -> AppResult<()> {
     let active = paks.join(name);
     if active.exists() {
         for s in PARK_SUFFIXES {
             let _ = fs::remove_file(paks.join(format!("{name}.{s}")));
         }
     } else if let Some(parked) = parked_path(paks, name) {
-        fs::rename(&parked, &active).map_err(|e| format!("{name}: {e}"))?;
+        fs::rename(&parked, &active)?;
     }
     Ok(())
 }
@@ -219,12 +220,12 @@ fn activate(paks: &Path, name: &str) -> Result<(), String> {
 /// Park `name` out of the way as `<name>.bak`. Windows fs::rename refuses to
 /// overwrite, so clear a stale parked copy first; also drop any legacy `.1` so
 /// detection stays unambiguous. No-op when the active file isn't present.
-fn park(paks: &Path, name: &str) -> Result<(), String> {
+fn park(paks: &Path, name: &str) -> AppResult<()> {
     let active = paks.join(name);
     if active.exists() {
         let parked = paks.join(format!("{name}.bak"));
         let _ = fs::remove_file(&parked);
-        fs::rename(&active, &parked).map_err(|e| format!("{name}: {e}"))?;
+        fs::rename(&active, &parked)?;
     }
     let _ = fs::remove_file(paks.join(format!("{name}.1")));
     Ok(())
@@ -232,7 +233,7 @@ fn park(paks: &Path, name: &str) -> Result<(), String> {
 
 /// Apply the pak layout for a variant. Only one balance pak is mounted at a
 /// time; the rest are parked as `<name>.bak`.
-fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
+fn apply_variant(paks: &Path, variant: &str) -> AppResult<()> {
     match variant {
         // Production: Elemental Fracture balance active, Playtest parked.
         "ef" => {
@@ -243,9 +244,7 @@ fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
                 park(paks, name)?;
             }
             if !paks.join(PAK).exists() {
-                return Err(format!(
-                    "{PAK} isn't in the Paks folder: run Install / Update mods first."
-                ));
+                return Err(AppError::new(ErrorCode::VariantPakMissing).with("pak", PAK));
             }
         }
         // Vanilla: both balance paks parked, stock game only.
@@ -263,12 +262,10 @@ fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
                 activate(paks, name)?;
             }
             if !paks.join(TEST_PAK).exists() {
-                return Err(format!(
-                    "{TEST_PAK} isn't installed: enable the Playtest build to download it first."
-                ));
+                return Err(AppError::new(ErrorCode::PlaytestPakMissing).with("pak", TEST_PAK));
             }
         }
-        other => return Err(format!("unknown variant: {other}")),
+        other => return Err(AppError::new(ErrorCode::UnknownVariant).with("variant", other)),
     }
     Ok(())
 }
@@ -689,18 +686,16 @@ fn ensure_prefix_override(
 
 #[tauri::command]
 #[specta::specta]
-pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
+pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     let s = settings::load(&app);
     if s.game_path.is_empty() {
-        return Err("Set the game folder first (Settings).".into());
+        return Err(AppError::new(ErrorCode::NoGameFolder));
     }
     let root = PathBuf::from(&s.game_path);
     let Some(exe) = find_exe(&root) else {
-        return Err(format!(
-            "No game binary found in {} (looked for {})",
-            root.join("g3").join("Binaries").join("Win64").display(),
-            WIN64_EXES.join(", ")
-        ));
+        return Err(AppError::new(ErrorCode::NoGameBinary)
+            .with("dir", root.join("g3").join("Binaries").join("Win64").display())
+            .with("names", WIN64_EXES.join(", ")));
     };
 
     let mut argv: Vec<String> = Vec::new();
@@ -722,11 +717,9 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
                 launch_command = "umu-run".into();
                 wrapper_argv = vec!["umu-run".into()];
             } else {
-                return Err(format!(
-                    "'{wrapper}' isn't installed{}. Set a different Launch wrapper in Settings \
-                     (e.g. wine or umu-run).",
-                    if settings::in_container() { " on the host" } else { "" }
-                ));
+                return Err(AppError::new(ErrorCode::WrapperNotInstalled)
+                    .with("wrapper", &wrapper)
+                    .with("onHost", settings::in_container()));
             }
         }
         let is_proton = launch_command.contains("umu") || launch_command.contains("proton");
@@ -760,13 +753,9 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
                 && !p.join("tracked_files").exists()
                 && !p.join("pfx").exists();
             if is_proton && foreign_wine {
-                return Err(format!(
-                    "The prefix at {prefix} was made by a different Wine, and \
-                     {} would permanently convert it (possibly breaking the app \
-                     that owns it). Pick an empty folder to get a fresh prefix, \
-                     or clear the field to use the default.",
-                    launch_command
-                ));
+                return Err(AppError::new(ErrorCode::ForeignWinePrefix)
+                    .with("prefix", prefix)
+                    .with("wrapper", &launch_command));
             }
             envs.push(format!("WINEPREFIX={prefix}"));
         }
@@ -835,7 +824,9 @@ pub fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
     let _ = fs::remove_file(cmds_dir.join("ef_server.txt"));
 
     cmd.spawn()
-        .map_err(|e| format!("failed to launch ({}): {e}", argv.join(" ")))?;
+        .map_err(|e| {
+            AppError::detail(ErrorCode::LaunchFailed, e).with("command", argv.join(" "))
+        })?;
     Ok(())
 }
 
