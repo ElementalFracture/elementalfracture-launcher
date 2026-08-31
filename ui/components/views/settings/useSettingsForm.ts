@@ -3,8 +3,8 @@ import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { isWindows } from "@/lib/platform";
-import { toast } from "@/lib/toast";
 import type { Settings } from "@/lib/rust";
+import { toastError } from "@/i18n/errors";
 import { computeWrapperState, type WrapperState } from "./wrapper";
 
 /** The text fields, named by the settings key each one writes. */
@@ -95,7 +95,7 @@ export function useSettingsForm(): SettingsForm {
       // Put the ref back, or every later write builds on a value that isn't
       // on disk.
       latest.current = settings;
-      toast(String(e), true);
+      toastError(e);
       return;
     }
     if (Object.keys(patch).some((key) => REPOINTS.includes(key))) {

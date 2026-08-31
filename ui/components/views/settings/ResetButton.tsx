@@ -5,6 +5,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 
 /** Wipes the config back to a first-run state. Arms on the first click and
     disarms itself again shortly after, so it can't go off by accident. */
@@ -30,7 +31,7 @@ export function ResetButton() {
     try {
       await resetSettings();
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
       return;
     }
     toast("Configuration reset");

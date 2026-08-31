@@ -186,7 +186,10 @@ describe("applyGameUpdate", () => {
 
   it("keeps offering it and lowers the flag when the patch fails", async () => {
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
-    commands.updatePatch.mockResolvedValue({ status: "error", error: "connection reset" });
+    commands.updatePatch.mockResolvedValue({
+      status: "error",
+      error: { code: "network", params: { detail: "connection reset" } },
+    });
 
     const { result } = renderGame();
     await waitFor(() => expect(result.current.gameOutdated).toBe(true));
@@ -256,7 +259,10 @@ describe("provisionInstall", () => {
     const { result } = renderGame();
     await waitFor(() => expect(result.current.status).not.toBeNull());
     commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.1", remote: "6.0.3" }));
-    commands.updatePatch.mockResolvedValue({ status: "error", error: "disk full" });
+    commands.updatePatch.mockResolvedValue({
+      status: "error",
+      error: { code: "io", params: { detail: "disk full" } },
+    });
 
     const report = vi.fn();
     let ok: boolean | undefined;
@@ -264,6 +270,8 @@ describe("provisionInstall", () => {
       ok = await result.current.provisionInstall(report);
     });
     expect(ok).toBe(false);
+    /* The code becomes a sentence here, and the library's own words ride along
+       in it — a failure the backend can't phrase still says what happened. */
     expect(report).toHaveBeenLastCalledWith(expect.stringContaining("disk full"), true);
   });
 });

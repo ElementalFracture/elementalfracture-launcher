@@ -7,6 +7,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
 import { openLink } from "@/lib/links";
+import { errorText } from "@/i18n/errors";
 import "./modals/Dialog.css";
 
 const LINKS = {
@@ -85,7 +86,7 @@ export function Wizard() {
       }
     } catch (e) {
       setGameResult("");
-      setGameError(String(e));
+      setGameError(errorText(e));
     } finally {
       setGameBusy(false);
     }
@@ -105,8 +106,9 @@ export function Wizard() {
       setPassword("");
       setStep("done");
     } catch (e) {
-      // loginEmail throws a friendly message on any auth failure.
-      setSigninError(e instanceof Error ? e.message : String(e));
+      // loginEmail rejects with a coded auth failure; the sentence is picked
+      // here, in whatever language is on screen.
+      setSigninError(errorText(e));
     } finally {
       setSigninBusy(false);
     }

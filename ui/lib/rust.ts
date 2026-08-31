@@ -14,10 +14,17 @@
  * Commands the backend declares fallible come back as `Result` and are
  * unwrapped here, so no caller ever branches on `status === "ok"` — they
  * use try/catch, the same as for the infallible ones.
+ *
+ * What they throw is a `BackendError`, which carries the backend's error
+ * *code* rather than a rendered sentence — the prose is picked in whatever
+ * language is on screen. Catch blocks render it with `errorText()`, or more
+ * often hand it straight to `toastError()`.
  */
 import { commands } from "@/generated/bindings";
+import { BackendError } from "@/i18n/errors";
 import type {
   Account,
+  AppError,
   FileCheck,
   GameStatus,
   LauncherUpdateInfo,
@@ -32,6 +39,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type {
   Account,
+  AppError,
   FileCheck,
   GameStatus,
   LauncherUpdateInfo,
@@ -43,11 +51,11 @@ export type {
 };
 
 /** Collapse a backend `Result` to its value, turning the error case into a throw. */
-export function unwrap<T>(r: Result<T, string>): T {
+export function unwrap<T>(r: Result<T, AppError>): T {
   if (r.status === "ok") {
     return r.data;
   }
-  throw new Error(r.error);
+  throw new BackendError(r.error);
 }
 
 /* ---------------- settings ---------------- */

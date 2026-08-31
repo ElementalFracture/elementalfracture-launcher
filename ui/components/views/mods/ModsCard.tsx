@@ -15,6 +15,8 @@ import * as rust from "@/lib/rust";
 import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import type { FileCheck } from "@/lib/rust";
+import { toastError } from "@/i18n/errors";
+import { errorText } from "@/i18n/errors";
 import "./ModsCard.css";
 
 /** Mod install state: what's on disk, what's behind, and the buttons to fix it. */
@@ -33,7 +35,7 @@ export function ModsCard() {
       const f = await rust.verifyInstall();
       setFiles(f);
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
     }
   }, []);
 
@@ -73,7 +75,7 @@ export function ModsCard() {
           : "Patch updated"
       );
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
     } finally {
       setUpdateBusy(false);
       refreshVersions();
@@ -88,7 +90,7 @@ export function ModsCard() {
       setLog(lines.join("\n"));
       toast("Mods installed");
     } catch (e) {
-      setLog(String(e));
+      setLog(errorText(e));
       toast("Install failed", true);
     } finally {
       setModsBusy(false);

@@ -3,6 +3,7 @@ import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 import { LaunchPlate } from "./LaunchPlate";
 import "./LaunchPanel.css";
 
@@ -45,7 +46,7 @@ export function LaunchPanel() {
         }, 1200);
       }
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
     } finally {
       setLaunchBusy(false);
     }

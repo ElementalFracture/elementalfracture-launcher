@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import { useSettings } from "@/context/SettingsContext";
 import { openLink } from "@/lib/links";
+import { toastError } from "@/i18n/errors";
 import { toast } from "@/lib/toast";
 import "./Dialog.css";
 
@@ -49,7 +50,7 @@ export function AccountModal({
       onOpenChange(false);
     } catch (e) {
       // loginEmail throws a friendly message on any auth failure.
-      toast(e instanceof Error ? e.message : String(e), true);
+      toastError(e);
     } finally {
       setSaving(false);
     }

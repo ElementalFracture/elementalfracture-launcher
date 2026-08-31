@@ -160,12 +160,17 @@ describe("saveSettings", () => {
     const { result } = renderSettings();
     await waitFor(() => expect(result.current.settings).not.toBeNull());
 
-    commands.saveSettings.mockResolvedValue({ status: "error", error: "path is not writable" });
+    commands.saveSettings.mockResolvedValue({
+      status: "error",
+      error: { code: "io", params: { detail: "path is not writable" } },
+    });
+    /* The throw carries the code; `message` is it, since the prose is only
+       chosen once a locale is known. */
     await expect(
       act(async () => {
         await result.current.saveSettings(makeSettings({ game_path: "/read-only" }));
       })
-    ).rejects.toThrow("path is not writable");
+    ).rejects.toThrow("io");
     expect(result.current.settings?.game_path).toBe("/games/spellbreak");
   });
 });

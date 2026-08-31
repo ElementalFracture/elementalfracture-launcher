@@ -15,6 +15,7 @@ import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 
 /** Where the game lives, which version it is, and the ways to get or move one. */
 export function GameCard() {
@@ -54,7 +55,7 @@ export function GameCard() {
       }
       toast("Game folder updated");
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
     }
   };
 
@@ -68,7 +69,7 @@ export function GameCard() {
         await applyPath(dir);
       }
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
     }
   };
 

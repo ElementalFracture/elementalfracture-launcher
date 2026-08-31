@@ -9,6 +9,7 @@ import {
 import * as rust from "@/lib/rust";
 import type { FriendStatus, FriendsData } from "@/lib/rust";
 import { useSettings } from "@/context/SettingsContext";
+import { errorText } from "@/i18n/errors";
 
 /** Error codes the sidecar answers with, in the wording the popover shows. */
 const FRIEND_ERRORS: Record<string, string> = {
@@ -95,7 +96,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         await refreshFriends();
         return null;
       } catch (e) {
-        return String(e);
+        return errorText(e);
       }
     },
     [refreshFriends]

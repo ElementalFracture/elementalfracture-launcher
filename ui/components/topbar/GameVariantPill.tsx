@@ -4,7 +4,7 @@ import { InfoPopover } from "@/components/InfoPopover";
 import { useGame } from "@/context/GameContext";
 import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
-import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 import {
   GAME_VARIANTS,
   canSeePlaytest,
@@ -41,7 +41,7 @@ export function GameVariantPill() {
         await rust.setVariant(picked);
       }
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
     } finally {
       setInstalling(false);
     }

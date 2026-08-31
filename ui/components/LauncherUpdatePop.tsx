@@ -8,7 +8,7 @@ import {
 } from "@/components/shadcn/card";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
-import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 import "./LauncherUpdatePop.css";
 
 export function LauncherUpdatePop() {
@@ -24,7 +24,7 @@ export function LauncherUpdatePop() {
       // On success the backend restarts the launcher; this call never resolves.
       await rust.updateLauncher();
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
       setInstalling(false);
     }
   };

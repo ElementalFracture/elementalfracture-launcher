@@ -10,6 +10,7 @@ import {
 import * as rust from "@/lib/rust";
 import type { GameStatus, LauncherUpdateInfo, VersionInfo } from "@/lib/rust";
 import { toast } from "@/lib/toast";
+import { errorText } from "@/i18n/errors";
 import { useSettings } from "@/context/SettingsContext";
 
 interface GameContextValue {
@@ -121,7 +122,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         );
         return true;
       } catch (e) {
-        report("Couldn't update the install: " + e, true);
+        report("Couldn't update the install: " + errorText(e), true);
         return false;
       } finally {
         refreshStatus();
@@ -172,8 +173,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // UI holds stay stale and get saved back over the new install.
       await refreshSettings();
     } catch (e) {
-      toast(String(e), true);
-      setInstallNotice("Install failed: " + e);
+      const why = errorText(e);
+      toast(why, true);
+      setInstallNotice("Install failed: " + why);
     } finally {
       setInstallBusy(false);
       refreshStatus();
@@ -200,7 +202,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       );
       return true;
     } catch (e) {
-      toast("Update failed: " + e, true);
+      toast("Update failed: " + errorText(e), true);
       return false;
     } finally {
       setUpdating(false);

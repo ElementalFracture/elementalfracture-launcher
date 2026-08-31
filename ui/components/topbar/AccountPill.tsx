@@ -14,6 +14,7 @@ import { useFriends } from "@/context/FriendsContext";
 import { useSettings } from "@/context/SettingsContext";
 import { avatarUrl } from "@/lib/avatar";
 import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 import { FriendList } from "./FriendList";
 import "./AccountPill.css";
 
@@ -44,7 +45,7 @@ export function AccountPill() {
       setAccountDrawerOpen(false);
       toast("Signed out.");
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e), true);
+      toastError(e);
     }
   };
 
