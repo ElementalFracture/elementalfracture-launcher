@@ -5,6 +5,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { toast } from "@/lib/toast";
+import { _ } from "@/i18n";
 import { toastError } from "@/i18n/errors";
 
 /** Wipes the config back to a first-run state. Arms on the first click and
@@ -34,7 +35,7 @@ export function ResetButton() {
       toastError(e);
       return;
     }
-    toast("Configuration reset");
+    toast(_("settings.reset.done"));
     refreshStatus();
     refreshPlayers();
     setView("home");
@@ -45,10 +46,10 @@ export function ResetButton() {
     <Button
       variant="destructive"
       className={armed ? "armed" : undefined}
-      title="Clear all launcher settings and run first-time setup again"
+      title={_("settings.reset.title")}
       onClick={onClick}
     >
-      {armed ? "Click again to confirm reset" : "Reset configuration"}
+      {armed ? _("settings.reset.confirm") : _("settings.reset.button")}
     </Button>
   );
 }

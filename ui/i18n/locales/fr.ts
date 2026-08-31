@@ -10,6 +10,10 @@ import type { Catalogue } from "../index";
  * tooling and the community's own vocabulary use.
  */
 export const fr: Catalogue = {
+  common: {
+    moreInfo: "Plus d'informations",
+  },
+
   settings: {
     launcher: {
       title: "Lanceur",

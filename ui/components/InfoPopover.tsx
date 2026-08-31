@@ -4,10 +4,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/shadcn/popover";
+import { _ } from "@/i18n";
 import "./InfoPopover.css";
 
 export function InfoPopover({
-  label = "More info",
+  label,
   align = "start",
   children,
 }: {
@@ -21,7 +22,11 @@ export function InfoPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="info-btn" aria-label={label} title={label}>
+        <button
+          className="info-btn"
+          aria-label={label ?? _("common.moreInfo")}
+          title={label ?? _("common.moreInfo")}
+        >
           i
         </button>
       </PopoverTrigger>

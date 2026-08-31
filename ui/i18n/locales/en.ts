@@ -11,6 +11,12 @@
  * isn't one; see `pluralKey()` in ../index, which explains the name.
  */
 export const en = {
+  /* Strings a shared component owns, rather than a view: whoever renders it
+     shouldn't have to pass its own words in. */
+  common: {
+    moreInfo: "More info",
+  },
+
   settings: {
     launcher: {
       title: "Launcher",

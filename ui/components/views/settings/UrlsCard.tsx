@@ -6,6 +6,7 @@ import {
 } from "@/components/shadcn/card";
 import { Input } from "@/components/shadcn/input";
 import { Label } from "@/components/shadcn/label";
+import { _ } from "@/i18n";
 import { blurOnEnter } from "./blurOnEnter";
 import type { SettingsForm } from "./useSettingsForm";
 
@@ -13,13 +14,12 @@ export function UrlsCard({ form }: { form: SettingsForm }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>URLs</CardTitle>
+        <CardTitle>{_("settings.urls.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="field">
           <Label htmlFor="cdn-base">
-            CDN base{" "}
-            <small>(where game and launcher updates are pulled from)</small>
+            {_("settings.urls.cdn")} <small>{_("settings.urls.cdnHelp")}</small>
           </Label>
           <Input
             id="cdn-base"
@@ -32,11 +32,8 @@ export function UrlsCard({ form }: { form: SettingsForm }) {
         </div>
         <div className="field">
           <Label htmlFor="auth-url">
-            Auth URL{" "}
-            <small>
-              (token validation endpoint; the game server host is derived from
-              it)
-            </small>
+            {_("settings.urls.auth")}{" "}
+            <small>{_("settings.urls.authHelp")}</small>
           </Label>
           <Input
             id="auth-url"
@@ -50,7 +47,8 @@ export function UrlsCard({ form }: { form: SettingsForm }) {
         </div>
         <div className="field">
           <Label htmlFor="players-url">
-            Players URL <small>(players sidecar endpoint)</small>
+            {_("settings.urls.players")}{" "}
+            <small>{_("settings.urls.playersHelp")}</small>
           </Label>
           <Input
             id="players-url"

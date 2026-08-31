@@ -4,6 +4,7 @@ import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { isWindows } from "@/lib/platform";
 import type { Settings } from "@/lib/rust";
+import type { LanguageSetting } from "@/i18n";
 import { toastError } from "@/i18n/errors";
 import { computeWrapperState, type WrapperState } from "./wrapper";
 
@@ -43,6 +44,11 @@ export interface SettingsForm {
    *  set it doesn't race its own state update. */
   commitText: (key: TextKey, value: string) => void;
 
+  /** The display language, written the moment it is picked. "" = follow the
+      OS. Not a draft: a picker has no half-chosen state. */
+  language: LanguageSetting;
+  setLanguage: (v: LanguageSetting) => void;
+
   /* The wrapper picker writes at once; its free-text half is a draft like any
      other, so `commitWrapper` takes the state to write for the same reason. */
   wrapper: WrapperState;
@@ -61,6 +67,7 @@ export function useSettingsForm(): SettingsForm {
   const { refreshStatus } = useGame();
   const { refreshPlayers } = useLiveData();
 
+  const [language, setLanguageState] = useState<LanguageSetting>("");
   const [minimizeOnClose, setMinimizeOnCloseState] = useState(false);
   const [closeOnLaunch, setCloseOnLaunchState] = useState(false);
   const [winePrefix, setWinePrefix] = useState("");
@@ -114,6 +121,7 @@ export function useSettingsForm(): SettingsForm {
   const srcAuthUrl = settings?.auth_url ?? "";
   const srcPlayersUrl = settings?.players_url ?? "";
   const srcLaunchCommand = settings?.launch_command ?? "";
+  const srcLanguage = (settings?.language ?? "") as LanguageSetting;
   const srcMinimizeOnClose = settings?.minimize_on_close ?? false;
   const srcCloseOnLaunch = settings?.close_on_launch ?? false;
 
@@ -126,9 +134,10 @@ export function useSettingsForm(): SettingsForm {
   }, [srcWinePrefix, srcCdnBase, srcAuthUrl, srcPlayersUrl]);
 
   useEffect(() => {
+    setLanguageState(srcLanguage);
     setMinimizeOnCloseState(srcMinimizeOnClose);
     setCloseOnLaunchState(srcCloseOnLaunch);
-  }, [srcMinimizeOnClose, srcCloseOnLaunch]);
+  }, [srcLanguage, srcMinimizeOnClose, srcCloseOnLaunch]);
 
   // Separate pass: the detected wrapper list arrives after settings do, and
   // the saved command can only be classified as known-vs-custom once it's in.
@@ -146,6 +155,11 @@ export function useSettingsForm(): SettingsForm {
       return w.value.trim();
     }
     return w.mode === "custom" ? w.value.trim() : w.value;
+  };
+
+  const setLanguage = (v: LanguageSetting) => {
+    setLanguageState(v);
+    persist({ language: v });
   };
 
   const setMinimizeOnClose = (v: boolean) => {
@@ -176,6 +190,8 @@ export function useSettingsForm(): SettingsForm {
   };
 
   return {
+    language,
+    setLanguage,
     minimizeOnClose,
     setMinimizeOnClose,
     closeOnLaunch,

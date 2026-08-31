@@ -60,10 +60,14 @@ export function Wizard() {
     try {
       let dir = await rust.autoFindGame();
       if (!dir) {
-        dir = await rust.pickGameDir("Select your Spellbreak folder (contains g3 and Engine)");
+        dir = await rust.pickGameDir(
+          "Select your Spellbreak folder (contains g3 and Engine)"
+        );
       }
       if (!dir) {
-        setGameResult("No folder selected, you can set it any time in Settings.");
+        setGameResult(
+          "No folder selected, you can set it any time in Settings."
+        );
         return;
       }
       if (!settings) {
@@ -190,7 +194,8 @@ export function Wizard() {
             <p className="wizard-tooltip">
               Don’t have an account?{" "}
               <a onClick={() => openLink(LINKS.register)}>Create one</a>, or see
-              the <a onClick={() => openLink(LINKS.guide)}>quick-start guide</a>.
+              the <a onClick={() => openLink(LINKS.guide)}>quick-start guide</a>
+              .
             </p>
             <div className="wizard-actions">
               <Button

@@ -8,13 +8,14 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Label } from "@/components/shadcn/label";
 import * as rust from "@/lib/rust";
+import { _ } from "@/i18n";
 import { blurOnEnter } from "./blurOnEnter";
 import { WrapperField } from "./WrapperField";
 import type { SettingsForm } from "./useSettingsForm";
 
 export function WrapperCard({ form }: { form: SettingsForm }) {
   const onBrowsePrefix = async () => {
-    const dir = await rust.pickGameDir("Select a Wine prefix folder");
+    const dir = await rust.pickGameDir(_("settings.wrapper.pickPrefix"));
     if (dir) {
       // A picked folder is a finished edit: no blur is coming to write it.
       form.setWinePrefix(dir);
@@ -25,7 +26,7 @@ export function WrapperCard({ form }: { form: SettingsForm }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Launch wrapper</CardTitle>
+        <CardTitle>{_("settings.wrapper.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <WrapperField
@@ -36,24 +37,21 @@ export function WrapperCard({ form }: { form: SettingsForm }) {
 
         <div className="field">
           <Label htmlFor="wine-prefix">
-            Wine prefix{" "}
-            <small>
-              (optional; passed as <code>WINEPREFIX</code>, empty = the launcher
-              makes its own)
-            </small>
+            {_("settings.wrapper.prefix")}{" "}
+            <small>{_("settings.wrapper.prefixHelp")}</small>
           </Label>
           <div className="form-row">
             <Input
               id="wine-prefix"
               type="text"
-              placeholder="e.g. /home/you/.wineprefixes/spellbreak"
+              placeholder={_("settings.wrapper.prefixPlaceholder")}
               value={form.winePrefix}
               onChange={(e) => form.setWinePrefix(e.target.value)}
               onBlur={(e) => form.commitText("wine_prefix", e.target.value)}
               onKeyDown={blurOnEnter}
             />
             <Button variant="secondary" onClick={onBrowsePrefix}>
-              Browse…
+              {_("settings.wrapper.browse")}
             </Button>
           </div>
         </div>

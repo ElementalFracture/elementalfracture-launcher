@@ -96,8 +96,7 @@ export function AccountModal({
           <p className="wizard-tooltip">
             <a onClick={() => openLink(RESET_URL)}>Forgot password?</a>
             {"  ·  "}
-            No account?{" "}
-            <a onClick={() => openLink(REGISTER_URL)}>Create one</a>
+            No account? <a onClick={() => openLink(REGISTER_URL)}>Create one</a>
           </p>
           <div className="wizard-actions">
             <Button

@@ -1,5 +1,6 @@
 import { useUI } from "@/context/UIContext";
 import { isWindows } from "@/lib/platform";
+import { LanguageCard } from "./LanguageCard";
 import { LauncherCard } from "./LauncherCard";
 import { ResetButton } from "./ResetButton";
 import { UrlsCard } from "./UrlsCard";
@@ -17,6 +18,7 @@ export function SettingsView() {
   return (
     <section className={"view" + (view === "settings" ? " active" : "")}>
       <LauncherCard form={form} />
+      <LanguageCard form={form} />
       {/* Both of its fields are Wine's; on Windows there is nothing to show. */}
       {!isWindows && <WrapperCard form={form} />}
       <UrlsCard form={form} />

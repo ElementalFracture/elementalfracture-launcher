@@ -66,10 +66,10 @@ export function GameVariantPill() {
 
   return (
     /*
-    * Tabs is used as a toggle as it's the best component that fit requirements:
-    * Having elements of different width and don't need to manage their width
-    * in this component to change the fill-selected side.
-    */
+     * Tabs is used as a toggle as it's the best component that fit requirements:
+     * Having elements of different width and don't need to manage their width
+     * in this component to change the fill-selected side.
+     */
     <Tabs.Root
       className="pill game-variant"
       value={activeGameVariant}

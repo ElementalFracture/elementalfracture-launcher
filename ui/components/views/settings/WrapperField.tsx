@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/shadcn/select";
 import { useSettings } from "@/context/SettingsContext";
+import { _ } from "@/i18n";
 import { CUSTOM_WRAPPER, type WrapperState } from "./wrapper";
 import "./WrapperField.css";
 
@@ -31,7 +32,8 @@ export function WrapperField({
   return (
     <div className="field">
       <Label htmlFor="launch-wrapper">
-        Command <small>(runs the game exe — Proton-GE recommended)</small>
+        {_("settings.wrapper.command")}{" "}
+        <small>{_("settings.wrapper.commandHelp")}</small>
       </Label>
       {/* The picker stays put once "Custom…" is chosen — the free-text
           box appears beside it rather than replacing it, so a detected
@@ -46,7 +48,7 @@ export function WrapperField({
                   ? { mode: "custom", value: "" }
                   : { mode: "select", value: v };
               onChange(next);
-              /* Custom… only opens the box beside it — there is nothing to
+              /* "Custom…" only opens the box beside it — there is nothing to
                  write until something is typed in there. */
               if (next.mode !== "custom") {
                 onCommit(next);
@@ -66,7 +68,9 @@ export function WrapperField({
                   {w.label}
                 </SelectItem>
               ))}
-              <SelectItem value={CUSTOM_WRAPPER}>Custom…</SelectItem>
+              <SelectItem value={CUSTOM_WRAPPER}>
+                {_("settings.wrapper.custom")}
+              </SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -74,11 +78,11 @@ export function WrapperField({
           <Input
             id="launch-wrapper"
             type="text"
-            placeholder={
+            placeholder={_(
               wrappers.length
-                ? "e.g. umu-run"
-                : "e.g. umu-run (none detected; install Wine or umu)"
-            }
+                ? "settings.wrapper.placeholder"
+                : "settings.wrapper.placeholderNone"
+            )}
             value={value.value}
             onChange={(e) => onChange({ ...value, value: e.target.value })}
             onBlur={(e) => onCommit({ ...value, value: e.target.value })}

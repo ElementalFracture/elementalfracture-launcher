@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SettingsView } from "../SettingsView";
+import { LocaleGate } from "@/i18n/LocaleGate";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
 import { LiveDataProvider } from "@/context/LiveDataContext";
@@ -50,6 +51,19 @@ beforeEach(() => {
   commands.getNews.mockResolvedValue({ status: "ok", data: [] });
 });
 
+/* The Language card has a picker of its own, so a bare combobox query would
+   match either one. Scope to the wrapper's own card: on Custom… the label
+   points at the text box rather than the picker, so the picker has no
+   accessible name to find it by. */
+const wrapperCard = () =>
+  Array.from(document.querySelectorAll('[data-slot="card"]')).find((card) =>
+    card
+      .querySelector('[data-slot="card-title"]')
+      ?.textContent?.startsWith("Launch wrapper")
+  );
+const wrapperPicker = () =>
+  wrapperCard()?.querySelector('[data-slot="select-trigger"]') ?? null;
+
 describe("launch wrapper picker", () => {
   it("keeps the picker on screen when the saved command is a custom one", async () => {
     // Replacing the picker with a bare text box strands the user on Custom —
@@ -62,7 +76,7 @@ describe("launch wrapper picker", () => {
     );
 
     render(<SettingsView />, { wrapper: Providers });
-    expect(await screen.findByRole("combobox")).toBeTruthy();
+    await waitFor(() => expect(wrapperPicker()).toBeTruthy());
     expect(
       await screen.findByDisplayValue("steam steam://rungameid/1815016993")
     ).toBeTruthy();
@@ -77,7 +91,7 @@ describe("launch wrapper picker", () => {
     );
 
     render(<SettingsView />, { wrapper: Providers });
-    expect(await screen.findByRole("combobox")).toBeTruthy();
+    await waitFor(() => expect(wrapperPicker()).toBeTruthy());
     expect(screen.queryByPlaceholderText(/umu-run/)).toBeNull();
   });
 
@@ -89,7 +103,7 @@ describe("launch wrapper picker", () => {
 
     render(<SettingsView />, { wrapper: Providers });
     expect(await screen.findByPlaceholderText(/none detected/)).toBeTruthy();
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(wrapperPicker()).toBeNull();
   });
 });
 
@@ -146,6 +160,69 @@ describe("launcher panel", () => {
         })
       )
     );
+  });
+});
+
+describe("the language picker", () => {
+  beforeEach(() => {
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+  });
+
+  /* SettingsView alone isn't enough: the locale comes from LocaleGate, which
+     reads the saved setting back out. This is that round trip. */
+  const renderApp = () =>
+    render(
+      <LocaleGate>
+        <SettingsView />
+      </LocaleGate>,
+      { wrapper: Providers }
+    );
+
+  it("draws the UI in the saved language", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ language: "fr" }));
+    renderApp();
+    expect(
+      await screen.findByText("Réinitialiser la configuration")
+    ).toBeTruthy();
+  });
+
+  /* The "i" button has no text, only a tooltip and an accessible name, so an
+     untranslated default here is invisible to every other assertion. */
+  it("translates the info button that has no words of its own", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ language: "fr" }));
+    renderApp();
+    expect(
+      await screen.findAllByRole("button", { name: "Plus d'informations" })
+    ).not.toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "More info" })).toBeNull();
+  });
+
+  it("falls back to English for a language with no catalogue", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ language: "de" }));
+    renderApp();
+    expect(await screen.findByText("Reset configuration")).toBeTruthy();
+  });
+
+  /* No restart, no reload: the write lands, LocaleGate sees the new setting
+     and the tree re-renders in the new language. */
+  it("switches the UI as soon as a language is picked", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ language: "" }));
+    renderApp();
+    await screen.findByText("Reset configuration");
+
+    fireEvent.click(
+      await screen.findByRole("combobox", { name: /Display language/ })
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "Français" }));
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ language: "fr" })
+      )
+    );
+    expect(
+      await screen.findByText("Réinitialiser la configuration")
+    ).toBeTruthy();
   });
 });
 

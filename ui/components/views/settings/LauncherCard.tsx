@@ -13,6 +13,7 @@ import { InfoPopover } from "@/components/InfoPopover";
 import { useGame } from "@/context/GameContext";
 import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
+import { _ } from "@/i18n";
 import type { SettingsForm } from "./useSettingsForm";
 
 export function LauncherCard({ form }: { form: SettingsForm }) {
@@ -30,14 +31,11 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
       const info = await atLeast(checkLauncherUpdate());
       await refreshVersions();
       if (!info?.remote) {
-        toast(
-          "Couldn't reach the update server, check the CDN base in Settings.",
-          true
-        );
+        toast(_("settings.launcher.unreachable"), true);
       } else if (info.remote !== info.current) {
         setLauncherUpdatePop(true);
       } else {
-        toast("Launcher is up to date");
+        toast(_("settings.launcher.upToDate"));
       }
     } finally {
       setCheckingUpdates(false);
@@ -48,9 +46,14 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
     <Card>
       <CardHeader>
         <CardTitle>
-          Launcher
+          {_("settings.launcher.title")}
           {launcherInfo?.current && (
-            <span className="title-note"> (v{launcherInfo.current})</span>
+            <span className="title-note">
+              {" "}
+              {_("settings.launcher.version", {
+                version: launcherInfo.current,
+              })}
+            </span>
           )}
         </CardTitle>
         <CardAction className="panel-actions">
@@ -62,10 +65,10 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
             {checkingUpdates ? (
               <>
                 <Spinner />
-                Checking…
+                {_("settings.launcher.checking")}
               </>
             ) : (
-              "Check for launcher updates"
+              _("settings.launcher.checkUpdates")
             )}
           </Button>
         </CardAction>
@@ -73,33 +76,26 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
       <CardContent className="switch-list">
         <div className="switch-row">
           <span className="switch-text">
-            <span>Minimize to taskbar when closing (X)</span>
+            <span>{_("settings.launcher.minimizeOnClose")}</span>
             <InfoPopover>
-              <p>
-                Pressing X hides the launcher to the taskbar instead of
-                quitting, so it stays running in the background. Quit it fully
-                from its tray/taskbar entry.
-              </p>
+              <p>{_("settings.launcher.minimizeOnCloseHelp")}</p>
             </InfoPopover>
           </span>
           <Switch
-            aria-label="Minimize to taskbar when closing (X)"
+            aria-label={_("settings.launcher.minimizeOnClose")}
             checked={form.minimizeOnClose}
             onCheckedChange={form.setMinimizeOnClose}
           />
         </div>
         <div className="switch-row">
           <span className="switch-text">
-            <span>Close launcher when the game starts</span>
+            <span>{_("settings.launcher.closeOnLaunch")}</span>
             <InfoPopover>
-              <p>
-                Automatically closes the launcher a moment after the game
-                launches, to free up memory while you play.
-              </p>
+              <p>{_("settings.launcher.closeOnLaunchHelp")}</p>
             </InfoPopover>
           </span>
           <Switch
-            aria-label="Close launcher when the game starts"
+            aria-label={_("settings.launcher.closeOnLaunch")}
             checked={form.closeOnLaunch}
             onCheckedChange={form.setCloseOnLaunch}
           />
