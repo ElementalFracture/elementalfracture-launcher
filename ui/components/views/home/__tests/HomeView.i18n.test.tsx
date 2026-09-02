@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { HomeView } from "../HomeView";
 import { LocaleGate } from "@/i18n/LocaleGate";
+import { fr } from "@/i18n/locales/fr";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
 import { LiveDataProvider } from "@/context/LiveDataContext";
@@ -63,11 +64,13 @@ beforeEach(() => {
 });
 
 describe("the banner", () => {
+  /* Against the catalogue rather than a quoted sentence: the copy itself is
+     still being revised, and what this has to catch is the hero rendering
+     English — or reaching for the wrong key — not a reworded line. */
   it("draws the hero copy in the saved language", async () => {
     renderHome();
-    expect(
-      await screen.findByText(/Les Terres Creuses vous appellent encore/)
-    ).toBeTruthy();
+    expect(await screen.findByText(fr.home.hero.efTitle)).toBeTruthy();
+    expect(screen.getByText(fr.home.hero.efSub)).toBeTruthy();
   });
 
   /* The copy rides in state across the variant fade, so it is seeded once and
@@ -76,9 +79,7 @@ describe("the banner", () => {
   it("keeps the hero on the language when the variant is not the default", async () => {
     commands.getStatus.mockResolvedValue(makeStatus({ variant: "classic" }));
     renderHome();
-    expect(
-      await screen.findByText(/Les Terres Creuses, telles qu'elles étaient/)
-    ).toBeTruthy();
+    expect(await screen.findByText(fr.home.hero.classicTitle)).toBeTruthy();
   });
 
   it("translates the launch plate, label and tooltip alike", async () => {
@@ -96,9 +97,7 @@ describe("the banner", () => {
       await screen.findByTitle("Télécharger la mise à jour v6.0.3")
     ).toBeTruthy();
     expect(
-      screen.getByText(
-        "La version 6.0.3 est disponible — mettez à jour pour jouer."
-      )
+      screen.getByText(fr.home.launch.hint.replace("{version}", "6.0.3"))
     ).toBeTruthy();
   });
 
@@ -119,10 +118,8 @@ describe("the banner", () => {
       makeStatus({ game_path: "", exe_present: false })
     );
     renderHome();
-    expect(
-      await screen.findByText(/Aucune installation de Spellbreak configurée/)
-    ).toBeTruthy();
-    expect(screen.getByText("Localiser une installation")).toBeTruthy();
+    expect(await screen.findByText(fr.home.install.noInstall)).toBeTruthy();
+    expect(screen.getByText(fr.home.install.locate)).toBeTruthy();
   });
 });
 

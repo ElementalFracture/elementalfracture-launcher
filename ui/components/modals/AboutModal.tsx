@@ -11,6 +11,8 @@ const LEGAL_LINKS: { label: string; url: string }[] = [
   { label: "Legal & Fair Use", url: "https://elefrac.com/legal/legal-status" },
 ];
 
+/* Left in English on purpose: the disclaimers are a legal position, not copy,
+   and a reworded one is a different claim. */
 export function AboutModal({
   open,
   onClose,

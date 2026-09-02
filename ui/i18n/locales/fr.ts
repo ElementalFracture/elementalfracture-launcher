@@ -69,9 +69,13 @@ export const fr: Catalogue = {
     },
   },
 
-  /* Lore names ("the Hollow Lands") are translated here, unlike the technical
-     nouns above; if the community settles on different wording, this block is
-     the only place it has to change. */
+  sidebar: {
+    home: "Accueil",
+    mods: "Paramètres du jeu",
+    settings: "Paramètres du lanceur",
+    about: "À propos",
+  },
+
   home: {
     greeting: {
       fallbackName: "Breaker",

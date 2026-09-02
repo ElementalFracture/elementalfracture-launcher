@@ -71,6 +71,15 @@ export const en = {
     },
   },
 
+  /* The icon rail. Nothing on it has words of its own — these are the tooltips,
+     which are also the buttons' only accessible names. */
+  sidebar: {
+    home: "Home",
+    mods: "Game Settings",
+    settings: "Launcher Settings",
+    about: "About",
+  },
+
   home: {
     /* Two lines per band of the day; `greeting()` in views/home/format.ts
        picks between them, and `fallbackName` stands in for an unset username. */
