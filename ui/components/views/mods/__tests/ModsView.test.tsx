@@ -5,6 +5,7 @@ import { ModsView } from "../ModsView";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
 import { UIProvider, useUI } from "@/context/UIContext";
+import { LocaleGate } from "@/i18n/LocaleGate";
 import { makeSettings, makeStatus, makeVersions } from "@/test/fixtures";
 
 const commands = vi.hoisted(() => ({
@@ -357,7 +358,7 @@ describe("mod status", () => {
       expect(screen.getByText("Some mod files are missing.")).toBeTruthy()
     );
     expect(screen.getByText("MISSING")).toBeTruthy();
-    expect(screen.getByText(/1 of 2 file\(s\) missing/)).toBeTruthy();
+    expect(screen.getByText(/1 of 2 file missing/)).toBeTruthy();
   });
 
   it("says mods are absent when nothing is present", async () => {
@@ -380,6 +381,44 @@ describe("mod status", () => {
       expect(screen.getByText(/Set the game folder first/)).toBeTruthy()
     );
     expect(screen.queryByText("INSTALLED")).toBeNull();
+  });
+});
+
+/* The catalogue is exercised in full by ui/i18n; what matters here is that
+   both cards read from it — every string on this view used to be a literal. */
+describe("language", () => {
+  const renderTranslated = () =>
+    render(
+      <LocaleGate>
+        <ModsView />
+      </LocaleGate>,
+      { wrapper: Providers }
+    );
+
+  it("draws both cards in the saved language", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ language: "fr" }));
+    renderTranslated();
+
+    expect(
+      await screen.findByText("Les mods sont installés et prêts.")
+    ).toBeTruthy();
+    expect(screen.getByText("Localiser l'installation")).toBeTruthy();
+    expect(screen.getByText("INSTALLÉS")).toBeTruthy();
+    expect(screen.queryByText("Locate install")).toBeNull();
+  });
+
+  /* "1 of 2 file(s) missing" was the old English hedge. French agrees the
+     noun and the adjective with the count, which a hedge can't do. */
+  it("agrees the missing-files count with the language's own plural rules", async () => {
+    commands.getSettings.mockResolvedValue(makeSettings({ language: "fr" }));
+    commands.verifyInstall.mockResolvedValue([
+      { name: "Elefrac.dll", present: false },
+      { name: "Injector.dll", present: false },
+      { name: "Loader.dll", present: true },
+    ]);
+    renderTranslated();
+
+    expect(await screen.findByText(/2 fichiers manquants sur 3/)).toBeTruthy();
   });
 });
 

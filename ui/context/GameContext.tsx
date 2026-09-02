@@ -11,6 +11,7 @@ import * as rust from "@/lib/rust";
 import type { GameStatus, LauncherUpdateInfo, VersionInfo } from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import { errorText } from "@/i18n/errors";
+import { _ } from "@/i18n";
 import { useSettings } from "@/context/SettingsContext";
 
 interface GameContextValue {
@@ -108,21 +109,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       try {
         const v = await rust.getVersions();
         if (v?.local && v?.remote && v.local === v.remote) {
-          report(`Already up to date (v${v.local})`);
+          report(_("game.alreadyCurrent", { version: v.local }));
           return true;
         }
       } catch {
         /* fall through to install */
       }
-      report("Installing updates & mods…");
+      report(_("game.provisioning"));
       try {
         const ver = await rust.updatePatch();
         report(
-          ver && ver !== "unknown" ? `Install ready (v${ver})` : "Install ready"
+          ver && ver !== "unknown"
+            ? _("game.provisioned", { version: ver })
+            : _("game.provisionedUnknown")
         );
         return true;
       } catch (e) {
-        report("Couldn't update the install: " + errorText(e), true);
+        report(_("game.provisionFailed", { detail: errorText(e) }), true);
         return false;
       } finally {
         refreshStatus();
@@ -140,13 +143,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     try {
       let dir = await rust.autoFindGame();
       if (!dir) {
-        dir = await rust.pickGameDir("Select your Spellbreak folder");
+        dir = await rust.pickGameDir(_("game.pickFolder"));
       }
       if (!dir || !settings) {
         return;
       }
       await saveSettings({ ...settings, game_path: dir });
-      toast("Game folder set: " + dir);
+      toast(_("game.folderSet", { path: dir }));
       await refreshStatus();
       await provisionInstall();
     } finally {
@@ -155,19 +158,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [settings, saveSettings, refreshStatus, provisionInstall]);
 
   const downloadGame = useCallback(async () => {
-    const dest = await rust.pickGameDir(
-      "Choose where to install Spellbreak (approx. 25 GB needed)"
-    );
+    const dest = await rust.pickGameDir(_("game.pickDestination"));
     if (!dest) {
       return;
     }
     setInstallBusy(true);
-    setInstallNotice(
-      "Installing: this is a big download, leave the launcher open."
-    );
+    setInstallNotice(_("game.downloading"));
     try {
       const root = await rust.downloadGame(dest);
-      toast("Game installed to " + root);
+      toast(_("game.downloaded", { path: root }));
       setInstallNotice(null);
       // download_game writes game_path itself, so re-read or the settings the
       // UI holds stay stale and get saved back over the new install.
@@ -175,7 +174,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       const why = errorText(e);
       toast(why, true);
-      setInstallNotice("Install failed: " + why);
+      setInstallNotice(_("game.downloadFailed", { detail: why }));
     } finally {
       setInstallBusy(false);
       refreshStatus();
@@ -197,12 +196,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const version = await rust.updatePatch();
       toast(
         version && version !== "unknown"
-          ? `Game updated to v${version}`
-          : "Game updated"
+          ? _("game.updated", { version })
+          : _("game.updatedUnknown")
       );
       return true;
     } catch (e) {
-      toast("Update failed: " + errorText(e), true);
+      toast(_("game.updateFailed", { detail: errorText(e) }), true);
       return false;
     } finally {
       setUpdating(false);

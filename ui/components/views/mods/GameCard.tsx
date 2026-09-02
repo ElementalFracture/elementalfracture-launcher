@@ -16,6 +16,7 @@ import * as rust from "@/lib/rust";
 import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import { toastError } from "@/i18n/errors";
+import { _ } from "@/i18n";
 
 /** Where the game lives, which version it is, and the ways to get or move one. */
 export function GameCard() {
@@ -53,7 +54,7 @@ export function GameCard() {
       if (fresh?.exe_present) {
         await provisionInstall();
       }
-      toast("Game folder updated");
+      toast(_("game.folderUpdated"));
     } catch (e) {
       toastError(e);
     }
@@ -64,7 +65,7 @@ export function GameCard() {
       return;
     }
     try {
-      const dir = await rust.pickGameDir("Select your Spellbreak folder");
+      const dir = await rust.pickGameDir(_("game.pickFolder"));
       if (dir) {
         await applyPath(dir);
       }
@@ -78,14 +79,11 @@ export function GameCard() {
     try {
       const { remote, outdated } = await atLeast(checkGameUpdate());
       if (!remote) {
-        toast(
-          "Couldn't reach the update server, check the CDN base in Settings.",
-          true
-        );
+        toast(_("game.unreachable"), true);
       } else if (outdated) {
-        toast(`Game update available (v${remote}) — Launch it from Home.`);
+        toast(_("game.updateAvailable", { version: remote }));
       } else {
-        toast("Game is up to date");
+        toast(_("game.upToDate"));
       }
     } finally {
       setCheckingUpdates(false);
@@ -93,18 +91,18 @@ export function GameCard() {
   };
 
   const gameLine =
-    installNotice ??
-    (savedPath.trim()
-      ? ""
-      : "No game folder set — Locate or Download the game.");
+    installNotice ?? (savedPath.trim() ? "" : _("game.noFolder"));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          Game
+          {_("game.title")}
           {versions?.local && (
-            <span className="title-note"> (v{versions.local})</span>
+            <span className="title-note">
+              {" "}
+              {_("game.version", { version: versions.local })}
+            </span>
           )}
         </CardTitle>
         <CardAction className="panel-actions">
@@ -113,7 +111,7 @@ export function GameCard() {
             disabled={installBusy}
             onClick={locateGame}
           >
-            Locate install
+            {_("game.locate")}
           </Button>
           {located && (
             <Button
@@ -124,26 +122,26 @@ export function GameCard() {
               {checkingUpdates ? (
                 <>
                   <Spinner />
-                  Checking…
+                  {_("game.checking")}
                 </>
               ) : (
-                "Check for game updates"
+                _("game.checkUpdates")
               )}
             </Button>
           )}
           <Button disabled={installBusy} onClick={downloadGame}>
-            Download game…
+            {_("game.download")}
           </Button>
         </CardAction>
       </CardHeader>
       <CardContent>
         <div className="field">
-          <Label htmlFor="install-location">Install location</Label>
+          <Label htmlFor="install-location">{_("game.location")}</Label>
           <div className="form-row">
             <Input
               id="install-location"
               type="text"
-              placeholder="Not set"
+              placeholder={_("game.locationPlaceholder")}
               value={shown}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -155,10 +153,12 @@ export function GameCard() {
               }}
             />
             <Button variant="secondary" onClick={onBrowseGame}>
-              Browse…
+              {_("game.browse")}
             </Button>
             {edited && (
-              <Button onClick={() => applyPath(shown.trim())}>Save</Button>
+              <Button onClick={() => applyPath(shown.trim())}>
+                {_("game.save")}
+              </Button>
             )}
           </div>
         </div>

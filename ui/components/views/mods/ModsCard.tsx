@@ -15,8 +15,8 @@ import * as rust from "@/lib/rust";
 import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import type { FileCheck } from "@/lib/rust";
-import { toastError } from "@/i18n/errors";
-import { errorText } from "@/i18n/errors";
+import { errorText, toastError } from "@/i18n/errors";
+import { _ } from "@/i18n";
 import "./ModsCard.css";
 
 /** Mod install state: what's on disk, what's behind, and the buttons to fix it. */
@@ -71,8 +71,8 @@ export function ModsCard() {
       const version = await rust.updatePatch();
       toast(
         version && version !== "unknown"
-          ? `Updated to v${version}`
-          : "Patch updated"
+          ? _("mods.patched", { version })
+          : _("mods.patchedUnknown")
       );
     } catch (e) {
       toastError(e);
@@ -88,10 +88,10 @@ export function ModsCard() {
     try {
       const lines = await rust.installMods();
       setLog(lines.join("\n"));
-      toast("Mods installed");
+      toast(_("mods.installDone"));
     } catch (e) {
       setLog(errorText(e));
-      toast("Install failed", true);
+      toast(_("mods.installFailed"), true);
     } finally {
       setModsBusy(false);
       refreshFiles();
@@ -101,16 +101,16 @@ export function ModsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Mods</CardTitle>
+        <CardTitle>{_("mods.title")}</CardTitle>
         <CardAction className="panel-actions">
           <Button variant="secondary" disabled={verifying} onClick={onVerify}>
             {verifying ? (
               <>
                 <Spinner />
-                Verifying…
+                {_("mods.verifying")}
               </>
             ) : (
-              "Verify"
+              _("mods.verify")
             )}
           </Button>
           {outdated && (
@@ -119,11 +119,11 @@ export function ModsCard() {
               disabled={updateBusy}
               onClick={onUpdate}
             >
-              {updateBusy ? "Updating…" : "Update game"}
+              {updateBusy ? _("mods.updating") : _("mods.update")}
             </Button>
           )}
           <Button disabled={modsBusy} onClick={onInstall}>
-            {modsBusy ? "Installing…" : "Install / Update mods"}
+            {modsBusy ? _("mods.installing") : _("mods.install")}
           </Button>
         </CardAction>
       </CardHeader>
@@ -131,7 +131,7 @@ export function ModsCard() {
         {verifying ? (
           <div className="mods-checking">
             <Spinner />
-            <span>Checking mod files…</span>
+            <span>{_("mods.checkingFiles")}</span>
           </div>
         ) : (
           <>
@@ -141,23 +141,25 @@ export function ModsCard() {
                   variant="secondary"
                   className={"badge " + (missing === 0 ? "ok" : "missing")}
                 >
-                  {missing === 0 ? "INSTALLED" : "MISSING"}
+                  {missing === 0
+                    ? _("mods.installedBadge")
+                    : _("mods.missingBadge")}
                 </Badge>
                 <span>
                   {missing === 0
-                    ? "Mods are installed and ready."
+                    ? _("mods.ready")
                     : missing === total
-                      ? "Mods are not installed."
-                      : "Some mod files are missing."}
+                      ? _("mods.absent")
+                      : _("mods.partial")}
                 </span>
               </div>
             ) : null}
 
             <div className="muted">
               {!status?.game_path
-                ? "Set the game folder first — use Locate or Download above."
+                ? _("mods.noFolder")
                 : missing > 0
-                  ? `${missing} of ${total} file(s) missing — run Install / Update mods.`
+                  ? _("mods.missingCount", { count: missing, total })
                   : ""}
             </div>
 

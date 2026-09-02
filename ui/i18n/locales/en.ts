@@ -71,6 +71,72 @@ export const en = {
     },
   },
 
+  /* The "Game & Mods" view. `game` is the Game card plus the install pipeline
+     its two buttons drive — that one lives in GameContext, because Home reaches
+     the same entry points — and `mods` is the card below it. */
+  game: {
+    title: "Game",
+    version: "(v{version})",
+    locate: "Locate install",
+    checkUpdates: "Check for game updates",
+    checking: "Checking…",
+    download: "Download game…",
+    location: "Install location",
+    locationPlaceholder: "Not set",
+    browse: "Browse…",
+    save: "Save",
+    noFolder: "No game folder set — Locate or Download the game.",
+    /* Titles on the OS folder picker, not on a window of ours. */
+    pickFolder: "Select your Spellbreak folder",
+    pickDestination:
+      "Choose where to install Spellbreak (approx. 25 GB needed)",
+    folderSet: "Game folder set: {path}",
+    folderUpdated: "Game folder updated",
+    updateAvailable:
+      "Game update available (v{version}) — Launch it from Home.",
+    upToDate: "Game is up to date",
+    unreachable:
+      "Couldn't reach the update server, check the CDN base in Settings.",
+    downloading: "Installing: this is a big download, leave the launcher open.",
+    downloaded: "Game installed to {path}",
+    downloadFailed: "Install failed: {detail}",
+    /* Provisioning: bringing a freshly-pointed-at install current. */
+    alreadyCurrent: "Already up to date (v{version})",
+    provisioning: "Installing updates & mods…",
+    provisioned: "Install ready (v{version})",
+    provisionedUnknown: "Install ready",
+    provisionFailed: "Couldn't update the install: {detail}",
+    /* The same pipeline, driven from Home's Launch/Update plate. */
+    updated: "Game updated to v{version}",
+    updatedUnknown: "Game updated",
+    updateFailed: "Update failed: {detail}",
+  },
+
+  mods: {
+    title: "Mods",
+    verify: "Verify",
+    verifying: "Verifying…",
+    update: "Update game",
+    updating: "Updating…",
+    install: "Install / Update mods",
+    installing: "Installing…",
+    checkingFiles: "Checking mod files…",
+    installedBadge: "INSTALLED",
+    missingBadge: "MISSING",
+    ready: "Mods are installed and ready.",
+    absent: "Mods are not installed.",
+    partial: "Some mod files are missing.",
+    noFolder: "Set the game folder first — use Locate or Download above.",
+    missingCount:
+      "{count} of {total} file missing — run Install / Update mods.",
+    missingCount_other:
+      "{count} of {total} files missing — run Install / Update mods.",
+    patched: "Updated to v{version}",
+    patchedUnknown: "Patch updated",
+    installDone: "Mods installed",
+    installFailed: "Install failed",
+  },
+
   /* Keyed by the ErrorCode the backend sends. `errorText()` in ../errors picks
      the one that matches and fills in the params that came with it. */
   errors: {

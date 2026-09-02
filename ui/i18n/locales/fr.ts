@@ -69,6 +69,69 @@ export const fr: Catalogue = {
     },
   },
 
+  game: {
+    title: "Jeu",
+    version: "(v{version})",
+    locate: "Localiser l'installation",
+    checkUpdates: "Rechercher des mises à jour du jeu",
+    checking: "Recherche…",
+    download: "Télécharger le jeu…",
+    location: "Dossier d'installation",
+    locationPlaceholder: "Non défini",
+    browse: "Parcourir…",
+    save: "Enregistrer",
+    noFolder:
+      "Aucun dossier de jeu défini — utilisez Localiser ou Télécharger.",
+    pickFolder: "Sélectionnez votre dossier Spellbreak",
+    pickDestination:
+      "Choisissez où installer Spellbreak (environ 25 Go nécessaires)",
+    folderSet: "Dossier du jeu défini : {path}",
+    folderUpdated: "Dossier du jeu mis à jour",
+    updateAvailable:
+      "Mise à jour du jeu disponible (v{version}) — lancez-la depuis l'Accueil.",
+    upToDate: "Le jeu est à jour",
+    unreachable:
+      "Impossible de joindre le serveur de mise à jour, vérifiez la base CDN dans les Paramètres.",
+    downloading:
+      "Installation en cours : le téléchargement est volumineux, laissez le lanceur ouvert.",
+    downloaded: "Jeu installé dans {path}",
+    downloadFailed: "Échec de l'installation : {detail}",
+    alreadyCurrent: "Déjà à jour (v{version})",
+    provisioning: "Installation des mises à jour et des mods…",
+    provisioned: "Installation prête (v{version})",
+    provisionedUnknown: "Installation prête",
+    provisionFailed: "Impossible de mettre à jour l'installation : {detail}",
+    updated: "Jeu mis à jour en v{version}",
+    updatedUnknown: "Jeu mis à jour",
+    updateFailed: "Échec de la mise à jour : {detail}",
+  },
+
+  mods: {
+    title: "Mods",
+    verify: "Vérifier",
+    verifying: "Vérification…",
+    update: "Mettre à jour le jeu",
+    updating: "Mise à jour…",
+    install: "Installer / Mettre à jour les mods",
+    installing: "Installation…",
+    checkingFiles: "Vérification des fichiers de mods…",
+    installedBadge: "INSTALLÉS",
+    missingBadge: "MANQUANTS",
+    ready: "Les mods sont installés et prêts.",
+    absent: "Les mods ne sont pas installés.",
+    partial: "Certains fichiers de mods sont manquants.",
+    noFolder:
+      "Définissez d'abord le dossier du jeu — utilisez Localiser ou Télécharger ci-dessus.",
+    missingCount:
+      "{count} fichier manquant sur {total} — lancez Installer / Mettre à jour les mods.",
+    missingCount_other:
+      "{count} fichiers manquants sur {total} — lancez Installer / Mettre à jour les mods.",
+    patched: "Mis à jour en v{version}",
+    patchedUnknown: "Correctif appliqué",
+    installDone: "Mods installés",
+    installFailed: "Échec de l'installation",
+  },
+
   errors: {
     noGameFolder: "Définissez d'abord le dossier du jeu (Paramètres).",
     notSpellbreakInstall:
