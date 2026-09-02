@@ -1,5 +1,6 @@
 import { useLiveData } from "@/context/LiveDataContext";
 import { openLink } from "@/lib/links";
+import { _ } from "@/i18n";
 
 /** The "What's new" strip: the latest posts from the portal. */
 export function NewsRow() {
@@ -8,7 +9,7 @@ export function NewsRow() {
   return (
     <>
       <div className="row-head">
-        <h3>What’s new</h3>
+        <h3>{_("home.news.title")}</h3>
       </div>
       <div className="cards">
         {news.slice(0, 6).map((item, i) => (

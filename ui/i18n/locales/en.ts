@@ -71,6 +71,83 @@ export const en = {
     },
   },
 
+  home: {
+    /* Two lines per band of the day; `greeting()` in views/home/format.ts
+       picks between them, and `fallbackName` stands in for an unset username. */
+    greeting: {
+      fallbackName: "breaker",
+      night: "Burning the midnight oil, {name}?",
+      nightAlt: "The Hollow Lands never sleep, {name}.",
+      morning: "Good morning, {name}!",
+      morningAlt: "Rise and cast, {name}!",
+      afternoon: "Good afternoon, {name}!",
+      afternoonAlt: "Perfect weather for a Spellstorm, {name}.",
+      evening: "Good evening, {name}!",
+      eveningAlt: "The storm rolls in at dusk, {name}.",
+    },
+    /* Banner copy, one title/sub pair per installed balance. */
+    hero: {
+      efTitle: "The Hollow Lands still beckon, breaker",
+      efSub:
+        "Community servers, restored battles, new balance. Spellbreak lives on.",
+      classicTitle: "The Hollow Lands, as they were before.",
+      classicSub:
+        "Community servers, restored battles, the original balance. Spellbreak, preserved.",
+      playtestTitle: "The Hollow Lands, ahead of the storm.",
+      playtestSub:
+        "Unreleased balance, for testers. Expect rough edges: your feedback shapes what ships.",
+    },
+    install: {
+      noInstall:
+        "No Spellbreak install configured. Locate an existing install or download the game.",
+      exeMissing:
+        "Spellbreak.exe was not found in the configured folder. Locate the right folder or re-download.",
+      locate: "Locate existing install",
+      download: "Download game…",
+    },
+    /* The plate and the line under it. Plate labels are set in a display face
+       at 36px, so they want a word, not a phrase — `LaunchPlate` steps the
+       size down as they get longer. */
+    launch: {
+      launch: "Launch",
+      launchTitle: "Launch Spellbreak",
+      updatingTitle: "Updating the game…",
+      update: "Update",
+      updating: "Updating",
+      updateTitle: "Download game update v{version}",
+      updateTitleUnknown: "Download the game update",
+      downloadingTitle: "Downloading the game update…",
+      hint: "Version {version} is out — update to play.",
+      hintUnknown: "A game update is out — update to play.",
+      patchShipped: "A game update shipped — update before you play.",
+      launching: "Launching Spellbreak…",
+    },
+    events: {
+      title: "Live events",
+      live: "LIVE NOW",
+      interested: "{count} interested",
+      interested_other: "{count} interested",
+      /* `{when}` is the date itself, which Intl formats in the same locale. */
+      inMinutes: "{when} (in {minutes} min)",
+      inHours: "{when} (in {hours} h)",
+    },
+    news: {
+      title: "What’s new",
+    },
+    /* Pipeline stages. The backend names them on the wire in kebab-case;
+       `stageLabel()` maps those names onto these keys. */
+    stages: {
+      downloadBase: "Downloading game",
+      extractBase: "Extracting game",
+      downloadPatch: "Downloading update",
+      extractPatch: "Installing update",
+      installMods: "Installing mods",
+      downloadPlaytest: "Downloading playtest build",
+      extractPlaytest: "Installing playtest build",
+      done: "Done",
+    },
+  },
+
   /* The "Game & Mods" view. `game` is the Game card plus the install pipeline
      its two buttons drive — that one lives in GameContext, because Home reaches
      the same entry points — and `mods` is the card below it. */

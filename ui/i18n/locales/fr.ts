@@ -69,6 +69,79 @@ export const fr: Catalogue = {
     },
   },
 
+  /* Lore names ("the Hollow Lands") are translated here, unlike the technical
+     nouns above; if the community settles on different wording, this block is
+     the only place it has to change. */
+  home: {
+    greeting: {
+      fallbackName: "Breaker",
+      night: "Encore debout à cette heure, {name} ?",
+      nightAlt: "Les Hollow Lands ne dorment jamais, {name}.",
+      morning: "Bonjour, {name} !",
+      morningAlt: "Debout, et à vos sorts, {name} !",
+      afternoon: "Bon après-midi, {name} !",
+      afternoonAlt: "Un temps parfait pour une tempête magique, {name}.",
+      evening: "Bonsoir, {name} !",
+      eveningAlt: "La tempête arrive à la tombée de la nuit, {name}.",
+    },
+    hero: {
+      efTitle: "Les Hollow Lands vous appellent encore, Breaker",
+      efSub:
+        "Serveurs communautaires, batailles restaurées, nouvel équilibrage. Spellbreak continue.",
+      classicTitle: "Les Hollow Lands, telles qu'elles étaient.",
+      classicSub:
+        "Serveurs communautaires, batailles restaurées, équilibrage d'origine. Spellbreak, comme avant.",
+      playtestTitle: "Les Hollow Lands, avant la tempête.",
+      playtestSub:
+        "Équilibrage inédit, pour les testeurs. Attendez-vous à des imperfections : vos retours façonnent ce qui sortira.",
+    },
+    install: {
+      noInstall:
+        "Aucune installation de Spellbreak configurée. Localisez une installation existante ou téléchargez le jeu.",
+      exeMissing:
+        "Spellbreak.exe est introuvable dans le dossier configuré. Localisez le bon dossier ou retéléchargez le jeu.",
+      locate: "Localiser une installation",
+      download: "Télécharger le jeu…",
+    },
+    launch: {
+      launch: "Lancer",
+      launchTitle: "Lancer Spellbreak",
+      updatingTitle: "Mise à jour du jeu…",
+      update: "Mettre à jour",
+      updating: "Mise à jour",
+      updateTitle: "Télécharger la mise à jour v{version}",
+      updateTitleUnknown: "Télécharger la mise à jour du jeu",
+      downloadingTitle: "Téléchargement de la mise à jour…",
+      hint: "La version {version} est disponible — mettez à jour pour jouer.",
+      hintUnknown:
+        "Une mise à jour du jeu est disponible — mettez à jour pour jouer.",
+      patchShipped:
+        "Une mise à jour est sortie — mettez à jour avant de jouer.",
+      launching: "Lancement de Spellbreak…",
+    },
+    events: {
+      title: "Événements en direct",
+      live: "EN DIRECT",
+      interested: "{count} intéressé",
+      interested_other: "{count} intéressés",
+      inMinutes: "{when} (dans {minutes} min)",
+      inHours: "{when} (dans {hours} h)",
+    },
+    news: {
+      title: "Nouveautés",
+    },
+    stages: {
+      downloadBase: "Téléchargement du jeu",
+      extractBase: "Extraction du jeu",
+      downloadPatch: "Téléchargement de la mise à jour",
+      extractPatch: "Installation de la mise à jour",
+      installMods: "Installation des mods",
+      downloadPlaytest: "Téléchargement de la version playtest",
+      extractPlaytest: "Installation de la version playtest",
+      done: "Terminé",
+    },
+  },
+
   game: {
     title: "Jeu",
     version: "(v{version})",

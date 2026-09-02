@@ -4,6 +4,7 @@ import { useSettings } from "@/context/SettingsContext";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import { toastError } from "@/i18n/errors";
+import { _ } from "@/i18n";
 import { LaunchPlate } from "./LaunchPlate";
 import "./LaunchPanel.css";
 
@@ -33,11 +34,11 @@ export function LaunchPanel() {
       if (!(await stillCurrent())) {
         // checkGameUpdate refreshed the versions on its way, so `gameOutdated`
         // has already turned this plate into Update behind the toast.
-        toast("A game update shipped — update before you play.");
+        toast(_("home.launch.patchShipped"));
         return;
       }
       await rust.launchGame();
-      toast("Launching Spellbreak…");
+      toast(_("home.launch.launching"));
       // Opt-in (Settings → Launcher): quit once the game is on its way. Held
       // back a moment so the toast shows and the process is spawned first.
       if (settings?.close_on_launch) {
@@ -57,13 +58,13 @@ export function LaunchPanel() {
     return (
       <div>
         <LaunchPlate
-          label={updating ? "Updating" : "Update"}
+          label={updating ? _("home.launch.updating") : _("home.launch.update")}
           title={
             updating
-              ? "Downloading the game update…"
+              ? _("home.launch.downloadingTitle")
               : target
-                ? `Download game update v${target}`
-                : "Download the game update"
+                ? _("home.launch.updateTitle", { version: target })
+                : _("home.launch.updateTitleUnknown")
           }
           disabled={updating}
           onClick={() => {
@@ -74,8 +75,8 @@ export function LaunchPanel() {
         />
         <div className="launch-hint">
           {target
-            ? `Version ${target} is out — update to play.`
-            : "A game update is out — update to play."}
+            ? _("home.launch.hint", { version: target })
+            : _("home.launch.hintUnknown")}
         </div>
       </div>
     );
@@ -84,8 +85,12 @@ export function LaunchPanel() {
   return (
     <div>
       <LaunchPlate
-        label="Launch"
-        title={updating ? "Updating the game…" : "Launch Spellbreak"}
+        label={_("home.launch.launch")}
+        title={
+          updating
+            ? _("home.launch.updatingTitle")
+            : _("home.launch.launchTitle")
+        }
         disabled={launchBusy || updating}
         onClick={onLaunch}
       />

@@ -1,6 +1,7 @@
 import { useLiveData } from "@/context/LiveDataContext";
 import { openLink } from "@/lib/links";
 import { formatEventTime } from "./format";
+import { _ } from "@/i18n";
 import "./EventRow.css";
 
 /** Community events pulled from the portal. Hidden entirely when there are none. */
@@ -13,7 +14,7 @@ export function EventRow() {
   return (
     <>
       <div className="row-head">
-        <h3>Live events</h3>
+        <h3>{_("home.events.title")}</h3>
       </div>
       <div className="cards">
         {events.slice(0, 4).map((ev, i) => (
@@ -30,7 +31,12 @@ export function EventRow() {
             </span>
             <p>{ev.description ?? ""}</p>
             <span className="date">
-              {[ev.location, ev.interested ? `${ev.interested} interested` : ""]
+              {[
+                ev.location,
+                ev.interested
+                  ? _("home.events.interested", { count: ev.interested })
+                  : "",
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </span>
