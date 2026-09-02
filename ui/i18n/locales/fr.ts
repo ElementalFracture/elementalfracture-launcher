@@ -19,36 +19,36 @@ export const fr: Catalogue = {
 
   settings: {
     launcher: {
-      title: "Lanceur",
+      title: "Launcher",
       version: "(v{version})",
       checkUpdates: "Rechercher des mises à jour",
       checking: "Recherche…",
-      upToDate: "Le lanceur est à jour",
+      upToDate: "Le launcher est à jour",
       unreachable:
         "Impossible de joindre le serveur de mise à jour, vérifiez la base CDN dans les Paramètres.",
       minimizeOnClose: "Réduire dans la barre des tâches à la fermeture (X)",
       minimizeOnCloseHelp:
-        "Appuyer sur X masque le lanceur dans la barre des tâches au lieu de le quitter : il continue de tourner en arrière-plan. Quittez-le complètement depuis son entrée dans la zone de notification.",
-      closeOnLaunch: "Fermer le lanceur au démarrage du jeu",
+        "Appuyer sur X masque le launcher dans la barre des tâches au lieu de le quitter : il continue de tourner en arrière-plan. Quittez-le complètement depuis la barre des tâches.",
+      closeOnLaunch: "Fermer le launcher au démarrage du jeu",
       closeOnLaunchHelp:
-        "Ferme automatiquement le lanceur peu après le démarrage du jeu, pour libérer de la mémoire pendant que vous jouez.",
+        "Ferme automatiquement le launcher peu après le démarrage du jeu, pour libérer de la mémoire pendant que vous jouez.",
     },
     language: {
       title: "Langue",
       label: "Langue d'affichage",
-      help: "Prend effet immédiatement. Système suit votre système d'exploitation, et revient à l'anglais si le lanceur ne parle pas cette langue.",
+      help: "Prend effet immédiatement. 'Système' suit votre système d'exploitation, et revient à l'anglais si le launcher ne parle pas cette langue.",
       system: "Système",
     },
     wrapper: {
       title: "Commande de lancement",
       command: "Commande",
-      commandHelp: "(exécute l'exe du jeu — Proton-GE recommandé)",
+      commandHelp: "(lance l'exécutable du jeu — Proton-GE recommandé)",
       custom: "Personnalisée…",
       placeholder: "ex. umu-run",
-      placeholderNone: "ex. umu-run (aucune détectée ; installez Wine ou umu)",
+      placeholderNone: "ex. umu-run (non détecté ; installez Wine ou umu)",
       prefix: "Préfixe Wine",
       prefixHelp:
-        "(facultatif ; transmis comme WINEPREFIX, vide = le lanceur crée le sien)",
+        "(facultatif ; transmis comme WINEPREFIX, vide = le launcher crée le sien)",
       prefixPlaceholder: "ex. /home/vous/.wineprefixes/spellbreak",
       pickPrefix: "Sélectionnez un dossier de préfixe Wine",
       browse: "Parcourir…",
@@ -56,10 +56,10 @@ export const fr: Catalogue = {
     urls: {
       title: "URL",
       cdn: "Base CDN",
-      cdnHelp: "(d'où sont téléchargées les mises à jour du jeu et du lanceur)",
+      cdnHelp: "(d'où sont téléchargées les mises à jour du jeu et du launcher)",
       auth: "URL d'authentification",
       authHelp:
-        "(point de validation du jeton ; l'hôte du serveur de jeu en est déduit)",
+        "(point de validation du token ; l'hôte du serveur de jeu en est déduit)",
       players: "URL des joueurs",
       playersHelp: "(point de terminaison du service de joueurs)",
     },
@@ -67,7 +67,7 @@ export const fr: Catalogue = {
       button: "Réinitialiser la configuration",
       confirm: "Cliquez à nouveau pour confirmer",
       title:
-        "Effacer tous les paramètres du lanceur et relancer la configuration initiale",
+        "Effacer tous les paramètres du launcher et relancer la configuration initiale",
       done: "Configuration réinitialisée",
     },
   },
@@ -123,7 +123,7 @@ export const fr: Catalogue = {
   },
 
   update: {
-    title: "Mise à jour du lanceur disponible",
+    title: "Mise à jour du launcher disponible",
     installing: "Installation…",
     ready: "v{version} prête · cliquez pour mettre à jour",
     click: "Cliquez pour mettre à jour",
@@ -204,7 +204,7 @@ export const fr: Catalogue = {
     errors: {
       userNotFound: "Aucun joueur avec ce Spellbreak ID.",
       cannotFriendSelf: "C'est vous !",
-      invalidToken: "Renseignez d'abord le jeton de votre compte.",
+      invalidToken: "Renseignez d'abord le token de votre compte.",
       usernameRequired: "Saisissez un Spellbreak ID.",
       noPendingRequest: "Aucune demande en attente de sa part.",
       unavailable: "Serveur d'amis indisponible, réessayez.",
@@ -214,7 +214,7 @@ export const fr: Catalogue = {
   sidebar: {
     home: "Accueil",
     mods: "Paramètres du jeu",
-    settings: "Paramètres du lanceur",
+    settings: "Paramètres du launcher",
     about: "À propos",
   },
 
@@ -313,7 +313,7 @@ export const fr: Catalogue = {
     unreachable:
       "Impossible de joindre le serveur de mise à jour, vérifiez la base CDN dans les Paramètres.",
     downloading:
-      "Installation en cours : le téléchargement est volumineux, laissez le lanceur ouvert.",
+      "Installation en cours : le téléchargement est volumineux, laissez le launcher ouvert.",
     downloaded: "Jeu installé dans {path}",
     downloadFailed: "Échec de l'installation : {detail}",
     alreadyCurrent: "Déjà à jour (v{version})",
@@ -368,7 +368,7 @@ export const fr: Catalogue = {
     modArchiveTooSmall:
       "Le mod.zip téléchargé est anormalement petit : le CDN a peut-être renvoyé une page d'erreur.",
     launcherArchiveTooSmall:
-      "Le lanceur téléchargé est anormalement petit : le CDN a peut-être renvoyé une page d'erreur.",
+      "Le launcher téléchargé est anormalement petit : le CDN a peut-être renvoyé une page d'erreur.",
     playtestArchiveEmpty: "L'archive playtest ne contenait aucun fichier .pak.",
     runtimeMissingUmu: "umu-run est introuvable dans l'archive du runtime.",
     rangeRequestsUnsupported:
@@ -376,7 +376,7 @@ export const fr: Catalogue = {
     downloadStalled:
       "Téléchargement bloqué (plage {range}, {remaining} restants).",
     launcherUpdateDisabledInDev:
-      "La mise à jour automatique du lanceur est désactivée dans les versions de développement (définissez EF_LAUNCHER_UPDATE=1).",
+      "La mise à jour automatique du launcher est désactivée dans les versions de développement (définissez EF_LAUNCHER_UPDATE=1).",
     extractionIncomplete:
       "Extraction incomplète : {written} fichiers écrits sur {expected}. Le téléchargement est probablement corrompu — supprimez le dossier d'installation et retéléchargez.",
     archiveMissingGameFolder:
@@ -385,9 +385,9 @@ export const fr: Catalogue = {
     runtimeNeedsPython:
       "Aucun runtime de jeu n'a été trouvé et python3 est absent (umu / Proton en a besoin). Installez python3 avec votre gestionnaire de paquets, ou installez Wine, puis réessayez.",
     launcherVersionUnreadable:
-      "Impossible de lire la version du lanceur depuis le CDN.",
+      "Impossible de lire la version du launcher depuis le CDN.",
 
-    noAccountToken: "Aucun jeton de compte défini.",
+    noAccountToken: "Aucun token de compte défini.",
     playersUrlNotConfigured: "URL des joueurs non configurée.",
     enterEmailAndPassword: "Saisissez votre e-mail et votre mot de passe.",
     signInNotConfigured: "La connexion n'est pas configurée.",
@@ -432,7 +432,7 @@ export const fr: Catalogue = {
     launcherInstallFailed:
       "Impossible d'installer le nouveau binaire : {detail}",
     launcherRestartFailed:
-      "Mise à jour effectuée, mais le lanceur n'a pas pu redémarrer : {detail}",
+      "Mise à jour effectuée, mais le launcher n'a pas pu redémarrer : {detail}",
     backgroundTaskFailed: "Une tâche en arrière-plan a échoué : {detail}",
     unknown: "Une erreur est survenue ({code}).",
   },
