@@ -12,6 +12,9 @@ import type { Catalogue } from "../index";
 export const fr: Catalogue = {
   common: {
     moreInfo: "Plus d'informations",
+    close: "Fermer",
+    loading: "Chargement",
+    closeToast: "Fermer la notification",
   },
 
   settings: {
@@ -67,6 +70,64 @@ export const fr: Catalogue = {
         "Effacer tous les paramètres du lanceur et relancer la configuration initiale",
       done: "Configuration réinitialisée",
     },
+  },
+
+  wizard: {
+    welcomeTitle: "Bienvenue dans Elemental Fracture",
+    welcomeSub: "Nous sommes ravis de vous compter parmi nous !",
+    next: "Suivant",
+    gameTitle: "Avez-vous déjà installé le jeu ?",
+    gameSub:
+      "Si Spellbreak est déjà sur cette machine, indiquez son dossier au launcher.",
+    gameNo: "Non, pas encore",
+    gameYes: "Oui, localiser mon installation",
+    looking: "Recherche d'une installation existante…",
+    pickFolder: "Sélectionnez votre dossier Spellbreak (contient g3 et Engine)",
+    noFolder:
+      "Aucun dossier sélectionné, vous pourrez le définir à tout moment dans les Paramètres.",
+    hooked: "Trouvé : {path}, {step}",
+    installingMods: "installation des mises à jour et des mods…",
+    noAccountYet: "Vous n'avez pas de compte ?",
+    quickStart: "Guide de démarrage",
+    skip: "Passer pour l'instant",
+    doneTitle: "Tout est prêt !",
+    doneTitleNamed: "Tout est prêt, {name} !",
+    doneSub: "Les Hollow Lands vous appellent encore, Breaker.",
+    enter: "Entrer dans le launcher",
+  },
+
+  account: {
+    title: "Se connecter à Elemental Fracture",
+    sub: "Utilisez vos e-mail et mot de passe Elemental Fracture — le même compte que sur le site.",
+    email: "E-mail",
+    password: "Mot de passe",
+    signIn: "Se connecter",
+    signingIn: "Connexion…",
+    forgot: "Mot de passe oublié ?",
+    noAccount: "Pas de compte ?",
+    createOne: "Créer un compte",
+    cancel: "Annuler",
+    welcomeBack: "Bon retour, {name} !",
+    welcomeBackAs: "Bon retour, {name} ({role}) !",
+    roleDev: "dev",
+    roleStaff: "staff",
+    roleTester: "testeur",
+  },
+
+  footer: {
+    connect: "Rejoindre",
+    connectTitle: "Rejoindre le Discord",
+    donate: "Soutenir",
+    donateTitle: "Soutenir sur Patreon",
+    patchNotes: "Notes de version",
+  },
+
+  update: {
+    title: "Mise à jour du lanceur disponible",
+    installing: "Installation…",
+    ready: "v{version} prête · cliquez pour mettre à jour",
+    click: "Cliquez pour mettre à jour",
+    dismiss: "Ignorer",
   },
 
   topbar: {

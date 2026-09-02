@@ -1,5 +1,6 @@
 import { FileText } from "lucide-react";
 import { openLink } from "@/lib/links";
+import { _ } from "@/i18n";
 import "./SocialRow.css";
 
 const LINKS = {
@@ -18,25 +19,25 @@ export function SocialRow() {
         <button
           className="social-btn"
           onClick={() => openLink(LINKS.discord)}
-          aria-label="Connect on Discord"
+          aria-label={_("footer.connectTitle")}
         >
           <span className="social-icon social-discord" aria-hidden="true" />
-          Connect
+          {_("footer.connect")}
         </button>
         <button
           className="social-btn"
           onClick={() => openLink(LINKS.donate)}
-          aria-label="Donate on Patreon"
+          aria-label={_("footer.donateTitle")}
         >
           <span className="social-icon social-donate" aria-hidden="true" />
-          Donate
+          {_("footer.donate")}
         </button>
         <button
           className="social-btn"
           onClick={() => openLink(LINKS.patchnotes)}
         >
           <FileText aria-hidden="true" />
-          Patch notes
+          {_("footer.patchNotes")}
         </button>
       </div>
 

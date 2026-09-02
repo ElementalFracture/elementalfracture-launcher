@@ -126,7 +126,7 @@ describe("the banner", () => {
 describe("the rows below it", () => {
   it("translates the news heading", async () => {
     renderHome();
-    expect(await screen.findByText("Nouveautés")).toBeTruthy();
+    expect(await screen.findByText(fr.home.news.title)).toBeTruthy();
     expect(screen.queryByText("What’s new")).toBeNull();
   });
 

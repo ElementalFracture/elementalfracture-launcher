@@ -9,6 +9,7 @@ import {
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
 import { toastError } from "@/i18n/errors";
+import { _ } from "@/i18n";
 import "./LauncherUpdatePop.css";
 
 export function LauncherUpdatePop() {
@@ -43,20 +44,18 @@ export function LauncherUpdatePop() {
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onApply()}
     >
       <CardHeader>
-        <CardTitle className="update-pop-title">
-          Launcher Update Available
-        </CardTitle>
+        <CardTitle className="update-pop-title">{_("update.title")}</CardTitle>
         <CardDescription className="update-pop-sub">
           {installing
-            ? "Installing…"
+            ? _("update.installing")
             : launcherInfo?.remote
-              ? `v${launcherInfo.remote} ready · click to update`
-              : "Click to update"}
+              ? _("update.ready", { version: launcherInfo.remote })
+              : _("update.click")}
         </CardDescription>
         <CardAction>
           <button
             className="update-pop-x"
-            title="Dismiss"
+            title={_("update.dismiss")}
             onClick={(e) => {
               e.stopPropagation();
               setLauncherUpdatePop(false);

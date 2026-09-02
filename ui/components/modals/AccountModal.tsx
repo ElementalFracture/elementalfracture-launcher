@@ -6,6 +6,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { openLink } from "@/lib/links";
 import { toastError } from "@/i18n/errors";
 import { toast } from "@/lib/toast";
+import { _ } from "@/i18n";
 import "./Dialog.css";
 
 // The account website (registration, email verification, password reset).
@@ -32,20 +33,25 @@ export function AccountModal({
 
   const signIn = async () => {
     if (!email.trim() || !password) {
-      toast("Enter your email and password.", true);
+      toast(_("errors.enterEmailAndPassword"), true);
       return;
     }
     setSaving(true);
     try {
       const res = await loginEmail(email.trim(), password);
-      const badge = res.is_dev
-        ? " (dev)"
+      const role = res.is_dev
+        ? _("account.roleDev")
         : res.is_staff
-          ? " (staff)"
+          ? _("account.roleStaff")
           : res.is_tester
-            ? " (tester)"
+            ? _("account.roleTester")
             : "";
-      toast(`Welcome back, ${res.username}${badge}!`);
+      const name = res.username ?? "";
+      toast(
+        role
+          ? _("account.welcomeBackAs", { name, role })
+          : _("account.welcomeBack", { name })
+      );
       reset();
       onOpenChange(false);
     } catch (e) {
@@ -72,14 +78,11 @@ export function AccountModal({
         showOverlay={false}
       >
         <div className="wizard-step">
-          <h2>Sign in to Elemental Fracture</h2>
-          <p className="muted">
-            Use your Elemental Fracture email and password — the same account as
-            the website.
-          </p>
+          <h2>{_("account.title")}</h2>
+          <p className="muted">{_("account.sub")}</p>
           <Input
             type="email"
-            placeholder="Email"
+            placeholder={_("account.email")}
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -87,16 +90,19 @@ export function AccountModal({
           />
           <Input
             type="password"
-            placeholder="Password"
+            placeholder={_("account.password")}
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && signIn()}
           />
           <p className="wizard-tooltip">
-            <a onClick={() => openLink(RESET_URL)}>Forgot password?</a>
+            <a onClick={() => openLink(RESET_URL)}>{_("account.forgot")}</a>
             {"  ·  "}
-            No account? <a onClick={() => openLink(REGISTER_URL)}>Create one</a>
+            {_("account.noAccount")}{" "}
+            <a onClick={() => openLink(REGISTER_URL)}>
+              {_("account.createOne")}
+            </a>
           </p>
           <div className="wizard-actions">
             <Button
@@ -104,10 +110,10 @@ export function AccountModal({
               disabled={saving}
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {_("account.cancel")}
             </Button>
             <Button disabled={saving} onClick={signIn}>
-              {saving ? "Signing in…" : "Sign in"}
+              {saving ? _("account.signingIn") : _("account.signIn")}
             </Button>
           </div>
         </div>

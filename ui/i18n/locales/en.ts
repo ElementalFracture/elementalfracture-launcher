@@ -15,6 +15,11 @@ export const en = {
      shouldn't have to pass its own words in. */
   common: {
     moreInfo: "More info",
+    /* shadcn's own chrome: a dialog's close button, the spinner, and the x on
+       a toast. None are drawn — they are what a screen reader reads out. */
+    close: "Close",
+    loading: "Loading",
+    closeToast: "Close toast",
   },
 
   settings: {
@@ -69,6 +74,69 @@ export const en = {
       title: "Clear all launcher settings and run first-time setup again",
       done: "Configuration reset",
     },
+  },
+
+  /* First run. `account.*` below carries the sign-in step, which is the same
+     dialog the account pill opens. */
+  wizard: {
+    welcomeTitle: "Welcome to Elemental Fracture",
+    welcomeSub: "We’re so glad you’re here.",
+    next: "Next",
+    gameTitle: "Have you set up the game before?",
+    gameSub:
+      "If Spellbreak is already on this machine, point the launcher at its folder and you’re done.",
+    gameNo: "No, not yet",
+    gameYes: "Yes, locate my install",
+    looking: "Looking for an existing install…",
+    pickFolder: "Select your Spellbreak folder (contains g3 and Engine)",
+    noFolder: "No folder selected, you can set it any time in Settings.",
+    /* `{step}` is the install pipeline's own line, lowercased by the caller. */
+    hooked: "Hooked: {path}, {step}",
+    installingMods: "installing updates & mods…",
+    noAccountYet: "Don’t have an account?",
+    quickStart: "Quick-start guide",
+    skip: "Skip for now",
+    doneTitle: "You're all set!",
+    doneTitleNamed: "You're all set, {name}!",
+    doneSub: "The Hollow Lands still beckon, breaker.",
+    enter: "Enter the launcher",
+  },
+
+  /* The sign-in dialog, and the wizard step that is the same form. */
+  account: {
+    title: "Sign in to Elemental Fracture",
+    sub: "Use your Elemental Fracture email and password — the same account as the website.",
+    email: "Email",
+    password: "Password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
+    forgot: "Forgot password?",
+    noAccount: "No account?",
+    createOne: "Create one",
+    cancel: "Cancel",
+    welcomeBack: "Welcome back, {name}!",
+    /* `{role}` is one of the three below, when the account carries a badge. */
+    welcomeBackAs: "Welcome back, {name} ({role})!",
+    roleDev: "dev",
+    roleStaff: "staff",
+    roleTester: "tester",
+  },
+
+  footer: {
+    connect: "Connect",
+    connectTitle: "Connect on Discord",
+    donate: "Donate",
+    donateTitle: "Donate on Patreon",
+    patchNotes: "Patch notes",
+  },
+
+  /* The pop-up in the top-right when a newer launcher is on the CDN. */
+  update: {
+    title: "Launcher Update Available",
+    installing: "Installing…",
+    ready: "v{version} ready · click to update",
+    click: "Click to update",
+    dismiss: "Dismiss",
   },
 
   /* The bar across the top: the logo, and the three pills. */
