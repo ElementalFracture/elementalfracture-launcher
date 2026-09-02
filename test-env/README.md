@@ -114,8 +114,8 @@ Emptying a list is the way to see each empty state; emptying `friends`,
 
 <http://localhost:8787/> is the same state with controls on it: the accounts
 you can sign in as, friends and their statuses, pending requests either way,
-rejections, the online count, the servers behind the in-game pill, events, and
-the game/launcher versions the updater compares against.
+rejections, the online count, the servers behind the in-game pill, events,
+patch notes, and the game/launcher versions the updater compares against.
 It polls every 2s, so it and the launcher agree — accept a request in the
 drawer and the row moves here on its own.
 
@@ -405,6 +405,38 @@ after ~30s with a "download stalled" error.
 `size_mb` pads each zip, to push `latest.zip` past the 64 MB threshold where the
 downloader switches to its segmented, multi-connection path (range requests are
 honored, so that path works too). Leave it at 0 for a quick single-stream run.
+
+## Patch notes
+
+The **News** card drives the "What's new" row on the home view. Unlike
+everything else here it is not JSON on the wire: the launcher reads the real
+thing off the WordPress RSS feed and parses the XML itself, so the test env
+answers `/patchnotes/feed/` in that shape and the same parser runs either way.
+
+```sh
+curl localhost:8787/patchnotes/feed/
+curl localhost:8787/admin/patch -d '{"path":["news"],"push":{"title":"Hotfix 6.0.4","body":"Crash on map load.","date":"Tue, 02 Sep 2026 09:00:00 +0000","url":"https://elefrac.com/patchnotes/6-0-4"}}'
+```
+
+`date` wants the RFC-822 shape the real feed uses (`Tue, 02 Sep 2026 09:00:00
++0000`); the launcher trims it to `02 Sep 2026` for the card. Only the four
+tags it reads are filled in — title, link, pubDate, description.
+
+Debug builds point at this feed rather than the live blog (`feed_url()` in
+`src-tauri/src/remote.rs`), which is the one URL here that is **not**
+overridable in Settings → URLs. Two things follow. With no test env running a
+debug build has no news at all — which is the row's empty state, and worth
+seeing. And a debug build re-reads the feed every 60s, so an edit here shows up
+on its own within the minute; a release build reads it once at startup and
+leaves it, since the blog is published to a few times a month.
+
+Emptying the list is how to reach the empty state deliberately: the row keeps
+its heading and says there is nothing to show. (The **Events** row above it
+does the opposite — with no events it disappears heading and all.)
+
+Events follow the same idea on their own card: a debug build asks for them
+every 60s rather than the five minutes a release build waits, so an edit there
+lands on roughly the same schedule.
 
 ## What it doesn't do
 

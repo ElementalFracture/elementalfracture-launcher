@@ -189,5 +189,19 @@
       "location": "EU West",
       "interested": 37
     }
+  ],
+  "news": [
+    {
+      "title": "Patch 6.0.3 — Frost rework",
+      "body": "Frostbite stacks fall off faster, and the ice wall no longer blocks its own caster. Full notes on the site.",
+      "date": "Mon, 01 Sep 2026 18:00:00 +0000",
+      "url": "https://elefrac.com/patchnotes/6-0-3"
+    },
+    {
+      "title": "Community servers: EU West is live",
+      "body": "A third region joins NA and EU Central. Pick it from the server list in game.",
+      "date": "Thu, 21 Aug 2026 12:30:00 +0000",
+      "url": "https://elefrac.com/patchnotes/eu-west"
+    }
   ]
 }

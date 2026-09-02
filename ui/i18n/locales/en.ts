@@ -305,6 +305,7 @@ export const en = {
     },
     news: {
       title: "What’s new",
+      empty: "No news right now.",
     },
     /* Pipeline stages. The backend names them on the wire in kebab-case;
        `stageLabel()` maps those names onto these keys. */

@@ -65,10 +65,11 @@ pub struct Settings {
 /// Settings → URLs. Both are overridable there and the override sticks —
 /// this only decides where a profile starts.
 ///
-/// `play_base` stays live even in debug: the test env has no patch notes or
-/// portal API to serve, and 404s from it would be less useful than the real
-/// thing. `cdn_base` has a fixture (test-env/update.mjs) and follows the same
-/// rule as the account endpoints — see `cdn_base()`.
+/// `play_base` stays live even in debug: the test env has no portal API to
+/// serve, and 404s from it would be less useful than the real thing. (Patch
+/// notes used to be on that list; the test env serves those now — see
+/// `feed_url()` in remote.rs.) `cdn_base` has a fixture (test-env/update.mjs)
+/// and follows the same rule as the account endpoints — see `cdn_base()`.
 fn portal_base() -> &'static str {
     if cfg!(debug_assertions) {
         "http://localhost:8787"

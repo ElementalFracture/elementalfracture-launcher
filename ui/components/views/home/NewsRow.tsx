@@ -11,19 +11,23 @@ export function NewsRow() {
       <div className="row-head">
         <h3>{_("home.news.title")}</h3>
       </div>
-      <div className="cards">
-        {news.slice(0, 6).map((item, i) => (
-          <div
-            key={i}
-            className="card"
-            onClick={() => item.url && openLink(item.url)}
-          >
-            <h4>{item.title ?? ""}</h4>
-            <p>{item.body ?? ""}</p>
-            <span className="date">{item.date ?? ""}</span>
-          </div>
-        ))}
-      </div>
+      {news.length === 0 ? (
+        <p className="row-empty">{_("home.news.empty")}</p>
+      ) : (
+        <div className="cards">
+          {news.slice(0, 6).map((item, i) => (
+            <div
+              key={i}
+              className="card"
+              onClick={() => item.url && openLink(item.url)}
+            >
+              <h4>{item.title ?? ""}</h4>
+              <p>{item.body ?? ""}</p>
+              <span className="date">{item.date ?? ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

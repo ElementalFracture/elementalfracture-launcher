@@ -125,9 +125,32 @@ describe("the banner", () => {
 
 describe("the rows below it", () => {
   it("translates the news heading", async () => {
+    commands.getNews.mockResolvedValue({
+      status: "ok",
+      data: [
+        { title: "Patch 6.0.3", body: "Balance pass.", date: "2 Sep 2026" },
+      ],
+    });
     renderHome();
     expect(await screen.findByText(fr.home.news.title)).toBeTruthy();
     expect(screen.queryByText("What’s new")).toBeNull();
+  });
+
+  /* There is no stand-in post any more, so the row has to account for itself
+     when the feed gives nothing — keeping its heading and saying so. */
+  it("keeps the news section and says it is empty when the feed gives nothing", async () => {
+    commands.getNews.mockResolvedValue({ status: "ok", data: [] });
+    renderHome();
+    expect(await screen.findByText(fr.home.news.empty)).toBeTruthy();
+    expect(screen.getByText(fr.home.news.title)).toBeTruthy();
+  });
+
+  /* The same line covers an unreachable feed, which is a rejection rather than
+     an empty list — the reader can't act on the difference. */
+  it("says the same when the feed cannot be reached at all", async () => {
+    commands.getNews.mockRejectedValue(new Error("offline"));
+    renderHome();
+    expect(await screen.findByText(fr.home.news.empty)).toBeTruthy();
   });
 
   it("agrees the interested count with the language's own plural rules", async () => {

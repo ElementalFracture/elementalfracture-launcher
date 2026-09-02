@@ -328,7 +328,7 @@ mod tests {
         apply_variant(&p, "classic").unwrap();
         // EF without the pak anywhere must fail loudly, not pretend.
         let err = apply_variant(&p, "ef").unwrap_err();
-        assert!(err.contains("Install / Update mods"), "{err}");
+        assert_eq!(err.code, ErrorCode::VariantPakMissing, "{err:?}");
     }
 
     #[test]
@@ -391,7 +391,7 @@ mod tests {
         let (tmp, p) = paks(&["ElefracBalance_P.pak", "ElefracBalance_P.sig"]);
         assert!(!test_build_installed(tmp.path()));
         let err = apply_variant(&p, "playtest").unwrap_err();
-        assert!(err.contains("enable the Playtest build"), "{err}");
+        assert_eq!(err.code, ErrorCode::PlaytestPakMissing, "{err:?}");
     }
 
     #[test]

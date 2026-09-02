@@ -1079,7 +1079,7 @@
                 })
               )
             ),
-            "none — the home view shows its empty state"
+            "none — the home view hides the row entirely"
           ),
           adder("add.event", "Friday Night Fracture", (name) =>
             push(["events"], {
@@ -1094,6 +1094,69 @@
               interested: 0,
             })
           )
+        );
+      }
+
+      function news(s) {
+        const list = s.news ?? [];
+        const path = (i, key) => ["news", i, key];
+        return card(
+          "News",
+          "the “What’s new” row on the home view",
+          rows(
+            list.map((item, i) =>
+              el(
+                "li",
+                { className: "row stack" },
+                text(
+                  `news.${i}.title`,
+                  item.title,
+                  (v) => set(path(i, "title"), v),
+                  "title"
+                ),
+                el(
+                  "div",
+                  { className: "row line" },
+                  text(
+                    `news.${i}.date`,
+                    item.date,
+                    (v) => set(path(i, "date"), v),
+                    "Mon, 01 Sep 2026 18:00:00 +0000"
+                  ),
+                  text(
+                    `news.${i}.url`,
+                    item.url,
+                    (v) => set(path(i, "url"), v),
+                    "https://elefrac.com/patchnotes/…"
+                  ),
+                  remover(() => drop(["news", i]))
+                ),
+                el("textarea", {
+                  value: item.body ?? "",
+                  placeholder: "body",
+                  spellcheck: false,
+                  dataset: { key: `news.${i}.body` },
+                  onchange: (e) => set(path(i, "body"), e.target.value),
+                })
+              )
+            ),
+            "none — the home view keeps the heading and shows its empty state"
+          ),
+          adder("add.news", "Patch 6.0.4", (title) =>
+            push(["news"], {
+              title,
+              body: "",
+              // The launcher shows this verbatim after reformatting it, so the
+              // RFC-822 shape the real feed uses is what to hand it.
+              date: new Date().toUTCString(),
+              url: "https://elefrac.com/patchnotes",
+            })
+          ),
+          el("p", {
+            className: "empty",
+            textContent:
+              "Served as RSS at /patchnotes/feed/, the same shape as the live WordPress feed — the launcher parses it with the same code. A dev build re-reads it every 60s, so an edit lands on its own within the minute. Empty the list to check the row's empty state.",
+          })
         );
       }
 
@@ -1130,7 +1193,8 @@
           rejections(next),
           home(next),
           updates(next),
-          events(next)
+          events(next),
+          news(next)
         );
 
         if (key) {

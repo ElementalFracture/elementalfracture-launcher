@@ -406,6 +406,35 @@ function body(req) {
   });
 }
 
+/** Wrap text so a title with an ampersand or a tag in it survives the trip —
+    the launcher's parser unwraps CDATA and decodes entities. */
+const cdata = (v) => `<![CDATA[${String(v ?? "").replace(/]]>/g, "]]&gt;")}]]>`;
+
+/** The fixture feed. Only the four tags parse_rss actually reads are filled
+    in; the envelope is there so the document is a valid feed. */
+function rss(items) {
+  const entries = items
+    .map(
+      (item) => `    <item>
+      <title>${cdata(item.title)}</title>
+      <link>${cdata(item.url)}</link>
+      <pubDate>${cdata(item.date)}</pubDate>
+      <description>${cdata(item.body)}</description>
+    </item>`
+    )
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Elemental Fracture — test env</title>
+    <link>http://localhost:8787/patchnotes/</link>
+    <description>Patch notes served by the test env.</description>
+${entries}
+  </channel>
+</rss>
+`;
+}
+
 createServer(async (req, res) => {
   const path = new URL(req.url, "http://localhost").pathname;
   const send = (payload, code = 200) => {
@@ -481,6 +510,15 @@ createServer(async (req, res) => {
   }
   if (req.method === "GET" && path === "/events") {
     return send({ events: data().events });
+  }
+
+  /* Patch notes. The launcher reads the real thing off a WordPress RSS feed
+     and parses the XML itself (parse_rss in remote.rs), so this answers in
+     that shape rather than JSON — which means the dashboard drives the same
+     parser the live feed does, tag for tag. */
+  if (req.method === "GET" && path === "/patchnotes/feed/") {
+    res.writeHead(200, { "content-type": "application/rss+xml; charset=utf-8" });
+    return res.end(rss(data().news ?? []));
   }
 
   // The CDN side: the version file and zips the updater pulls off cdn_base.

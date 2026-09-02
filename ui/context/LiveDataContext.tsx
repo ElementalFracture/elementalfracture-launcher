@@ -2,16 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import * as rust from "@/lib/rust";
 import type { EventItem, NewsItem, PlayersData } from "@/lib/rust";
 
-/** Shown when the patchnotes feed isn't reachable. */
-const FALLBACK_NEWS: NewsItem[] = [
-  {
-    title: "Launcher 1.0",
-    body: "The launcher has been rewritten from scratch: one app now handles installing, patching, tokens and launching, on Windows and Linux.",
-    date: "18 Jul 2026",
-    url: "https://elefrac.com/patchnotes",
-  },
-];
-
 interface LiveDataContextValue {
   playersData: PlayersData | null;
   events: EventItem[] | null;
@@ -20,6 +10,9 @@ interface LiveDataContextValue {
   refreshEvents: () => Promise<void>;
   refreshNews: () => Promise<void>;
 }
+
+const NEWS_POLL_MS = import.meta.env.DEV ? 60_000 : 300_000;
+const EVENTS_POLL_MS = import.meta.env.DEV ? 60_000 : 300_000;
 
 const LiveDataContext = createContext<LiveDataContextValue | null>(null);
 
@@ -46,10 +39,9 @@ export function LiveDataProvider({ children }: { children: ReactNode }) {
 
   const refreshNews = useCallback(async () => {
     try {
-      const items = await rust.getNews();
-      setNews(items.length > 0 ? items : FALLBACK_NEWS);
+      setNews(await rust.getNews());
     } catch {
-      setNews(FALLBACK_NEWS);
+      setNews([]);
     }
   }, []);
 
@@ -60,10 +52,12 @@ export function LiveDataProvider({ children }: { children: ReactNode }) {
     refreshPlayers();
     refreshEvents();
     const playersInterval = setInterval(refreshPlayers, 60_000);
-    const eventsInterval = setInterval(refreshEvents, 300_000);
+    const eventsInterval = setInterval(refreshEvents, EVENTS_POLL_MS);
+    const newsInterval = setInterval(refreshNews, NEWS_POLL_MS);
     return () => {
       clearInterval(playersInterval);
       clearInterval(eventsInterval);
+      clearInterval(newsInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

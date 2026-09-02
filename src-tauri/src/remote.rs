@@ -5,6 +5,14 @@ use std::time::Duration;
 
 const FEED_URL: &str = "https://elefrac.com/patchnotes/feed/";
 
+fn feed_url() -> &'static str {
+    if cfg!(debug_assertions) {
+        "http://localhost:8787/patchnotes/feed/"
+    } else {
+        FEED_URL
+    }
+}
+
 fn client() -> AppResult<reqwest::Client> {
     let c = reqwest::Client::builder()
         .timeout(Duration::from_secs(6))
@@ -409,7 +417,7 @@ pub struct NewsItem {
 #[specta::specta]
 pub async fn get_news() -> AppResult<Vec<NewsItem>> {
     let xml = client()?
-        .get(FEED_URL)
+        .get(feed_url())
         .send()
         .await
         .and_then(|r| r.error_for_status())?
@@ -508,4 +516,62 @@ fn parse_rss(xml: &str) -> Vec<NewsItem> {
         })
         .take(8)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Exactly what test-env/server.mjs answers `/patchnotes/feed/` with, so a
+    /// change to that fixture's shape fails here rather than showing up as an
+    /// empty news row in a dev session.
+    const TEST_ENV_FEED: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Elemental Fracture — test env</title>
+    <link>http://localhost:8787/patchnotes/</link>
+    <description>Patch notes served by the test env.</description>
+    <item>
+      <title><![CDATA[Patch 6.0.3 — Frost rework]]></title>
+      <link><![CDATA[https://elefrac.com/patchnotes/6-0-3]]></link>
+      <pubDate><![CDATA[Mon, 01 Sep 2026 18:00:00 +0000]]></pubDate>
+      <description><![CDATA[Frostbite stacks fall off faster.]]></description>
+    </item>
+  </channel>
+</rss>
+"#;
+
+    #[test]
+    fn parses_the_test_env_feed() {
+        let items = parse_rss(TEST_ENV_FEED);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Patch 6.0.3 — Frost rework");
+        assert_eq!(items[0].body, "Frostbite stacks fall off faster.");
+        assert_eq!(items[0].url, "https://elefrac.com/patchnotes/6-0-3");
+        // RFC-822 in, the short form the card shows out.
+        assert_eq!(items[0].date, "01 Sep 2026");
+    }
+
+    /// An empty `news` list is a feed with no `<item>` at all — the home view's
+    /// empty state, and the reason the row must not treat it as a failure.
+    #[test]
+    fn an_empty_feed_is_no_news_rather_than_an_error() {
+        let empty = TEST_ENV_FEED
+            .split("    <item>")
+            .next()
+            .unwrap()
+            .to_string()
+            + "  </channel>\n</rss>\n";
+        assert!(parse_rss(&empty).is_empty());
+    }
+
+    /// The debug default is what points a dev session at the dashboard.
+    #[test]
+    fn debug_builds_read_news_from_the_test_env() {
+        if cfg!(debug_assertions) {
+            assert_eq!(feed_url(), "http://localhost:8787/patchnotes/feed/");
+        } else {
+            assert_eq!(feed_url(), FEED_URL);
+        }
+    }
 }

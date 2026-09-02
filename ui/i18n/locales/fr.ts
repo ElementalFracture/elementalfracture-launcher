@@ -275,6 +275,7 @@ export const fr: Catalogue = {
     },
     news: {
       title: "Nouveautés",
+      empty: "Aucune actualité pour le moment.",
     },
     stages: {
       downloadBase: "Téléchargement du jeu",
