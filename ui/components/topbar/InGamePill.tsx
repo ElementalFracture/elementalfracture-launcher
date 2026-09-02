@@ -7,9 +7,10 @@ import {
 import { useLiveData } from "@/context/LiveDataContext";
 import { Swords } from "lucide-react";
 import { GAME_VARIANTS } from "@/lib/gameVariant";
+import { _ } from "@/i18n";
 import { modeRowsByVariant, regionsOf } from "./players";
 import "./InGamePill.css";
-import {Separator} from "@/components/shadcn/separator.tsx";
+import { Separator } from "@/components/shadcn/separator.tsx";
 
 /** Players in game, with a per-gameVariant, per-region breakdown behind a click. */
 export function InGamePill() {
@@ -42,31 +43,30 @@ export function InGamePill() {
       }}
     >
       <PopoverTrigger asChild>
-        <button
-          className="pill clickable"
-          title="Players in game: click for a breakdown"
-        >
+        <button className="pill clickable" title={_("topbar.ingame.title")}>
           <Swords className="pill-icon" />
           <div className="pill-text">
             <strong>{inGame ?? "–"}</strong>
-            <small>in game</small>
+            <small>{_("topbar.ingame.label")}</small>
           </div>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8}>
         <div className="player-breakdown">
           {sections.length === 0 ? (
-            <div className="no-one">No one in game</div>
+            <div className="no-one">{_("topbar.ingame.empty")}</div>
           ) : (
             sections.map(({ id, label: variantLabel }) => (
               <section key={id} className="variant-section">
                 <h3 className="variant-title">{variantLabel}</h3>
-                <Separator/>
+                <Separator />
                 <table className="mode-table">
                   <thead>
                     <tr>
                       <th scope="col">
-                        <span className="sr-only">Mode</span>
+                        <span className="sr-only">
+                          {_("topbar.ingame.mode")}
+                        </span>
                       </th>
                       {regions.map((region) => (
                         <th key={region} scope="col">

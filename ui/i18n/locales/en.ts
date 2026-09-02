@@ -71,6 +71,101 @@ export const en = {
     },
   },
 
+  /* The bar across the top: the logo, and the three pills. */
+  topbar: {
+    logo: "Elemental Fracture — open elefrac.com",
+    logoTitle: "Open elefrac.com",
+    ingame: {
+      title: "Players in game: click for a breakdown",
+      label: "in game",
+      empty: "No one in game",
+      /* Column head for the mode names, which are read out but not drawn. */
+      mode: "Mode",
+      /* Both the region with none reported and the mode that matched no
+         bucket land here. */
+      other: "Other",
+      modes: {
+        solos: "Solos",
+        duos: "Duos",
+        squads: "Squads",
+        arena: "Arena/TDM",
+      },
+    },
+    variant: {
+      group: "Game variant",
+      enabling: "Enabling…",
+      enable: "Enable Playtest",
+      difference: "What's the difference?",
+      /* Whole sentences, the balance's name included: *asterisks* mark the
+         run that is drawn in bold. A translation can move that run, or drop
+         the emphasis entirely, without anyone touching the component. */
+      efHelp:
+        "*Elemental Fracture* is the community edition: reworked talents, fresh balance and ongoing updates.",
+      classicHelp:
+        "*Classic* is Spellbreak as it was at shutdown: the original balance, preserved untouched.",
+      playtestHelp:
+        "*Playtest* is the private playtest channel: unreleased balance for testers to try before it ships.",
+      /* Tooltips on the tabs. The names beside them are not translated. */
+      efTitle: "Elemental Fracture Balance",
+      classicTitle: "Classic Spellbreak",
+      playtestTitle: "Private playtest build",
+    },
+    account: {
+      title: "Account",
+      guest: "Guest",
+      signIn: "Sign in",
+      sessionExpired: "Session expired",
+      signOut: "Sign out",
+      signedOut: "Signed out.",
+      closeFriends: "Close friend list",
+      /* Stands in for the account's own name in the drawer header. */
+      you: "You",
+      developer: "Developer",
+      staff: "Staff",
+      tester: "Tester",
+    },
+  },
+
+  /* The drawer behind the account pill. Its own namespace rather than a corner
+     of `topbar`, because FriendsContext owns half of these words. */
+  friends: {
+    add: "Add",
+    addTitle: "Send friend request",
+    addPlaceholder: "Add by Spellbreak ID (username)",
+    loading: "Loading…",
+    none: "No friends yet, add someone by their Spellbreak ID above.",
+    /* `{n}`, not `{count}`: these are section heads with a tally, not a
+       sentence about a number, so they take no plural form. */
+    onlineSection: "Friends ({n})",
+    onlineEmpty: "Nobody is online right now.",
+    requestsSection: "Requests ({n})",
+    offlineSection: "Offline ({n})",
+    offlineEmpty: "No offline friends.",
+    requested: "requested",
+    inGame: "in game",
+    online: "online",
+    offline: "offline",
+    remove: "Remove friend",
+    accept: "Accept",
+    decline: "Decline",
+    cancelRequest: "Cancel request",
+    /* The accessible name of a row's button, which is only an icon. */
+    actionFor: "{action}: {name}",
+    confirmTitle: "Remove {name} ?",
+    confirmBody: "This will remove {name} from your friends list.",
+    confirmCancel: "Cancel",
+    confirmRemove: "Remove",
+    /* Keyed by the code the friends sidecar answers with. */
+    errors: {
+      userNotFound: "No player with that Spellbreak ID.",
+      cannotFriendSelf: "That's you!",
+      invalidToken: "Set your account token first.",
+      usernameRequired: "Enter a Spellbreak ID.",
+      noPendingRequest: "No pending request from them.",
+      unavailable: "Friend server unavailable, try again.",
+    },
+  },
+
   /* The icon rail. Nothing on it has words of its own — these are the tooltips,
      which are also the buttons' only accessible names. */
   sidebar: {

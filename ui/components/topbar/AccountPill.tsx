@@ -15,6 +15,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { avatarUrl } from "@/lib/avatar";
 import { toast } from "@/lib/toast";
 import { toastError } from "@/i18n/errors";
+import { _ } from "@/i18n";
 import { FriendList } from "./FriendList";
 import "./AccountPill.css";
 
@@ -43,7 +44,7 @@ export function AccountPill() {
     try {
       await logout();
       setAccountDrawerOpen(false);
-      toast("Signed out.");
+      toast(_("topbar.account.signedOut"));
     } catch (e) {
       toastError(e);
     }
@@ -56,15 +57,15 @@ export function AccountPill() {
   const hasToken = Boolean(settings?.auth_token?.trim());
   const registered = Boolean(name);
   const role = settings?.is_dev
-    ? "Developer"
+    ? _("topbar.account.developer")
     : settings?.is_staff
-      ? "Staff"
+      ? _("topbar.account.staff")
       : settings?.is_tester
-        ? "Tester"
+        ? _("topbar.account.tester")
         : "";
   const initials = (name || "EF").slice(0, 2).toUpperCase();
 
-  const selfName = friends?.me?.username || name || "You";
+  const selfName = friends?.me?.username || name || _("topbar.account.you");
   const selfInitials = selfName.slice(0, 2).toUpperCase();
 
   return (
@@ -81,10 +82,13 @@ export function AccountPill() {
             }
           }}
         >
-          <DrawerTrigger className="pill account" title="Account">
+          <DrawerTrigger
+            className="pill account"
+            title={_("topbar.account.title")}
+          >
             <Avatar url={avUrl} initials={initials} />
             <div className="pill-text">
-              <strong>{name || "Guest"}</strong>
+              <strong>{name || _("topbar.account.guest")}</strong>
               {role && <small>{role}</small>}
             </div>
           </DrawerTrigger>
@@ -100,7 +104,7 @@ export function AccountPill() {
               </div>
               <DrawerClose
                 render={<Button variant="ghost" size="icon-sm" />}
-                aria-label="Close friend list"
+                aria-label={_("topbar.account.closeFriends")}
               >
                 <ArrowRight aria-hidden="true" />
               </DrawerClose>
@@ -119,7 +123,7 @@ export function AccountPill() {
                 className="account-signout"
                 onClick={signOut}
               >
-                Sign out
+                {_("topbar.account.signOut")}
               </Button>
             </div>
           </DrawerContent>
@@ -127,13 +131,17 @@ export function AccountPill() {
       ) : (
         <button
           className="pill account"
-          title="Account"
+          title={_("topbar.account.title")}
           onClick={() => setAccountModalOpen(true)}
         >
           <span className="avatar">{initials}</span>
           <div className="pill-text">
-            <strong>Guest</strong>
-            <small>{hasToken ? "Session expired" : "Sign in"}</small>
+            <strong>{_("topbar.account.guest")}</strong>
+            <small>
+              {hasToken
+                ? _("topbar.account.sessionExpired")
+                : _("topbar.account.signIn")}
+            </small>
           </div>
         </button>
       )}

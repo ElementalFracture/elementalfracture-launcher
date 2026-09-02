@@ -1,5 +1,6 @@
 import logoFull from "@/assets/logo-full.png";
 import { openLink } from "@/lib/links";
+import { _ } from "@/i18n";
 import { InGamePill } from "./InGamePill";
 import { AccountPill } from "./AccountPill";
 import { GameVariantPill } from "./GameVariantPill";
@@ -15,8 +16,8 @@ export function TopBar() {
       <button
         id="topbar-logo"
         onClick={() => openLink(SITE)}
-        aria-label="Elemental Fracture — open elefrac.com"
-        title="Open elefrac.com"
+        aria-label={_("topbar.logo")}
+        title={_("topbar.logoTitle")}
       >
         <img src={logoFull} alt="" draggable={false} />
       </button>
