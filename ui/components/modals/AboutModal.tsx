@@ -3,15 +3,13 @@ import { Button } from "@/components/shadcn/button";
 import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import { useGame } from "@/context/GameContext";
 import { openLink } from "@/lib/links";
+import { URLS } from "@/lib/urls";
 import "./Dialog.css";
 
 const LEGAL_LINKS: { label: string; url: string }[] = [
-  { label: "Privacy Policy", url: "https://elefrac.com/legal/privacy-policy" },
-  {
-    label: "Terms of Service",
-    url: "https://elefrac.com/legal/terms-of-service",
-  },
-  { label: "Legal & Fair Use", url: "https://elefrac.com/legal/legal-status" },
+  { label: "Privacy Policy", url: URLS.privacy },
+  { label: "Terms of Service", url: URLS.terms },
+  { label: "Legal & Fair Use", url: URLS.legalStatus },
 ];
 
 /* Left in English on purpose: the disclaimers are a legal position, not copy,

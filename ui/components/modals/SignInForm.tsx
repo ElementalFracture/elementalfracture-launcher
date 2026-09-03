@@ -4,15 +4,10 @@ import { Input } from "@/components/shadcn/input";
 import { useSettings } from "@/context/SettingsContext";
 import type { TokenResult } from "@/lib/rust";
 import { openLink } from "@/lib/links";
+import { URLS } from "@/lib/urls";
 import { errorText } from "@/i18n/errors";
 import { _ } from "@/i18n";
 import "./Dialog.css";
-
-// The account website (registration, email verification, password reset).
-const SITE = "https://elefrac.com";
-const REGISTER_URL = `${SITE}/register`;
-const RESET_URL = `${SITE}/reset`;
-const GUIDE_URL = `${SITE}/docs/quick-start-guide`;
 
 export function SignInForm({
   onSignedIn,
@@ -76,7 +71,7 @@ export function SignInForm({
         onKeyDown={(e) => e.key === "Enter" && signIn()}
       />
       <p className="wizard-tooltip">
-        <a onClick={() => openLink(RESET_URL)}>{_("account.forgot")}</a>
+        <a onClick={() => openLink(URLS.reset)}>{_("account.forgot")}</a>
       </p>
       <div className="wizard-actions stacked">
         <Button disabled={busy} onClick={signIn}>
@@ -85,7 +80,7 @@ export function SignInForm({
         <Button
           variant="secondary"
           disabled={busy}
-          onClick={() => openLink(REGISTER_URL)}
+          onClick={() => openLink(URLS.register)}
         >
           {_("account.createOne")}
         </Button>
@@ -94,7 +89,9 @@ export function SignInForm({
       <p className="wizard-tooltip">
         <span className="tooltip-phrase">
           {_("account.needHelp")}
-          <a onClick={() => openLink(GUIDE_URL)}>{_("account.quickStart")}</a>
+          <a onClick={() => openLink(URLS.quickStart)}>
+            {_("account.quickStart")}
+          </a>
         </span>
       </p>
       {actions && <div className="wizard-actions stacked">{actions}</div>}
