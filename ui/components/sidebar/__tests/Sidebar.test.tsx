@@ -15,6 +15,7 @@ const commands = vi.hoisted(() => ({
   getStatus: vi.fn(),
   getVersions: vi.fn(),
   getLauncherUpdate: vi.fn(),
+  refreshAccount: vi.fn(),
 }));
 
 vi.mock("@/generated/bindings", () => ({ commands }));
@@ -46,6 +47,9 @@ beforeEach(() => {
     remote: null,
     update: false,
   });
+  // SettingsProvider re-checks the token on mount; unmocked it only throws
+  // into the console, but the noise buries anything a test does care about.
+  commands.refreshAccount.mockResolvedValue({ status: "ok", data: null });
 });
 
 /* Every button on the rail is an icon with a tooltip and nothing else, so a
@@ -65,7 +69,7 @@ describe("the tooltips, which are all the words the rail has", () => {
 
     expect(await screen.findByTitle("Accueil")).toBeTruthy();
     expect(screen.getByTitle("Paramètres du jeu")).toBeTruthy();
-    expect(screen.getByTitle("Paramètres du lanceur")).toBeTruthy();
+    expect(screen.getByTitle("Paramètres du launcher")).toBeTruthy();
     expect(screen.getByTitle("À propos")).toBeTruthy();
     expect(screen.queryByTitle("Home")).toBeNull();
   });

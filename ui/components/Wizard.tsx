@@ -191,11 +191,12 @@ export function Wizard() {
               onKeyDown={(e) => e.key === "Enter" && onSignIn()}
             />
             <p className="wizard-tooltip">
-              {_("wizard.noAccountYet")}{" "}
-              <a onClick={() => openLink(LINKS.register)}>
-                {_("account.createOne")}
-              </a>
-              {"  ·  "}
+              <span className="tooltip-phrase">
+                {_("wizard.noAccountYet")}
+                <a onClick={() => openLink(LINKS.register)}>
+                  {_("account.createOne")}
+                </a>
+              </span>
               <a onClick={() => openLink(LINKS.guide)}>
                 {_("wizard.quickStart")}
               </a>

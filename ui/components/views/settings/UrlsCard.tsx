@@ -32,7 +32,7 @@ export function UrlsCard({ form }: { form: SettingsForm }) {
         </div>
         <div className="field">
           <Label htmlFor="auth-url">
-            {_("settings.urls.auth")}{" "}
+            {_("settings.urls.auth")}
             <small>{_("settings.urls.authHelp")}</small>
           </Label>
           <Input
@@ -47,7 +47,7 @@ export function UrlsCard({ form }: { form: SettingsForm }) {
         </div>
         <div className="field">
           <Label htmlFor="players-url">
-            {_("settings.urls.players")}{" "}
+            {_("settings.urls.players")}
             <small>{_("settings.urls.playersHelp")}</small>
           </Label>
           <Input

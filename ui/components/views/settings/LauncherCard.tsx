@@ -49,7 +49,6 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
           {_("settings.launcher.title")}
           {launcherInfo?.current && (
             <span className="title-note">
-              {" "}
               {_("settings.launcher.version", {
                 version: launcherInfo.current,
               })}

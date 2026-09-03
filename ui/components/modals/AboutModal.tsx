@@ -7,7 +7,10 @@ import "./Dialog.css";
 
 const LEGAL_LINKS: { label: string; url: string }[] = [
   { label: "Privacy Policy", url: "https://elefrac.com/legal/privacy-policy" },
-  { label: "Terms of Service", url: "https://elefrac.com/legal/terms-of-service" },
+  {
+    label: "Terms of Service",
+    url: "https://elefrac.com/legal/terms-of-service",
+  },
   { label: "Legal & Fair Use", url: "https://elefrac.com/legal/legal-status" },
 ];
 
@@ -46,29 +49,30 @@ export function AboutModal({
             involved is a volunteer and receives no financial compensation;
             donations only cover the website, game servers and CDN.
           </p>
+          {/* Just the links: Dialog.css puts the dot between them. */}
           <p className="about-links">
-            {LEGAL_LINKS.map((link, i) => (
-              <span key={link.url}>
-                {i > 0 && <span className="about-links-sep"> · </span>}
-                <a
-                  href={link.url}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLink(link.url);
-                  }}
-                >
-                  {link.label}
-                </a>
-              </span>
+            {LEGAL_LINKS.map((link) => (
+              <a
+                key={link.url}
+                href={link.url}
+                onClick={(e) => {
+                  e.preventDefault();
+                  openLink(link.url);
+                }}
+              >
+                {link.label}
+              </a>
             ))}
           </p>
           <div className="wizard-actions">
             <Button onClick={onClose}>Close</Button>
           </div>
+          {/* JSX drops the newlines between these, so the heart's own margin
+              is the only thing spacing the sentence. */}
           <p className="about-made">
-            Made with{" "}
-            <Heart className="about-heart" role="img" aria-label="love" /> by
-            Doobs &amp; Lytion
+            Made with
+            <Heart className="about-heart" role="img" aria-label="love" />
+            by Doobs &amp; Lytion
           </p>
         </div>
       </DialogContent>

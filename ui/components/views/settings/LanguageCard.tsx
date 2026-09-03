@@ -33,7 +33,7 @@ export function LanguageCard({ form }: { form: SettingsForm }) {
       <CardContent>
         <div className="field">
           <Label htmlFor="language">
-            {_("settings.language.label")}{" "}
+            {_("settings.language.label")}
             <InfoPopover>
               <p>{_("settings.language.help")}</p>
             </InfoPopover>

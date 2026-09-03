@@ -236,10 +236,8 @@ describe("launcher version in the title", () => {
 
   it("carries the installed version in brackets", async () => {
     render(<SettingsView />, { wrapper: Providers });
-    await waitFor(() => expect(title()?.textContent).toBe("Launcher (v3.0.2)"));
-    expect(title()?.querySelector(".title-note")?.textContent).toBe(
-      " (v3.0.2)"
-    );
+    await waitFor(() => expect(title()?.textContent).toBe("Launcher(v3.0.2)"));
+    expect(title()?.querySelector(".title-note")?.textContent).toBe("(v3.0.2)");
   });
 
   /* It says what you are running, not what the CDN has — a newer one upstream
@@ -251,7 +249,7 @@ describe("launcher version in the title", () => {
       update: false,
     });
     render(<SettingsView />, { wrapper: Providers });
-    await waitFor(() => expect(title()?.textContent).toBe("Launcher (v3.0.2)"));
+    await waitFor(() => expect(title()?.textContent).toBe("Launcher(v3.0.2)"));
   });
 
   it("is bare when the version can't be read", async () => {

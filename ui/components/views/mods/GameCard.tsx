@@ -100,7 +100,6 @@ export function GameCard() {
           {_("game.title")}
           {versions?.local && (
             <span className="title-note">
-              {" "}
               {_("game.version", { version: versions.local })}
             </span>
           )}

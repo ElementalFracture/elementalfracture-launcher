@@ -68,13 +68,13 @@ describe("game title", () => {
       (node) => node.textContent?.startsWith("Game")
     );
 
+  /* No space in textContent: the gap after the title is `.title-note`'s
+     margin now, not a character in the markup. */
   it("carries the installed version in brackets", async () => {
     renderMods();
-    await waitFor(() => expect(title()?.textContent).toBe("Game (v6.0.2)"));
+    await waitFor(() => expect(title()?.textContent).toBe("Game(v6.0.2)"));
     // And it is the faded span that carries it, not the title proper.
-    expect(title()?.querySelector(".title-note")?.textContent).toBe(
-      " (v6.0.2)"
-    );
+    expect(title()?.querySelector(".title-note")?.textContent).toBe("(v6.0.2)");
   });
 
   /* The title says what you have, not what the CDN offers — "Latest:" on the
@@ -85,7 +85,7 @@ describe("game title", () => {
       makeVersions({ local: "6.0.2", remote: "6.0.3" })
     );
     renderMods();
-    await waitFor(() => expect(title()?.textContent).toBe("Game (v6.0.2)"));
+    await waitFor(() => expect(title()?.textContent).toBe("Game(v6.0.2)"));
   });
 
   it("is bare when the install has no version", async () => {

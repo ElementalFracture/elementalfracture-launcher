@@ -37,7 +37,7 @@ export function WrapperCard({ form }: { form: SettingsForm }) {
 
         <div className="field">
           <Label htmlFor="wine-prefix">
-            {_("settings.wrapper.prefix")}{" "}
+            {_("settings.wrapper.prefix")}
             <small>{_("settings.wrapper.prefixHelp")}</small>
           </Label>
           <div className="form-row">

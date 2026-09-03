@@ -32,7 +32,7 @@ export function WrapperField({
   return (
     <div className="field">
       <Label htmlFor="launch-wrapper">
-        {_("settings.wrapper.command")}{" "}
+        {_("settings.wrapper.command")}
         <small>{_("settings.wrapper.commandHelp")}</small>
       </Label>
       {/* The picker stays put once "Custom…" is chosen — the free-text
