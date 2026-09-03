@@ -93,8 +93,6 @@ export const en = {
     /* `{step}` is the install pipeline's own line, lowercased by the caller. */
     hooked: "Hooked: {path}, {step}",
     installingMods: "installing updates & mods…",
-    noAccountYet: "Don’t have an account?",
-    quickStart: "Quick-start guide",
     skip: "Skip for now",
     doneTitle: "You're all set!",
     doneTitleNamed: "You're all set, {name}!",
@@ -111,9 +109,9 @@ export const en = {
     signIn: "Sign in",
     signingIn: "Signing in…",
     forgot: "Forgot password?",
-    noAccount: "No account?",
     createOne: "Create one",
-    cancel: "Cancel",
+    needHelp: "Need help?",
+    quickStart: "Quick-start guide",
     welcomeBack: "Welcome back, {name}!",
     /* `{role}` is one of the three below, when the account carries a badge. */
     welcomeBackAs: "Welcome back, {name} ({role})!",

@@ -68,9 +68,15 @@ describe("the wizard", () => {
     expect(screen.getByText(fr.wizard.gameYes)).toBeTruthy();
     fireEvent.click(screen.getByText(fr.wizard.gameNo));
 
-    // The sign-in step is the account dialog's own copy, shared not duplicated.
+    // The sign-in step is the account dialog's own form, shared not copied —
+    // these are the same assertions "the sign-in dialog" makes below, which is
+    // the whole point of SignInForm.
     expect(await screen.findByText(fr.account.title)).toBeTruthy();
     expect(screen.getByPlaceholderText(fr.account.password)).toBeTruthy();
+    expect(screen.getByText(fr.account.forgot)).toBeTruthy();
+    expect(screen.getByText(fr.account.createOne)).toBeTruthy();
+    expect(screen.getByText(fr.account.quickStart)).toBeTruthy();
+    // Skip is the one thing onboarding adds on top of it.
     fireEvent.click(screen.getByText(fr.wizard.skip));
 
     expect(await screen.findByText(fr.wizard.doneTitle)).toBeTruthy();
@@ -116,12 +122,21 @@ describe("the wizard", () => {
 });
 
 describe("the sign-in dialog", () => {
-  it("translates the form and both links", async () => {
+  it("translates the form and every link on it", async () => {
     renderFr(<AccountModal open onOpenChange={() => {}} />);
     expect(await screen.findByText(fr.account.title)).toBeTruthy();
     expect(screen.getByText(fr.account.forgot)).toBeTruthy();
     expect(screen.getByText(fr.account.createOne)).toBeTruthy();
-    expect(screen.getByText(fr.account.cancel)).toBeTruthy();
+    expect(screen.getByText(fr.account.signIn)).toBeTruthy();
+    expect(screen.getByText(fr.account.quickStart)).toBeTruthy();
+  });
+
+  /* The guide used to be onboarding's alone. It sits on both now, so this is
+     what would catch it being wired into only one of them again. */
+  it("offers the guide, with the question that introduces it", async () => {
+    renderFr(<AccountModal open onOpenChange={() => {}} />);
+    expect(await screen.findByText(fr.account.needHelp)).toBeTruthy();
+    expect(screen.getByText(fr.account.quickStart)).toBeTruthy();
   });
 
   /* The badge used to be an English " (dev)" glued onto the sentence; the
