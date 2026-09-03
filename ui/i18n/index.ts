@@ -17,8 +17,9 @@
  *     en.ts   settings: { urls: { title: "URLs" } }
  *     key     "settings.urls.title"
  *
- * Keys are typed, so a typo fails `tsc` instead of rendering nothing. `fr.ts`
- * has to hold every key `en.ts` holds, or the build fails as well.
+ * Keys are typed, so a typo fails `tsc` instead of rendering nothing. Every
+ * other catalogue has to hold every key `en.ts` holds, or the build fails as
+ * well.
  *
  * `_` is a plain function, not a hook — that is what keeps call sites this
  * short. The catch: React never learns that a component called it, so nothing
@@ -31,30 +32,66 @@
  * replaces the body of `format()` and no call site has to change.
  */
 import { useSyncExternalStore } from "react";
+import { de } from "./locales/de";
 import { en } from "./locales/en";
+import { es } from "./locales/es";
 import { fr } from "./locales/fr";
+import { it } from "./locales/it";
+import { ja } from "./locales/ja";
+import { ko } from "./locales/ko";
+import { ptBR } from "./locales/pt-BR";
+import { zhHans } from "./locales/zh-Hans";
+import { zhHant } from "./locales/zh-Hant";
 
 /** `en` is `as const`, so TypeScript sees each value as that exact string
     rather than as `string`. That is what lets `Key` below be a list of the
     real paths.
 
     Other languages have the same keys but different words, so `Catalogue` is
-    the same shape with the leaves widened back to `string`. `fr.ts` declares
-    itself as `Catalogue`, which is what turns a missing French key into a
-    build error. */
+    the same shape with the leaves widened back to `string`. Each of the other
+    catalogues declares itself as `Catalogue`, which is what turns a missing
+    key into a build error. */
 type Source = typeof en;
 type Translated<T> = {
   [K in keyof T]: T[K] extends string ? string : Translated<T[K]>;
 };
 export type Catalogue = Translated<Source>;
 
-/** The locales that have a catalogue. Order is the order the picker shows. */
-export const LOCALES = ["en", "fr"] as const;
+/** The locales that have a catalogue. Order is the order the picker shows.
+
+    A tag is only as specific as it needs to be: `fr` covers every French
+    region, while Portuguese and Chinese carry the part that actually changes
+    the words — the Brazilian variety, and the two scripts. `resolveLocale`
+    below is what maps an OS tag like `pt-PT` or `zh-TW` onto one of these. */
+export const LOCALES = [
+  "en",
+  "es",
+  "pt-BR",
+  "fr",
+  "de",
+  "it",
+  "zh-Hans",
+  "zh-Hant",
+  "ko",
+  "ja",
+] as const;
 export type Locale = (typeof LOCALES)[number];
 
-/* Both catalogues ship inside the bundle. They are a few KB, and fetching them
-   on demand would show untranslated text for a moment at every cold start. */
-const CATALOGUES: Record<Locale, Catalogue> = { en, fr };
+/* Every catalogue ships inside the bundle. They are a few KB each, and
+   fetching them on demand would show untranslated text for a moment at every
+   cold start. */
+const CATALOGUES: Record<Locale, Catalogue> = {
+  en,
+  es,
+  "pt-BR": ptBR,
+  fr,
+  de,
+  it,
+  "zh-Hans": zhHans,
+  "zh-Hant": zhHant,
+  ko,
+  ja,
+};
 
 /** What the picker saves, and what `Settings.language` holds. `""` means
     "follow the OS" — stored as that rather than as the language it resolves
@@ -65,7 +102,15 @@ export type LanguageSetting = "" | Locale;
     someone who has landed in a language they can't read can still get out. */
 export const LOCALE_NAMES: Record<Locale, string> = {
   en: "English",
+  es: "Español",
+  "pt-BR": "Português (Brasil)",
   fr: "Français",
+  de: "Deutsch",
+  it: "Italiano",
+  "zh-Hans": "简体中文",
+  "zh-Hant": "繁體中文",
+  ko: "한국어",
+  ja: "日本語",
 };
 
 /* ---------------- key typing ---------------- */
@@ -95,12 +140,37 @@ function isLocale(tag: string): tag is Locale {
   return (LOCALES as readonly string[]).includes(tag);
 }
 
+/** The subtags that mean Traditional Chinese. The script is what the
+    catalogues are split on, but an OS reports a region — "zh-TW", not
+    "zh-Hant" — so both spellings are listed. Everything else Chinese is
+    Simplified. */
+const TRADITIONAL_CHINESE = ["hant", "tw", "hk", "mo"];
+
+/**
+ * Match one OS language tag against the catalogues we have.
+ *
+ *     "fr-CA"  → "fr"        the region doesn't change the words
+ *     "pt-PT"  → "pt-BR"     the only Portuguese we speak
+ *     "zh-TW"  → "zh-Hant"   the script the region implies
+ *     "zh"     → "zh-Hans"
+ *     "sv-SE"  → undefined   a language we don't speak
+ */
+function matchTag(tag: string): Locale | undefined {
+  const [primary, ...rest] = tag.toLowerCase().split("-");
+  if (primary === "zh") {
+    return rest.some((part) => TRADITIONAL_CHINESE.includes(part))
+      ? "zh-Hant"
+      : "zh-Hans";
+  }
+  return LOCALES.find((l) => l.toLowerCase().split("-")[0] === primary);
+}
+
 /**
  * Turn a saved setting into a language that actually has a catalogue.
  *
  *     "fr"  → "fr"           a language we speak
  *     ""    → OS language    the webview says "fr-CA", the region is ignored
- *     "de"  → "en"           anything we don't speak
+ *     "sv"  → "en"           anything we don't speak
  */
 export function resolveLocale(
   setting: string,
@@ -114,9 +184,9 @@ export function resolveLocale(
     (typeof navigator === "undefined" ? [] : navigator.languages) ??
     [];
   for (const tag of tags) {
-    const primary = tag.toLowerCase().split("-")[0];
-    if (isLocale(primary)) {
-      return primary;
+    const hit = matchTag(tag);
+    if (hit) {
+      return hit;
     }
   }
   return "en";

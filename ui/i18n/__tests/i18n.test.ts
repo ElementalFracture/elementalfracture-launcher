@@ -7,9 +7,34 @@ import {
   setLocale,
   subscribe,
   LOCALES,
-} from "../index";
+} from "@/i18n";
+import type { Catalogue, Locale } from "@/i18n";
+import { de } from "../locales/de";
 import { en } from "../locales/en";
+import { es } from "../locales/es";
 import { fr } from "../locales/fr";
+/* `it` is already vitest's, so the Italian catalogue comes in renamed. */
+import { it as italian } from "../locales/it";
+import { ja } from "../locales/ja";
+import { ko } from "../locales/ko";
+import { ptBR } from "../locales/pt-BR";
+import { zhHans } from "../locales/zh-Hans";
+import { zhHant } from "../locales/zh-Hant";
+
+/* The same map `index.ts` keeps, rebuilt here so the checks below run against
+   every catalogue rather than a hand-picked pair — a locale added without a
+   line in this map fails the first test in the block. */
+const TRANSLATED: Record<Exclude<Locale, "en">, Catalogue> = {
+  es,
+  "pt-BR": ptBR,
+  fr,
+  de,
+  it: italian,
+  "zh-Hans": zhHans,
+  "zh-Hant": zhHant,
+  ko,
+  ja,
+};
 
 describe("interpolation", () => {
   it("fills named slots", () => {
@@ -30,16 +55,27 @@ describe("interpolation", () => {
 });
 
 describe("the catalogues", () => {
-  /* fr.ts is typed as Catalogue, so this can't fail while tsc passes — but it
-     fails loudly if someone reaches for a cast to get a build through. */
-  it("cover the same keys", () => {
+  const translated = Object.entries(TRANSLATED) as [string, Catalogue][];
+
+  /* Every locale the picker offers needs a catalogue here, or the checks
+     below quietly skip it. */
+  it("are all covered by these tests", () => {
+    expect(Object.keys(TRANSLATED).sort()).toEqual(
+      LOCALES.filter((l) => l !== "en").sort()
+    );
+  });
+
+  /* Each catalogue is typed as Catalogue, so this can't fail while tsc
+     passes — but it fails loudly if someone reaches for a cast to get a build
+     through. */
+  it.each(translated)("%s covers the same keys", (_name, catalogue) => {
     const paths = (o: object, prefix = ""): string[] =>
       Object.entries(o).flatMap(([k, v]) =>
         typeof v === "string"
           ? [`${prefix}${k}`]
           : paths(v as object, `${prefix}${k}.`)
       );
-    expect(paths(fr).sort()).toEqual(paths(en).sort());
+    expect(paths(catalogue).sort()).toEqual(paths(en).sort());
   });
 
   /* Spacing belongs to the markup, not to the words. A space at the edge of a
@@ -54,28 +90,38 @@ describe("the catalogues", () => {
             : [`${prefix}${name}`]
           : padded(v as object, `${prefix}${name}.`)
       );
-    expect({ en: padded(en), fr: padded(fr) }).toEqual({ en: [], fr: [] });
+    const offenders = Object.fromEntries(
+      [["en", en] as [string, Catalogue], ...translated].map(
+        ([name, catalogue]) => [name, padded(catalogue)]
+      )
+    );
+    expect(offenders).toEqual(
+      Object.fromEntries(Object.keys(offenders).map((name) => [name, []]))
+    );
   });
 
   /* A `{slot}` the other locale dropped renders as a sentence with a value
      missing from it, which tsc can't see. */
-  it("keep the same placeholders in every string", () => {
-    const slots = (s: string) => (s.match(/\{(\w+)\}/g) ?? []).sort();
-    const walk = (a: object, b: object, prefix = "") => {
-      for (const [k, v] of Object.entries(a)) {
-        const other = (b as Record<string, unknown>)[k];
-        if (typeof v === "string") {
-          expect({ key: prefix + k, slots: slots(other as string) }).toEqual({
-            key: prefix + k,
-            slots: slots(v),
-          });
-        } else {
-          walk(v as object, other as object, `${prefix}${k}.`);
+  it.each(translated)(
+    "%s keeps the same placeholders in every string",
+    (_name, catalogue) => {
+      const slots = (s: string) => (s.match(/\{(\w+)\}/g) ?? []).sort();
+      const walk = (a: object, b: object, prefix = "") => {
+        for (const [k, v] of Object.entries(a)) {
+          const other = (b as Record<string, unknown>)[k];
+          if (typeof v === "string") {
+            expect({ key: prefix + k, slots: slots(other as string) }).toEqual({
+              key: prefix + k,
+              slots: slots(v),
+            });
+          } else {
+            walk(v as object, other as object, `${prefix}${k}.`);
+          }
         }
-      }
-    };
-    walk(en, fr);
-  });
+      };
+      walk(en, catalogue);
+    }
+  );
 
   it("has a string for every locale it offers", () => {
     for (const l of LOCALES) {
@@ -170,13 +216,29 @@ describe("resolveLocale", () => {
   });
 
   it("falls back to English for a language we don't speak", () => {
-    expect(resolveLocale("", ["de-DE", "ja"])).toBe("en");
+    expect(resolveLocale("", ["sv-SE", "nl"])).toBe("en");
     expect(resolveLocale("", [])).toBe("en");
+  });
+
+  /* Portuguese is only translated once, so every region gets that one. */
+  it("answers a region we don't have with the variety we do", () => {
+    expect(resolveLocale("", ["pt-PT"])).toBe("pt-BR");
+    expect(resolveLocale("", ["pt"])).toBe("pt-BR");
+  });
+
+  /* The OS reports Chinese as a region ("zh-TW"), the catalogues are split by
+     script ("zh-Hant"), and the two have to meet somewhere. */
+  it("picks a Chinese script from the region the OS reports", () => {
+    expect(resolveLocale("", ["zh-TW"])).toBe("zh-Hant");
+    expect(resolveLocale("", ["zh-HK"])).toBe("zh-Hant");
+    expect(resolveLocale("", ["zh-Hant"])).toBe("zh-Hant");
+    expect(resolveLocale("", ["zh-CN"])).toBe("zh-Hans");
+    expect(resolveLocale("", ["zh"])).toBe("zh-Hans");
   });
 
   /* A tag saved by a newer build, or a hand-edited config: treated as unset
      rather than left to render a catalogue that isn't there. */
   it("treats an unknown saved tag as follow-the-OS", () => {
-    expect(resolveLocale("de", ["fr-FR"])).toBe("fr");
+    expect(resolveLocale("sv", ["fr-FR"])).toBe("fr");
   });
 });
