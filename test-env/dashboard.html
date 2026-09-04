@@ -1070,6 +1070,19 @@
                   ),
                   remover(() => drop(["events", i]))
                 ),
+                el(
+                  "div",
+                  { className: "row line" },
+                  field(
+                    "Link",
+                    text(
+                      `events.${i}.url`,
+                      event.url,
+                      (v) => set(path(i, "url"), v),
+                      "https://discord.gg/…"
+                    )
+                  )
+                ),
                 el("textarea", {
                   value: event.description ?? "",
                   placeholder: "description",
@@ -1092,8 +1105,14 @@
               description: "",
               location: "EU West",
               interested: 0,
+              url: "",
             })
-          )
+          ),
+          el("p", {
+            className: "empty",
+            textContent:
+              "Link is the one field nothing here fills in for you: an event card only opens something when it's set, so typing one in is how to reach that path at all. A debug build re-reads events every 60s.",
+          })
         );
       }
 
