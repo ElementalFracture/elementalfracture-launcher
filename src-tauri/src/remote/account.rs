@@ -263,3 +263,7 @@ pub async fn logout(app: tauri::AppHandle) -> AppResult<()> {
     })?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "__tests/account.rs"]
+mod tests;

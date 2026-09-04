@@ -73,3 +73,7 @@ pub async fn pick_game_dir(app: tauri::AppHandle, title: Option<String>) -> Opti
         .and_then(|f| f.into_path().ok())
         .map(|p| p.to_string_lossy().into_owned())
 }
+
+#[cfg(test)]
+#[path = "__tests/platform.rs"]
+mod tests;

@@ -233,43 +233,5 @@ pub(super) fn extract_umu_run(tar_path: &Path, dest: &Path) -> AppResult<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn tar_reader_pulls_umu_run() {
-        // Build a minimal two-entry tar (a dir + the umu-run regular file) and
-        // confirm the reader extracts exactly the file's bytes.
-        fn header(name: &str, size: u64, typeflag: u8) -> Vec<u8> {
-            let mut h = vec![0u8; 512];
-            let nb = name.as_bytes();
-            h[..nb.len()].copy_from_slice(nb);
-            let octal = format!("{size:011o}\0");
-            h[124..124 + octal.len()].copy_from_slice(octal.as_bytes());
-            h[156] = typeflag;
-            h
-        }
-        let payload = b"#!/usr/bin/env python3\nPK-zipapp-bytes";
-        let mut tar = Vec::new();
-        tar.extend(header("umu/", 0, b'5'));
-        tar.extend(header("umu/umu-run", payload.len() as u64, b'0'));
-        tar.extend(payload);
-        tar.extend(vec![0u8; 512 - payload.len() % 512]); // pad to 512
-        tar.extend(vec![0u8; 1024]); // end-of-archive
-
-        let tmp = tempfile::tempdir().unwrap();
-        let tar_path = tmp.path().join("umu.tar");
-        let out = tmp.path().join("umu-run");
-        fs::write(&tar_path, &tar).unwrap();
-        extract_umu_run(&tar_path, &out).unwrap();
-        assert_eq!(fs::read(&out).unwrap(), payload);
-    }
-
-    #[test]
-    fn tar_reader_errors_when_absent() {
-        let tmp = tempfile::tempdir().unwrap();
-        let tar_path = tmp.path().join("empty.tar");
-        fs::write(&tar_path, vec![0u8; 1024]).unwrap();
-        assert!(extract_umu_run(&tar_path, &tmp.path().join("umu-run")).is_err());
-    }
-}
+#[path = "__tests/archive.rs"]
+mod tests;

@@ -74,3 +74,7 @@ pub async fn friend_accept(app: tauri::AppHandle, username: String) -> AppResult
 pub async fn friend_remove(app: tauri::AppHandle, username: String) -> AppResult<serde_json::Value> {
     friend_call(&app, "/friends/remove", Some(username)).await
 }
+
+#[cfg(test)]
+#[path = "__tests/friends.rs"]
+mod tests;

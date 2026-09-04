@@ -212,3 +212,6 @@ fn install_from_zip(root: &Path, bytes: &[u8]) -> AppResult<Vec<String>> {
     Ok(log)
 }
 
+#[cfg(test)]
+#[path = "__tests/mods.rs"]
+mod tests;

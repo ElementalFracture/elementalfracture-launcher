@@ -202,3 +202,7 @@ impl std::error::Error for AppError {}
 
 /// What every fallible command returns.
 pub type AppResult<T> = Result<T, AppError>;
+
+#[cfg(test)]
+#[path = "__tests/error.rs"]
+mod tests;

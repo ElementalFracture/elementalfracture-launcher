@@ -48,3 +48,7 @@ pub(super) fn write_hidden_mode(root: &Path, mode: &str) {
         unsafe { SetFileAttributesW(wide.as_ptr(), FILE_ATTRIBUTE_HIDDEN) };
     }
 }
+
+#[cfg(test)]
+#[path = "__tests/markers.rs"]
+mod tests;

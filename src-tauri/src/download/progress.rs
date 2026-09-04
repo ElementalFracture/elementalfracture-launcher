@@ -29,3 +29,7 @@ pub(super) fn human(bytes: u64) -> String {
     }
     format!("{v:.1} {}", UNITS[u])
 }
+
+#[cfg(test)]
+#[path = "__tests/progress.rs"]
+mod tests;

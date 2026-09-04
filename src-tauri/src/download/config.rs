@@ -73,28 +73,5 @@ pub async fn get_remote_config(app: tauri::AppHandle) -> std::collections::HashM
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn ini_versions_and_extras() {
-        let cfg = parse_ini(
-            "; Elemental Fracture launcher configuration\n\
-             [Versions]\n\
-             LauncherVersion = 1.0.0\n\
-             GameVersion=6.0.2\n\
-             # future settings ride along\n\
-             DiscordUrl = https://dsc.gg/elefrac\n",
-        );
-        assert_eq!(config_version(&cfg, "launcherversion").as_deref(), Some("1.0.0"));
-        assert_eq!(config_version(&cfg, "gameversion").as_deref(), Some("6.0.2"));
-        assert_eq!(cfg.get("discordurl").unwrap(), "https://dsc.gg/elefrac");
-    }
-
-    #[test]
-    fn ini_rejects_error_pages() {
-        let cfg = parse_ini("<?xml version=\"1.0\"?><Error><Code>NoSuchKey</Code></Error>");
-        assert_eq!(config_version(&cfg, "gameversion"), None);
-        assert_eq!(config_version(&cfg, "launcherversion"), None);
-    }
-}
+#[path = "__tests/config.rs"]
+mod tests;

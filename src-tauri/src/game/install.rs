@@ -99,3 +99,7 @@ pub fn auto_find_game() -> Option<String> {
         .find(|c| find_exe(c).is_some())
         .map(|p| p.to_string_lossy().into_owned())
 }
+
+#[cfg(test)]
+#[path = "__tests/install.rs"]
+mod tests;
