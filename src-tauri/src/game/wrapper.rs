@@ -11,6 +11,32 @@ pub struct WrapperOption {
     pub label: String,
 }
 
+/// The ONLY shape any of the three lookups below may use: `prog` rides in as
+/// `$1` rather than spliced into the script text, so nothing user-controlled
+/// reaches the shell parser. A path with spaces survives; a name carrying `;`,
+/// a backtick or `$(...)` is looked up rather than executed. `"_"` fills `$0`.
+///
+/// There is deliberately no `>/dev/null` in the script: the yes/no callers null
+/// their stdio on the `Command` instead, which lets `detect_wrappers` reuse the
+/// same string and read the resolved path off stdout. Anything that needs to
+/// look up a program goes through this — a second, hand-rolled `command -v` is
+/// how the injection this replaced got in.
+const LOOKUP: &str = r#"command -v "$1""#;
+
+/// `sh -c LOOKUP` for `prog`, relayed to the host when the launcher itself
+/// lives in a container (the game, and its wrapper, run on the host).
+fn lookup_cmd(prog: &str) -> std::process::Command {
+    let mut cmd = if platform::in_container() {
+        let mut c = std::process::Command::new("distrobox-host-exec");
+        c.arg("sh");
+        c
+    } else {
+        std::process::Command::new("sh")
+    };
+    cmd.args(["-c", LOOKUP, "_", prog]);
+    cmd
+}
+
 /// Run a command (on the host when the launcher lives in a container) and
 /// return its stdout on success.
 fn host_cmd_output(args: &[&str]) -> Option<String> {
@@ -47,7 +73,7 @@ pub fn detect_wrappers() -> Vec<WrapperOption> {
 
     let home_bin = std::env::var("HOME").map(|h| format!("{h}/.local/bin"));
     for cand in ["umu-run", "wine", "wine64", "wine-stable"] {
-        if let Some(path) = host_cmd_output(&["sh", "-c", &format!("command -v {cand}")]) {
+        if let Some(path) = host_cmd_output(&["sh", "-c", LOOKUP, "_", cand]) {
             let path = path.trim().to_string();
             if !path.is_empty() {
                 push(cand.into(), format!("{cand} ({path})"));
@@ -90,20 +116,8 @@ pub(super) fn parse_wrapper(command: &str) -> Vec<String> {
 /// Check the launch wrapper exists where the game will actually run
 /// (on the host when the launcher itself lives in a container).
 pub(super) fn wrapper_available(prog: &str) -> bool {
-    // `prog` rides in as an argument rather than spliced into the script text:
-    // nothing user-controlled reaches the shell parser, so a path with spaces
-    // survives and a path with quotes can't break out. "_" fills $0.
-    const CHECK: &str = r#"command -v "$1" >/dev/null 2>&1"#;
-    let mut cmd = if platform::in_container() {
-        let mut c = std::process::Command::new("distrobox-host-exec");
-        c.args(["sh", "-c", CHECK, "_", prog]);
-        c
-    } else {
-        let mut c = std::process::Command::new("sh");
-        c.args(["-c", CHECK, "_", prog]);
-        c
-    };
-    cmd.stdout(std::process::Stdio::null())
+    lookup_cmd(prog)
+        .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
         .map(|st| st.success())
@@ -124,17 +138,8 @@ pub(crate) fn command_present(prog: &str) -> bool {
     if Path::new(prog).is_absolute() {
         return Path::new(prog).exists();
     }
-    let check = format!("command -v {prog} >/dev/null 2>&1");
-    let mut cmd = if platform::in_container() {
-        let mut c = std::process::Command::new("distrobox-host-exec");
-        c.args(["sh", "-c", &check]);
-        c
-    } else {
-        let mut c = std::process::Command::new("sh");
-        c.args(["-c", &check]);
-        c
-    };
-    cmd.stdout(std::process::Stdio::null())
+    lookup_cmd(prog)
+        .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
         .map(|st| st.success())

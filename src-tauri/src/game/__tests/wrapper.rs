@@ -58,3 +58,37 @@ fn availability_survives_spaces_and_quotes() {
     assert!(!wrapper_available(&evil));
     assert!(target.exists(), "injected command ran");
 }
+
+/// The same canary against `command_present`. This is the one that used to
+/// build its script with `format!`, so a wrapper name carrying shell syntax
+/// was parsed and run by `sh` rather than looked up.
+#[cfg(unix)]
+#[test]
+fn presence_check_looks_names_up_rather_than_running_them() {
+    assert!(command_present("sh"));
+    assert!(!command_present(""));
+    assert!(!command_present("definitely-not-a-real-program-xyz"));
+
+    let canary = tempfile::tempdir().unwrap();
+    let target = canary.path().join("CANARY");
+    fs::write(&target, b"x").unwrap();
+    // Not absolute, so it reaches the lookup rather than the exists() branch.
+    let evil = format!(r#"x" ; rm -f "{}" ; ""#, target.display());
+    assert!(!command_present(&evil));
+    assert!(target.exists(), "injected command ran");
+
+    // A backtick / $() payload has to be inert too, not just the `;` shape.
+    let sub = format!(r#"x`rm -f {}`"#, target.display());
+    assert!(!command_present(&sub));
+    assert!(target.exists(), "backtick substitution ran");
+}
+
+/// An absolute path never reaches the shell at all — it is tested on disk —
+/// but it must still survive spaces.
+#[cfg(unix)]
+#[test]
+fn presence_check_handles_absolute_paths_with_spaces() {
+    let (_tmp, path) = spaced_wine();
+    assert!(command_present(&path));
+    assert!(!command_present("/no/such/wine"));
+}
