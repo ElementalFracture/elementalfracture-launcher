@@ -154,6 +154,12 @@ fn install_from_zip(root: &Path, bytes: &[u8]) -> AppResult<Vec<String>> {
             log.push(format!("Removed legacy Mods/commands/{legacy}"));
         }
     }
+    // Same for the `.ef_auth` marker that succeeded them: the game reads the
+    // session key from its environment now, so a copy in the game folder is
+    // only a plaintext credential sitting on a possibly-shared drive.
+    if fs::remove_file(root.join(".ef_auth")).is_ok() {
+        log.push("Removed legacy .ef_auth".into());
+    }
 
     // Place every .dll in the package: the loader → g3/Binaries/Win64, all other
     // DLLs → Mods/dlls. Collect entry names first (extract_one takes a fresh

@@ -2,7 +2,7 @@
 //! it must NOT inherit, and the auth handoff that rides along.
 
 use super::install::{find_exe, WIN64_EXES};
-use super::markers::{write_hidden_auth, write_hidden_mode};
+use super::markers::write_hidden_mode;
 use super::variant::detect_variant;
 use super::wrapper::{parse_wrapper, wrapper_available};
 use crate::error::{AppError, AppResult, ErrorCode};
@@ -220,10 +220,9 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     cmd.current_dir(exe.parent().unwrap());
     sanitize_appimage_env(&mut cmd);
 
-    // Auth handoff. Env vars first (free, works if the game doesn't relaunch),
-    // but the reliable channel is a hidden .ef_auth file in the game root —
-    // the injector resolves the game folder identically on Windows and wine,
-    // unlike %APPDATA%. Written fresh each launch.
+    // Auth handoff: the environment the game is spawned with. Nothing is
+    // written to the game folder — the session key stays out of a directory
+    // that is routinely on a shared Steam library or a second drive.
     let server_host = settings::game_host(&s.auth_url);
     if !s.auth_token.trim().is_empty() {
         cmd.env("EF_AUTH_TOKEN", s.auth_token.trim());
@@ -231,14 +230,17 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     if !server_host.is_empty() {
         cmd.env("EF_SERVER", &server_host);
     }
-    write_hidden_auth(&root, s.auth_token.trim(), &server_host);
     // Current balance mode, written fresh each launch so the controller matches the loaded pak.
     write_hidden_mode(&root, &detect_variant(&root));
 
-    // Scrub legacy visible plaintext copies from older installs.
+    // Scrub plaintext auth copies older launchers left in the game folder:
+    // Mods/commands/*.txt, and the .ef_auth marker that replaced them. Every
+    // launch, not just installs, so a copy that never sees another install
+    // still goes away.
     let cmds_dir = root.join("Mods").join("commands");
     let _ = fs::remove_file(cmds_dir.join("auth_token.txt"));
     let _ = fs::remove_file(cmds_dir.join("ef_server.txt"));
+    let _ = fs::remove_file(root.join(".ef_auth"));
 
     cmd.spawn()
         .map_err(|e| {

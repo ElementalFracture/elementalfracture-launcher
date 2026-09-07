@@ -51,7 +51,7 @@ Static `index.html` + `styles.css` + `app.js`, loaded by the webview with
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `main.rs`     | Registers the Tauri command handlers.                                                                                        |
 | `settings.rs` | Persisted config (`settings.json` in the OS config dir), folder picker, external-link opener, `game_host()` URL→host helper. |
-| `game.rs`     | Locate/launch the game, EF↔Classic pak toggle, write the hidden `.ef_auth` handoff file, read local `version.txt`.           |
+| `game.rs`     | Locate/launch the game, EF↔Classic pak toggle, write the hidden `.ef_mode` marker, read local `version.txt`.                 |
 | `download.rs` | Segmented base-game download, patch application, `version.txt` bump, update check.                                           |
 | `mods.rs`     | Install/verify the loader + mod DLLs from `mod.zip`.                                                                         |
 | `remote.rs`   | Player counts, live events, patch-notes RSS, and sign-in + session validation.                                                           |
@@ -113,12 +113,16 @@ launcher stores that key and presents it from then on instead of the password:
 `{"token": "..."}` → `{"ok", "username", "is_staff", "is_dev"}`) and the friend
 routes carry it.
 
-At launch the launcher hands that key and the server host to the game through a
-hidden **`.ef_auth`** file in the game root (line 1 = key, line 2 = server),
-which the in-game `auth_injector` reads. This resolves identically on Windows
-and under Wine/Proton, where per-process environment and `%APPDATA%` do not.
-The in-game server host is _derived_ from `auth_url`, so there's a single
-address to configure.
+At launch the launcher hands that key and the server host to the game through
+the spawned process's environment — **`EF_AUTH_TOKEN`** and **`EF_SERVER`** —
+which the in-game `auth_injector` reads. The in-game server host is _derived_
+from `auth_url`, so there's a single address to configure.
+
+Nothing is written into the game folder: an earlier design put the key in a
+hidden `.ef_auth` file there (line 1 = key, line 2 = server), which meant a
+plaintext credential sitting in a directory that is routinely a shared Steam
+library or a second drive. Both `install_from_zip` and every launch delete that
+file if an older build left one behind.
 
 ---
 

@@ -32,9 +32,10 @@ pub struct Settings {
     /// Tester badge: unlocks the hidden Playtest variant.
     /// A peer of staff/dev, not implied by either.
     pub is_tester: bool,
-    /// The session key `/login` exchanged the email + password for. Kept here
-    /// so it survives before a game folder exists, and gets written into the
-    /// game's hidden `.ef_auth` at launch once one does.
+    /// The session key `/login` exchanged the email + password for. Presented
+    /// to `/auth` and the friend routes, and handed to the game through its
+    /// environment at launch (`EF_AUTH_TOKEN`) — never written into the game
+    /// folder.
     pub auth_token: String,
     /// Public "Spellbreak ID" (the unique username), from email sign-in.
     pub spellbreak_id: String,

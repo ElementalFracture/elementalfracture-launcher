@@ -102,7 +102,8 @@ fn stale_dlls_are_purged_and_everything_else_is_left_alone() {
 }
 
 /// Auth moved into the launcher; an install scrubs the plaintext copies an
-/// older one left in the game folder.
+/// older one left in the game folder — the `Mods/commands` text files, and the
+/// `.ef_auth` marker that replaced them.
 #[test]
 fn legacy_plaintext_auth_files_are_scrubbed() {
     let tmp = game_root();
@@ -111,10 +112,13 @@ fn legacy_plaintext_auth_files_are_scrubbed() {
     fs::create_dir_all(&cmds).unwrap();
     fs::write(cmds.join("auth_token.txt"), b"secret").unwrap();
     fs::write(cmds.join("ef_server.txt"), b"host").unwrap();
+    fs::write(root.join(".ef_auth"), b"tok\nhost\n").unwrap();
 
     let log = install_from_zip(root, &mod_zip(&[("xinput1_3.dll", b"loader")])).unwrap();
 
     assert!(!cmds.join("auth_token.txt").exists());
     assert!(!cmds.join("ef_server.txt").exists());
+    assert!(!root.join(".ef_auth").exists());
     assert!(log.iter().any(|l| l.contains("auth_token.txt")), "{log:?}");
+    assert!(log.iter().any(|l| l.contains(".ef_auth")), "{log:?}");
 }
