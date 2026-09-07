@@ -31,7 +31,7 @@ import type {
   NewsItem,
   Result,
   Settings,
-  TokenResult,
+  LoginResult,
   VersionInfo,
   WrapperOption,
 } from "@/generated/bindings";
@@ -45,7 +45,7 @@ export type {
   LauncherUpdateInfo,
   NewsItem,
   Settings,
-  TokenResult,
+  LoginResult,
   VersionInfo,
   WrapperOption,
 };
@@ -73,16 +73,16 @@ export async function resetSettings(): Promise<Settings> {
 }
 
 /** Email/password sign-in (the account the website uses). Throws on auth failure. */
-export async function loginEmail(email: string, password: string): Promise<TokenResult> {
+export async function loginEmail(email: string, password: string): Promise<LoginResult> {
   return unwrap(await commands.loginEmail(email, password));
 }
 
-/** Sign out: clears the stored token, name, avatar and roles. */
+/** Sign out: clears the stored session, name, avatar and roles. */
 export async function logout(): Promise<void> {
   unwrap(await commands.logout());
 }
 
-/** Re-check the stored token's roles. `null` = nothing to report, roles kept. */
+/** Re-check the stored session's roles. `null` = nothing to report, roles kept. */
 export async function refreshAccount(): Promise<Account | null> {
   return unwrap(await commands.refreshAccount());
 }

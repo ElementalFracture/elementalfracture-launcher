@@ -67,7 +67,8 @@ pub enum ErrorCode {
     LauncherVersionUnreadable,
 
     /* ---- authored: account ---- */
-    NoAccountToken,
+    /// A signed-in session is required and there isn't one.
+    NotSignedIn,
     PlayersUrlNotConfigured,
     EnterEmailAndPassword,
     SignInNotConfigured,

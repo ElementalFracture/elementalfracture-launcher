@@ -64,7 +64,7 @@ export const ja: Catalogue = {
       cdnHelp: "（ゲームとランチャーの更新の取得元）",
       auth: "認証 URL",
       authHelp:
-        "（トークン検証エンドポイント。ゲームサーバーのホストはここから導出されます）",
+        "（セッション検証エンドポイント。ゲームサーバーのホストはここから導出されます）",
       players: "プレイヤー数 URL",
       playersHelp: "（プレイヤー数サービスのエンドポイント）",
     },
@@ -206,7 +206,8 @@ export const ja: Catalogue = {
     errors: {
       userNotFound: "その Spellbreak ID のプレイヤーは見つかりません。",
       cannotFriendSelf: "それはあなた自身です！",
-      invalidToken: "先にアカウントのトークンを設定してください。",
+      sessionExpired:
+        "セッションの有効期限が切れました。もう一度サインインしてください。",
       usernameRequired: "Spellbreak ID を入力してください。",
       noPendingRequest: "その人からの保留中の申請はありません。",
       unavailable: "フレンドサーバーに接続できません。もう一度お試しください。",
@@ -389,7 +390,7 @@ export const ja: Catalogue = {
     launcherVersionUnreadable:
       "CDN からランチャーのバージョンを読み取れませんでした。",
 
-    noAccountToken: "アカウントのトークンが設定されていません。",
+    notSignedIn: "サインインしていません。",
     playersUrlNotConfigured: "プレイヤー数 URL が設定されていません。",
     enterEmailAndPassword: "メールアドレスとパスワードを入力してください。",
     signInNotConfigured: "サインインが設定されていません。",

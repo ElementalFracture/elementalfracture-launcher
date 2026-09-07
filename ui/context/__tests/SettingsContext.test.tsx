@@ -47,8 +47,8 @@ describe("refreshAccount", () => {
     expect(result.current.settings?.is_tester).toBe(true);
   });
 
-  it("clears the cached identity when the stored token has expired", async () => {
-    // An expired token: refresh_account clears the identity on disk and answers
+  it("clears the cached identity when the stored session has expired", async () => {
+    // An expired session: refresh_account clears the identity on disk and answers
     // with the emptied account (truthy, not null), so the UI re-reads and the
     // pill flips to "session expired".
     commands.getSettings.mockResolvedValue(
@@ -182,7 +182,7 @@ describe("loginEmail", () => {
 
     commands.loginEmail.mockResolvedValue({
       status: "ok",
-      data: { username: "Breaker", is_staff: true, is_dev: false, verified: true, warning: null },
+      data: { username: "Breaker", is_staff: true, is_dev: false, is_tester: false },
     });
     commands.getSettings.mockResolvedValue(makeSettings({ username: "Breaker", is_staff: true }));
 

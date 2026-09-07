@@ -17,7 +17,7 @@ import { _, type Key } from "@/i18n";
 const FRIEND_ERRORS: Record<string, Key> = {
   user_not_found: "friends.errors.userNotFound",
   cannot_friend_self: "friends.errors.cannotFriendSelf",
-  invalid_token: "friends.errors.invalidToken",
+  invalid_token: "friends.errors.sessionExpired",
   username_required: "friends.errors.usernameRequired",
   no_pending_request: "friends.errors.noPendingRequest",
 };
@@ -60,7 +60,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const [friends, setFriends] = useState<FriendsData | null>(null);
 
-  // Every call needs a token, so a guest never reaches the sidecar at all.
+  // Every call needs a session, so a guest never reaches the sidecar at all.
   // Keyed on the value rather than the settings object: re-reading settings
   // for an unrelated field must not tear down the heartbeat below.
   const token = settings?.auth_token?.trim() ?? "";
@@ -102,7 +102,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     [refreshFriends]
   );
 
-  /* A new token is a new identity: drop the previous account's graph before
+  /* A new session is a new identity: drop the previous account's graph before
      pulling the new one, so no one else's friends flash up in between. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {

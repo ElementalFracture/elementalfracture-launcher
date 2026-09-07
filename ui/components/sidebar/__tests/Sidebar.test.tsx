@@ -47,7 +47,7 @@ beforeEach(() => {
     remote: null,
     update: false,
   });
-  // SettingsProvider re-checks the token on mount; unmocked it only throws
+  // SettingsProvider re-checks the session on mount; unmocked it only throws
   // into the console, but the noise buries anything a test does care about.
   commands.refreshAccount.mockResolvedValue({ status: "ok", data: null });
 });

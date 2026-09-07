@@ -61,7 +61,7 @@ export const zhHans: Catalogue = {
       cdn: "CDN 地址",
       cdnHelp: "（游戏和启动器更新的下载来源）",
       auth: "认证地址",
-      authHelp: "（令牌校验接口；游戏服务器主机由它推导得出）",
+      authHelp: "（会话校验接口；游戏服务器主机由它推导得出）",
       players: "玩家数地址",
       playersHelp: "（玩家数服务接口）",
     },
@@ -201,7 +201,7 @@ export const zhHans: Catalogue = {
     errors: {
       userNotFound: "没有使用该 Spellbreak ID 的玩家。",
       cannotFriendSelf: "那是你自己！",
-      invalidToken: "请先设置你的账号令牌。",
+      sessionExpired: "会话已过期，请重新登录。",
       usernameRequired: "请输入 Spellbreak ID。",
       noPendingRequest: "没有来自对方的待处理申请。",
       unavailable: "好友服务器不可用，请重试。",
@@ -367,7 +367,7 @@ export const zhHans: Catalogue = {
       "未找到游戏运行时，且缺少 python3（umu / Proton 需要它）。请用你的包管理器安装 python3，或改为安装 Wine，然后重试。",
     launcherVersionUnreadable: "无法从 CDN 读取启动器版本。",
 
-    noAccountToken: "尚未设置账号令牌。",
+    notSignedIn: "你尚未登录。",
     playersUrlNotConfigured: "尚未配置玩家数地址。",
     enterEmailAndPassword: "请输入你的邮箱和密码。",
     signInNotConfigured: "尚未配置登录。",

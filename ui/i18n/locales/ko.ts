@@ -63,7 +63,7 @@ export const ko: Catalogue = {
       cdn: "CDN 주소",
       cdnHelp: "(게임과 런처 업데이트를 받아오는 곳)",
       auth: "인증 URL",
-      authHelp: "(토큰 검증 엔드포인트. 게임 서버 호스트는 여기서 유도됩니다)",
+      authHelp: "(세션 검증 엔드포인트. 게임 서버 호스트는 여기서 유도됩니다)",
       players: "플레이어 수 URL",
       playersHelp: "(플레이어 수 서비스 엔드포인트)",
     },
@@ -204,7 +204,7 @@ export const ko: Catalogue = {
     errors: {
       userNotFound: "해당 Spellbreak ID를 쓰는 플레이어가 없습니다.",
       cannotFriendSelf: "본인이잖아요!",
-      invalidToken: "먼저 계정 토큰을 설정하세요.",
+      sessionExpired: "세션이 만료되었습니다. 다시 로그인하세요.",
       usernameRequired: "Spellbreak ID를 입력하세요.",
       noPendingRequest: "그 사람에게서 온 대기 중인 요청이 없습니다.",
       unavailable: "친구 서버를 사용할 수 없습니다. 다시 시도하세요.",
@@ -381,7 +381,7 @@ export const ko: Catalogue = {
       "게임 런타임을 찾지 못했고 python3도 없습니다 (umu / Proton에 필요합니다). 패키지 관리자로 python3을 설치하거나 Wine을 설치한 뒤 다시 시도하세요.",
     launcherVersionUnreadable: "CDN에서 런처 버전을 읽지 못했습니다.",
 
-    noAccountToken: "설정된 계정 토큰이 없습니다.",
+    notSignedIn: "로그인되어 있지 않습니다.",
     playersUrlNotConfigured: "플레이어 수 URL이 설정되지 않았습니다.",
     enterEmailAndPassword: "이메일과 비밀번호를 입력하세요.",
     signInNotConfigured: "로그인이 설정되지 않았습니다.",

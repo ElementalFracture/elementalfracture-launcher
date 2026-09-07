@@ -68,10 +68,11 @@ describe("AccountPill", () => {
     );
   });
 
-  /* A token can be on disk while its account is no longer valid (name cleared by
-     an expired-token refresh), so the token alone can't stand for an account:
-     the pill says "session expired" and a click opens sign-in, not the drawer. */
-  it("shows session expired for a token whose account was cleared", async () => {
+  /* A session key can be on disk while its account is no longer valid (name
+     cleared by an expired-session refresh), so the key alone can't stand for an
+     account: the pill says "session expired" and a click opens sign-in, not the
+     drawer. */
+  it("shows session expired for a session whose account was cleared", async () => {
     commands.getSettings.mockResolvedValue(
       makeSettings({ auth_token: "rejected-tok", username: "" })
     );
@@ -82,14 +83,14 @@ describe("AccountPill", () => {
     );
 
     fireEvent.click(pill());
-    // The token modal is what a click means here, and the drawer stays shut.
-    // (FriendsContext still polls on any stored token, so the friend list call
+    // The sign-in modal is what a click means here, and the drawer stays shut.
+    // (FriendsContext still polls on any stored session, so the friend list call
     // is not what this asserts on — only that no drawer came up.)
     await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
     expect(screen.queryByLabelText("Close friend list")).toBeNull();
   });
 
-  it("distinguishes no token at all from one that failed", async () => {
+  it("distinguishes no session at all from one that failed", async () => {
     commands.getSettings.mockResolvedValue(
       makeSettings({ auth_token: "", username: "" })
     );

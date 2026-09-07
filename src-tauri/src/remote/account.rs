@@ -6,16 +6,14 @@ use crate::settings;
 use serde::Serialize;
 
 #[derive(Serialize, specta::Type)]
-pub struct TokenResult {
+pub struct LoginResult {
     pub username: Option<String>,
     pub is_staff: bool,
     pub is_dev: bool,
     pub is_tester: bool,
-    pub verified: bool,
-    pub warning: Option<String>,
 }
 
-/// The account behind a validated token, as the portal reports it.
+/// The account behind a live session, as the portal reports it.
 #[derive(Serialize, specta::Type)]
 pub struct Account {
     pub username: String,
@@ -36,12 +34,12 @@ fn read_account(body: &serde_json::Value, username: &str) -> Account {
     }
 }
 
-/// Re-validate the STORED token and refresh the cached role flags, so a
+/// Re-validate the stored session and refresh the cached role flags, so a
 /// freshly granted staff/dev/tester badge shows up without a restart, and an
-/// expired token flips the account pill to "session expired" instead of showing
-/// a signed-in name that no longer works.
+/// expired session flips the account pill to "session expired" instead of
+/// showing a signed-in name that no longer works.
 ///
-/// Three outcomes: a valid token refreshes the roles (returns the account); an
+/// Three outcomes: a live session refreshes the roles (returns the account); an
 /// explicit `{"ok": false}` clears the cached identity so the pill prompts a new
 /// sign-in (returns the emptied account); anything else (a network blip or a
 /// malformed reply) is transient and leaves everything on disk untouched
@@ -90,10 +88,10 @@ pub async fn refresh_account(app: tauri::AppHandle) -> AppResult<Option<Account>
             }
             Ok(None)
         }
-        // The auth server explicitly rejected the stored token (expired or revoked).
+        // The auth server explicitly rejected the stored session (expired or revoked).
         // Clear the cached identity so the account pill flips to a "session expired,
-        // sign in again" prompt; keep the token itself so the pill can tell "expired"
-        // apart from "never signed in". Return the now-empty account (not None) so the
+        // sign in again" prompt; keep the session key itself so the pill can tell
+        // "expired" apart from "never signed in". Return the now-empty account (not None) so the
         // UI re-reads and reflects the change. A missing `ok` (malformed reply or a
         // hiccup) is treated as transient and left alone, like a network blip.
         Some(false) => {
@@ -145,18 +143,18 @@ fn suspension_error(body: &serde_json::Value) -> AppError {
 
 /// Email/password sign-in (the same account the website uses). POSTs to the
 /// public `/login` endpoint (no shared key: the launcher is a client), which
-/// returns the token + profile. On success the token/username/avatar/roles are
-/// stored, so play and the account pill work exactly as after a token paste —
-/// only now the identity comes from an email + password instead of a pasted
-/// token. Returns Err(message) on any auth failure so the modal can show it
-/// without saving or closing.
+/// exchanges the credentials for a session key + profile. On success the
+/// session key, username, avatar and roles are stored, so play, the friend
+/// list and the account pill all work off that stored session. Returns
+/// Err(message) on any auth failure so the modal can show it without saving
+/// or closing.
 #[tauri::command]
 #[specta::specta]
 pub async fn login_email(
     app: tauri::AppHandle,
     email: String,
     password: String,
-) -> AppResult<TokenResult> {
+) -> AppResult<LoginResult> {
     let email = email.trim().to_string();
     if email.is_empty() || password.is_empty() {
         return Err(AppError::new(ErrorCode::EnterEmailAndPassword));
@@ -236,17 +234,15 @@ pub async fn login_email(
         s.is_tester = account.is_tester;
     })?;
 
-    Ok(TokenResult {
+    Ok(LoginResult {
         username: Some(account.username),
         is_staff: account.is_staff,
         is_dev: account.is_dev,
         is_tester: account.is_tester,
-        verified: true,
-        warning: None,
     })
 }
 
-/// Sign out: clear the stored identity (token, name, avatar, roles, Discord).
+/// Sign out: clear the stored identity (session, name, avatar, roles, Discord).
 #[tauri::command]
 #[specta::specta]
 pub async fn logout(app: tauri::AppHandle) -> AppResult<()> {

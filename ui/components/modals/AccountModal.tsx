@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@/components/shadcn/dialog";
 import { SignInForm } from "./SignInForm";
-import type { TokenResult } from "@/lib/rust";
+import type { LoginResult } from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import { _ } from "@/i18n";
 import "./Dialog.css";
@@ -14,7 +14,7 @@ export function AccountModal({
 }) {
   /* Say who just signed in, then get out of the way. Closing unmounts the
      form, which is what clears the fields. */
-  const onSignedIn = (res: TokenResult) => {
+  const onSignedIn = (res: LoginResult) => {
     const role = res.is_dev
       ? _("account.roleDev")
       : res.is_staff

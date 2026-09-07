@@ -1,5 +1,5 @@
 //! The friend roster, served by the players sidecar next to /players. Every
-//! call carries the stored token, so the frontend only ever names a user.
+//! call carries the stored session key, so the frontend only ever names a user.
 
 use super::client;
 use crate::error::{AppError, AppResult, ErrorCode};
@@ -18,9 +18,10 @@ fn sidecar_base(s: &settings::Settings) -> Option<String> {
     })
 }
 
-/// POST {token[, username]} to a /friends* endpoint and return its JSON. The
-/// token comes from stored settings, so the frontend never handles it — it
-/// just names the friend to act on.
+/// POST the session key (and, where the route needs one, a username) to a
+/// /friends* endpoint and return its JSON. The session comes from stored
+/// settings, so the frontend never handles it — it just names the friend to
+/// act on.
 async fn friend_call(
     app: &tauri::AppHandle,
     path: &str,
@@ -29,7 +30,7 @@ async fn friend_call(
     let s = settings::load(app);
     let token = s.auth_token.trim().to_string();
     if token.is_empty() {
-        return Err(AppError::new(ErrorCode::NoAccountToken));
+        return Err(AppError::new(ErrorCode::NotSignedIn));
     }
     let base = sidecar_base(&s)
         .ok_or_else(|| AppError::new(ErrorCode::PlayersUrlNotConfigured))?;

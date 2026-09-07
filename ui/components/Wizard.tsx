@@ -6,7 +6,7 @@ import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
-import type { TokenResult } from "@/lib/rust";
+import type { LoginResult } from "@/lib/rust";
 import { errorText } from "@/i18n/errors";
 import { _ } from "@/i18n";
 import "./modals/Dialog.css";
@@ -31,7 +31,7 @@ function WizardSteps() {
      language picked after signing in still reads right. */
   const [doneName, setDoneName] = useState("");
 
-  const onSignedIn = (res: TokenResult) => {
+  const onSignedIn = (res: LoginResult) => {
     setDoneName(res.username ?? "");
     setStep("done");
   };

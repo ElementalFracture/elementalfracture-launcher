@@ -61,7 +61,7 @@ export const ptBR: Catalogue = {
       cdnHelp: "(de onde vêm as atualizações do jogo e do launcher)",
       auth: "URL de autenticação",
       authHelp:
-        "(endpoint de validação do token; o host do servidor de jogo é derivado dele)",
+        "(endpoint de validação de sessão; o host do servidor de jogo é derivado dele)",
       players: "URL de jogadores",
       playersHelp: "(endpoint do serviço de jogadores)",
     },
@@ -204,7 +204,7 @@ export const ptBR: Catalogue = {
     errors: {
       userNotFound: "Nenhum jogador com esse Spellbreak ID.",
       cannotFriendSelf: "Esse é você!",
-      invalidToken: "Defina primeiro o token da sua conta.",
+      sessionExpired: "Sua sessão expirou — entre novamente.",
       usernameRequired: "Digite um Spellbreak ID.",
       noPendingRequest: "Nenhum pedido pendente dessa pessoa.",
       unavailable: "Servidor de amigos indisponível, tente de novo.",
@@ -386,7 +386,7 @@ export const ptBR: Catalogue = {
     launcherVersionUnreadable:
       "Não foi possível ler a versão do launcher no CDN.",
 
-    noAccountToken: "Nenhum token de conta definido.",
+    notSignedIn: "Você não está conectado.",
     playersUrlNotConfigured: "A URL de jogadores não está configurada.",
     enterEmailAndPassword: "Digite seu e-mail e sua senha.",
     signInNotConfigured: "O login não está configurado.",

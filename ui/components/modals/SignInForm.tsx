@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { useSettings } from "@/context/SettingsContext";
-import type { TokenResult } from "@/lib/rust";
+import type { LoginResult } from "@/lib/rust";
 import { openLink } from "@/lib/links";
 import { URLS } from "@/lib/urls";
 import { errorText } from "@/i18n/errors";
@@ -13,7 +13,7 @@ export function SignInForm({
   onSignedIn,
   actions,
 }: {
-  onSignedIn: (res: TokenResult) => void;
+  onSignedIn: (res: LoginResult) => void;
   actions?: ReactNode;
 }) {
   const { loginEmail } = useSettings();
@@ -29,7 +29,7 @@ export function SignInForm({
     }
     setBusy(true);
     setError("");
-    let res: TokenResult;
+    let res: LoginResult;
     try {
       res = await loginEmail(email.trim(), password);
     } catch (e) {

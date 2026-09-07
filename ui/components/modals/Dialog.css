@@ -1,6 +1,6 @@
 /* ============ Dialog shell ============ */
 /* Overlay + centering are handled by the Dialog primitive; .wizard-panel is
-   just the ornate card look, reused for every modal (wizard, account token,
+   just the ornate card look, reused for every modal (wizard, sign-in,
    launcher update, advanced-options warning). */
 
 .wizard-panel {

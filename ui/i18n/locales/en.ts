@@ -64,7 +64,7 @@ export const en = {
       cdnHelp: "(where game and launcher updates are pulled from)",
       auth: "Auth URL",
       authHelp:
-        "(token validation endpoint; the game server host is derived from it)",
+        "(session validation endpoint; the game server host is derived from it)",
       players: "Players URL",
       playersHelp: "(players sidecar endpoint)",
     },
@@ -225,7 +225,7 @@ export const en = {
     errors: {
       userNotFound: "No player with that Spellbreak ID.",
       cannotFriendSelf: "That's you!",
-      invalidToken: "Set your account token first.",
+      sessionExpired: "Your session expired — sign in again.",
       usernameRequired: "Enter a Spellbreak ID.",
       noPendingRequest: "No pending request from them.",
       unavailable: "Friend server unavailable, try again.",
@@ -419,7 +419,7 @@ export const en = {
     launcherVersionUnreadable:
       "Couldn't read the launcher version from the CDN.",
 
-    noAccountToken: "No account token set.",
+    notSignedIn: "You're not signed in.",
     playersUrlNotConfigured: "Players URL not configured.",
     enterEmailAndPassword: "Enter your email and password.",
     signInNotConfigured: "Sign-in is not configured.",

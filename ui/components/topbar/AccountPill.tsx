@@ -30,7 +30,7 @@ function Avatar({ url, initials }: { url: string | null; initials: string }) {
 
 /**
  * With a verified account it opens the friend list in a drawer off the right
- * edge; otherwise it goes straight to the token modal, since there is no
+ * edge; otherwise it goes straight to the sign-in modal, since there is no
  * account to show yet.
  */
 export function AccountPill() {
@@ -51,10 +51,10 @@ export function AccountPill() {
   };
 
   const name = settings?.username?.trim();
-  /* A stored token is not an account: a token can be on disk (from a past
-     sign-in) while the last role refresh cleared the name, so the name, not the
-     token, is what proves a verified account. */
-  const hasToken = Boolean(settings?.auth_token?.trim());
+  /* A stored session is not an account: a session key can be on disk (from a
+     past sign-in) while the last role refresh cleared the name, so the name,
+     not the session, is what proves a verified account. */
+  const hasSession = Boolean(settings?.auth_token?.trim());
   const registered = Boolean(name);
   const role = settings?.is_dev
     ? _("topbar.account.developer")
@@ -138,7 +138,7 @@ export function AccountPill() {
           <div className="pill-text">
             <strong>{_("topbar.account.guest")}</strong>
             <small>
-              {hasToken
+              {hasSession
                 ? _("topbar.account.sessionExpired")
                 : _("topbar.account.signIn")}
             </small>

@@ -61,7 +61,7 @@ export const zhHant: Catalogue = {
       cdn: "CDN 位址",
       cdnHelp: "（遊戲與啟動器更新的下載來源）",
       auth: "驗證網址",
-      authHelp: "（權杖驗證端點；遊戲伺服器主機由它推導而來）",
+      authHelp: "（工作階段驗證端點；遊戲伺服器主機由它推導而來）",
       players: "玩家數網址",
       playersHelp: "（玩家數服務端點）",
     },
@@ -201,7 +201,7 @@ export const zhHant: Catalogue = {
     errors: {
       userNotFound: "找不到使用該 Spellbreak ID 的玩家。",
       cannotFriendSelf: "那是你自己！",
-      invalidToken: "請先設定你的帳號權杖。",
+      sessionExpired: "工作階段已過期，請重新登入。",
       usernameRequired: "請輸入 Spellbreak ID。",
       noPendingRequest: "沒有來自對方的待處理邀請。",
       unavailable: "好友伺服器無法使用，請再試一次。",
@@ -368,7 +368,7 @@ export const zhHant: Catalogue = {
       "找不到遊戲執行環境，且缺少 python3（umu / Proton 需要它）。請用你的套件管理器安裝 python3，或改為安裝 Wine，然後再試一次。",
     launcherVersionUnreadable: "無法從 CDN 讀取啟動器版本。",
 
-    noAccountToken: "尚未設定帳號權杖。",
+    notSignedIn: "你尚未登入。",
     playersUrlNotConfigured: "尚未設定玩家數網址。",
     enterEmailAndPassword: "請輸入你的電子郵件與密碼。",
     signInNotConfigured: "尚未設定登入。",

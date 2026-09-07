@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import * as rust from "@/lib/rust";
-import type { Settings, TokenResult, WrapperOption } from "@/lib/rust";
+import type { Settings, LoginResult, WrapperOption } from "@/lib/rust";
 import { isWindows } from "@/lib/platform";
 
 interface SettingsContextValue {
@@ -9,7 +9,7 @@ interface SettingsContextValue {
   refreshSettings: () => Promise<Settings | null>;
   saveSettings: (next: Settings) => Promise<void>;
   resetSettings: () => Promise<Settings>;
-  loginEmail: (email: string, password: string) => Promise<TokenResult>;
+  loginEmail: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   refreshAccount: () => Promise<void>;
   loadWrappers: () => Promise<WrapperOption[]>;
@@ -67,7 +67,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(await rust.getSettings());
   }, []);
 
-  /* Re-validate the stored token every minute so a badge granted while the
+  /* Re-validate the stored session every minute so a badge granted while the
      launcher is open (Tester, say) turns up without a restart — that's what
      makes the Test Build channel appear. Only a successful answer writes:
      refreshAccount returns null on a network blip, and the roles already on

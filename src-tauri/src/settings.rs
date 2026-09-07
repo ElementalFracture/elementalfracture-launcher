@@ -18,22 +18,23 @@ pub struct Settings {
     /// Base URL of the account portal (serves web/api.php).
     pub play_base: String,
     pub cdn_base: String,
-    /// HTTPS endpoint that validates a token → username (POST {"token"}).
+    /// HTTPS endpoint that validates a live session → username.
     /// The in-game server host the injector connects to is derived from this.
     pub auth_url: String,
     /// Player-count sidecar endpoint (players_sidecar.py).
     pub players_url: String,
-    /// Registered username resolved from the auth token via the portal.
+    /// Registered username resolved from the stored session via the portal.
     pub username: String,
-    /// Role flags resolved alongside the username at token validation.
+    /// Role flags resolved alongside the username on each session refresh.
     /// Drive the account subheading (only staff/dev get one).
     pub is_staff: bool,
     pub is_dev: bool,
     /// Tester badge: unlocks the hidden Playtest variant.
     /// A peer of staff/dev, not implied by either.
     pub is_tester: bool,
-    /// The auth token itself — kept here so it survives before a game
-    /// folder exists and gets written into Mods/commands when one does.
+    /// The session key `/login` exchanged the email + password for. Kept here
+    /// so it survives before a game folder exists, and gets written into the
+    /// game's hidden `.ef_auth` at launch once one does.
     pub auth_token: String,
     /// Public "Spellbreak ID" (the unique username), from email sign-in.
     pub spellbreak_id: String,
@@ -135,7 +136,7 @@ pub fn config_dir(app: &tauri::AppHandle) -> PathBuf {
         .app_config_dir()
         .expect("no app config dir available");
     // Debug builds get their own profile under the same app dir, so `tauri dev`
-    // can't overwrite the settings — and the token — of the launcher you
+    // can't overwrite the settings — and the session — of the launcher you
     // actually play with. It also makes states the app has no way back to
     // (signed out, pre-onboarding) safe to reach: wreck the dev profile freely.
     if cfg!(debug_assertions) {
@@ -149,9 +150,9 @@ fn settings_path(app: &tauri::AppHandle) -> PathBuf {
     config_dir(app).join("settings.json")
 }
 
-/// Serializes all settings WRITES, so two load-modify-store calls (a token
-/// paste racing the install flow) can't clobber each other and silently drop a
-/// field like the token.
+/// Serializes all settings WRITES, so two load-modify-store calls (a sign-in
+/// racing the install flow) can't clobber each other and silently drop a field
+/// like the session key.
 static WRITE_LOCK: Mutex<()> = Mutex::new(());
 
 pub fn load(app: &tauri::AppHandle) -> Settings {
@@ -165,8 +166,8 @@ pub fn load(app: &tauri::AppHandle) -> Settings {
         Ok(v) => v,
         Err(e) => {
             // The file exists but won't parse (corrupted / half-written). Do
-            // NOT silently reset to defaults — that is exactly how a saved auth
-            // token vanishes without a trace. Keep the bad file so the loss is
+            // NOT silently reset to defaults — that is exactly how a saved
+            // session vanishes without a trace. Keep the bad file so the loss is
             // visible and recoverable, then fall back to defaults.
             let bak = path.with_extension("json.corrupt");
             let _ = fs::rename(&path, &bak);
@@ -199,7 +200,7 @@ pub fn store(app: &tauri::AppHandle, s: &Settings) -> AppResult<()> {
 
 /// Load-modify-store under the write lock, so no concurrent writer can slip a
 /// whole-settings overwrite between the read and the write and undo an
-/// in-flight token. Returns the settings as written.
+/// in-flight sign-in. Returns the settings as written.
 pub fn mutate(
     app: &tauri::AppHandle,
     f: impl FnOnce(&mut Settings),

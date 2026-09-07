@@ -26,8 +26,9 @@ OS webview.
   then keeps `version.txt` in agreement with the CDN and auto-updates on
   startup.
 - **Mod management** — installs the loader + mod DLLs, verifies the install.
-- **Sign in with an auth token** — validated against the server; your registered
-  username, staff/dev role and in-game identity all follow from it.
+- **Sign in with an email and password** — the same account as the website;
+  your registered username, staff/dev role and in-game identity all follow
+  from it.
 - **Live population** — separate **Online** (players with the game open, menu
   included) and **In game** counts, with a per-mode breakdown (Solos / Duos /
   Squads / Arena·TDM).
@@ -53,7 +54,7 @@ Static `index.html` + `styles.css` + `app.js`, loaded by the webview with
 | `game.rs`     | Locate/launch the game, EF↔Classic pak toggle, write the hidden `.ef_auth` handoff file, read local `version.txt`.           |
 | `download.rs` | Segmented base-game download, patch application, `version.txt` bump, update check.                                           |
 | `mods.rs`     | Install/verify the loader + mod DLLs from `mod.zip`.                                                                         |
-| `remote.rs`   | Player counts, live events, patch-notes RSS, and token validation.                                                           |
+| `remote.rs`   | Player counts, live events, patch-notes RSS, and sign-in + session validation.                                                           |
 
 ### Settings
 
@@ -76,17 +77,17 @@ or the update feed.
 
 Debug builds read and write a `dev/` subdir instead
 (`~/.config/com.elefrac.launcher/dev/settings.json`), so `tauri dev` never
-overwrites the settings — or the token — of the launcher you actually play
+overwrites the settings — or the session — of the launcher you actually play
 with. The split is in `config_dir` in `settings.rs`; everything stored in the
 config dir follows it, which today is `settings.json` and the
 `launcher_version.txt` update marker.
 
 It also makes the states the app has no way back to safe to reach, since
-nothing clears a token or un-onboards: wreck the dev profile freely.
+nothing signs you out or un-onboards: wreck the dev profile freely.
 `test-env/dev-profile.sh` seeds it for the two that are awkward by hand:
 
 ```sh
-test-env/dev-profile.sh signed-out   # your real settings, minus the token
+test-env/dev-profile.sh signed-out   # your real settings, signed out
 test-env/dev-profile.sh fresh        # empty profile: the onboarding wizard
 test-env/dev-profile.sh keep         # leave it as-is, just run
 ```
@@ -97,20 +98,23 @@ and only the login differs — no re-onboarding to get to the Guest pill. The
 real profile is only ever read from. Linux only; Windows takes the config dir
 from `%APPDATA%`.
 
-To sign back in, run `npm run test-env` and use one of its tokens — a debug
-build already points at it, and it serves `/auth` from a token-to-account table.
-Its dashboard on <http://localhost:8787/> is where you set the tokens, the
-friend graph and the rest of what it serves without editing JSON. See
-`test-env/README.md`.
+To sign back in, run `npm run test-env` and use one of its accounts — a debug
+build already points at it, and it serves `/login` and `/auth` from the same
+account table. Its dashboard on <http://localhost:8787/> is where you set the
+accounts, the friend graph and the rest of what it serves without editing JSON.
+See `test-env/README.md`.
 
 ### Authentication handoff
 
-The token is entered once in the launcher and validated over HTTPS
-(`POST {auth_url}` with `{"token": "..."}` → `{"ok", "username", "is_staff",
-"is_dev"}`).
+Sign-in is an email and a password (`POST {login_url}` with
+`{"email", "password"}`), which the server exchanges for a session key. The
+launcher stores that key and presents it from then on instead of the password:
+`refresh_account` re-validates it every minute (`POST {auth_url}` with
+`{"token": "..."}` → `{"ok", "username", "is_staff", "is_dev"}`) and the friend
+routes carry it.
 
-At launch the launcher hands the token and server host to the game through a
-hidden **`.ef_auth`** file in the game root (line 1 = token, line 2 = server),
+At launch the launcher hands that key and the server host to the game through a
+hidden **`.ef_auth`** file in the game root (line 1 = key, line 2 = server),
 which the in-game `auth_injector` reads. This resolves identically on Windows
 and under Wine/Proton, where per-process environment and `%APPDATA%` do not.
 The in-game server host is _derived_ from `auth_url`, so there's a single
@@ -125,7 +129,8 @@ The launcher is a client of a few services (their code lives in the
 
 | Endpoint                                                                                           | Purpose                                                                                                                                                       |
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST {auth_url}` → `{ok, username, is_staff, is_dev}`                                             | Validate a token → account.                                                                                                                                   |
+| `POST {login_url}` → `{ok, token, username, is_staff, is_dev, is_tester}`                          | Exchange an email + password for a session key.                                                                                                               |
+| `POST {auth_url}` → `{ok, username, is_staff, is_dev}`                                             | Re-validate a session key → account.                                                                                                                                   |
 | `GET  {players_url}` → `{online, connected, servers:[{display_name, state, map, players, names}]}` | In-game and online (presence) counts + per-server breakdown.                                                                                                  |
 | `GET  {players_url%/players}/events` → `{events:[…]}`                                              | Live Discord scheduled events.                                                                                                                                |
 | `https://docs.elefrac.com/patchnotes/rss.xml`                                                      | "What's new" cards.                                                                                                                                           |

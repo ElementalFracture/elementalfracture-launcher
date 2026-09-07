@@ -63,7 +63,7 @@ describe("presence helpers", () => {
 });
 
 describe("loading the graph", () => {
-  it("fetches it once a token is set", async () => {
+  it("fetches it once a session is stored", async () => {
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
     expect(result.current.friends?.me?.username).toBe("Lytion");
