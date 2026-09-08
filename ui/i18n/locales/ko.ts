@@ -380,6 +380,8 @@ export const ko: Catalogue = {
     runtimeNeedsPython:
       "게임 런타임을 찾지 못했고 python3도 없습니다 (umu / Proton에 필요합니다). 패키지 관리자로 python3을 설치하거나 Wine을 설치한 뒤 다시 시도하세요.",
     launcherVersionUnreadable: "CDN에서 런처 버전을 읽지 못했습니다.",
+    archiveTooLarge:
+      "이 다운로드는 압축을 풀면 {size}로, {limit} 제한을 넘습니다 — 디스크를 채우는 대신 거부했습니다. 다시 시도하고, 계속되면 제보해 주세요.",
 
     notSignedIn: "로그인되어 있지 않습니다.",
     playersUrlNotConfigured: "플레이어 수 URL이 설정되지 않았습니다.",

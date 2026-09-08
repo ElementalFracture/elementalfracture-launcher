@@ -65,6 +65,9 @@ pub enum ErrorCode {
     RuntimeNeedsPython,
     /// The CDN answered but the version file was unreadable.
     LauncherVersionUnreadable,
+    /// An archive that unpacks to more than the ceiling — a decompression
+    /// bomb, or a payload that has outgrown the limit. `params: size, limit`
+    ArchiveTooLarge,
 
     /* ---- authored: account ---- */
     /// A signed-in session is required and there isn't one.

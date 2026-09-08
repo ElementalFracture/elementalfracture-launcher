@@ -366,6 +366,8 @@ export const zhHans: Catalogue = {
     runtimeNeedsPython:
       "未找到游戏运行时，且缺少 python3（umu / Proton 需要它）。请用你的包管理器安装 python3，或改为安装 Wine，然后重试。",
     launcherVersionUnreadable: "无法从 CDN 读取启动器版本。",
+    archiveTooLarge:
+      "此下载解压后为 {size}，超过 {limit} 的上限——已拒绝，以免占满磁盘。请重试；如果反复出现，请反馈。",
 
     notSignedIn: "你尚未登录。",
     playersUrlNotConfigured: "尚未配置玩家数地址。",

@@ -386,6 +386,8 @@ export const it: Catalogue = {
       "Non è stato trovato alcun runtime di gioco e python3 manca (a umu / Proton serve). Installa python3 con il tuo gestore di pacchetti, oppure installa Wine, e riprova.",
     launcherVersionUnreadable:
       "Impossibile leggere la versione del launcher dal CDN.",
+    archiveTooLarge:
+      "Questo download si decomprime in {size}, oltre il limite di {limit}: è stato rifiutato invece di riempire il disco. Riprova; se continua, segnalalo.",
 
     notSignedIn: "Non hai effettuato l'accesso.",
     playersUrlNotConfigured: "URL dei giocatori non configurato.",

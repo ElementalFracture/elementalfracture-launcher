@@ -37,6 +37,74 @@ fn safe_rel_path(name: &str) -> Option<PathBuf> {
     (!out.as_os_str().is_empty()).then_some(out)
 }
 
+/// Ceiling on what one archive may unpack to, declared or actual.
+///
+/// A zip's central directory states each entry's uncompressed size, and that
+/// is what a decompression bomb inflates: a few KB on the wire promising
+/// terabytes on disk. 64 GiB sits far above a real install (a few GB) and only
+/// catches something that was never going to be legitimate.
+///
+/// One number for all three extractors. The patch and the playtest pak are
+/// much smaller than a base install, so a tighter limit would be more
+/// meaningful for them — but a single generous ceiling is the one that stops a
+/// bomb without anyone having to revise it when a payload grows.
+const MAX_UNCOMPRESSED: u64 = 64 * 1024 * 1024 * 1024; // 64 GiB
+
+/// What the central directory says this archive unpacks to, refused if that is
+/// past the ceiling.
+fn declared_size(zip: &mut zip::ZipArchive<File>) -> AppResult<u64> {
+    declared_size_within(zip, MAX_UNCOMPRESSED)
+}
+
+/// The body of `declared_size`, with the ceiling passed in so a test can hold
+/// one against a small archive instead of needing a 64 GiB fixture.
+///
+/// `saturating_add` rather than `+`: a crafted zip can declare sizes that
+/// overflow the running total and wrap around to something small, which is a
+/// check that reports success on the worst input it could be given.
+fn declared_size_within(zip: &mut zip::ZipArchive<File>, limit: u64) -> AppResult<u64> {
+    let mut total: u64 = 0;
+    for i in 0..zip.len() {
+        total = total.saturating_add(zip.by_index(i)?.size());
+    }
+    if total > limit {
+        return Err(AppError::new(ErrorCode::ArchiveTooLarge)
+            .with("size", human(total))
+            .with("limit", human(limit)));
+    }
+    Ok(total)
+}
+
+/// Take `n` bytes out of what this archive has left to spend.
+///
+/// The declared-size check above trusts the central directory, which is exactly
+/// what a hostile archive writes. This is the half that doesn't: an entry that
+/// declares 1 KB and then streams forever is stopped at the ceiling rather than
+/// when the disk fills. The size it reports is a bound, not a total — the copy
+/// stops before finding out how much more there was.
+fn spend(budget: &mut u64, n: u64) -> AppResult<()> {
+    *budget = budget.checked_sub(n).ok_or_else(|| {
+        AppError::new(ErrorCode::ArchiveTooLarge)
+            .with("size", format!("> {}", human(MAX_UNCOMPRESSED)))
+            .with("limit", human(MAX_UNCOMPRESSED))
+    })?;
+    Ok(())
+}
+
+/// `std::io::copy` against that budget. Generic over the reader so it never has
+/// to name the zip crate's entry type.
+fn copy_within_budget<R: Read>(src: &mut R, out: &mut File, budget: &mut u64) -> AppResult<()> {
+    let mut buf = vec![0u8; 1 << 20]; // 1 MiB
+    loop {
+        let n = src.read(&mut buf)?;
+        if n == 0 {
+            return Ok(());
+        }
+        spend(budget, n as u64)?;
+        out.write_all(&buf[..n])?;
+    }
+}
+
 pub(super) fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, dest: &Path) -> AppResult<()> {
     let file = File::open(zip_path)?;
     let mut zip = zip::ZipArchive::new(file)?;
@@ -46,11 +114,12 @@ pub(super) fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, 
     // Progress is driven by bytes, not file count: the archive ends with one huge
     // game pak, so a per-file bar hits ~99% and then sits frozen for minutes while
     // that last file copies. Byte progress (updated DURING the copy) moves smoothly.
-    let mut total_bytes: u64 = 0;
-    for i in 0..total {
-        total_bytes += zip.by_index(i)?.size();
-    }
-    let total_bytes = total_bytes.max(1);
+    // The same pass refuses an archive that declares more than the ceiling, before
+    // a single entry is written.
+    let total_bytes = declared_size(&mut zip)?.max(1);
+    // What the entries are actually allowed to stream, regardless of what they
+    // declared above.
+    let mut budget = MAX_UNCOMPRESSED;
 
     // Count files written vs. files the archive says it holds. A mismatch means
     // something was silently dropped (or the archive is truncated/corrupt); we
@@ -87,6 +156,7 @@ pub(super) fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, 
             if n == 0 {
                 break;
             }
+            spend(&mut budget, n as u64)?;
             f.write_all(&buf[..n])?;
             bytes_done += n as u64;
             if last.elapsed().as_millis() >= 150 {
@@ -118,6 +188,8 @@ pub(super) fn extract_all(app: &tauri::AppHandle, stage: &str, zip_path: &Path, 
 pub(super) fn extract_flat(zip_path: &Path, dest: &Path) -> AppResult<Vec<String>> {
     let file = File::open(zip_path)?;
     let mut zip = zip::ZipArchive::new(file)?;
+    declared_size(&mut zip)?;
+    let mut budget = MAX_UNCOMPRESSED;
     let mut names = Vec::new();
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i)?;
@@ -128,7 +200,7 @@ pub(super) fn extract_flat(zip_path: &Path, dest: &Path) -> AppResult<Vec<String
         let Some(base) = rel.file_name() else { continue };
         let out = dest.join(base);
         let mut f = File::create(&out)?;
-        std::io::copy(&mut entry, &mut f)?;
+        copy_within_budget(&mut entry, &mut f, &mut budget)?;
         names.push(base.to_string_lossy().into_owned());
     }
     Ok(names)
@@ -140,6 +212,8 @@ pub(super) fn extract_flat(zip_path: &Path, dest: &Path) -> AppResult<Vec<String
 pub(super) fn stage_test_pak(zip_path: &Path, paks: &Path) -> AppResult<String> {
     let file = File::open(zip_path)?;
     let mut zip = zip::ZipArchive::new(file)?;
+    declared_size(&mut zip)?;
+    let mut budget = MAX_UNCOMPRESSED;
     let mut pak = false;
     let mut sig = false;
     for i in 0..zip.len() {
@@ -165,7 +239,7 @@ pub(super) fn stage_test_pak(zip_path: &Path, paks: &Path) -> AppResult<String> 
             continue;
         };
         let mut f = File::create(&dest)?;
-        std::io::copy(&mut entry, &mut f)?;
+        copy_within_budget(&mut entry, &mut f, &mut budget)?;
     }
     if !pak {
         return Err(AppError::new(ErrorCode::PlaytestArchiveEmpty));

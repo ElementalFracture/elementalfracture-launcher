@@ -385,6 +385,8 @@ export const ptBR: Catalogue = {
       "Nenhum runtime do jogo foi encontrado e o python3 está faltando (o umu / Proton precisa dele). Instale o python3 pelo seu gerenciador de pacotes, ou instale o Wine, e tente de novo.",
     launcherVersionUnreadable:
       "Não foi possível ler a versão do launcher no CDN.",
+    archiveTooLarge:
+      "Este download descompacta para {size}, acima do limite de {limit} — foi recusado em vez de encher seu disco. Tente de novo; se continuar, reporte.",
 
     notSignedIn: "Você não está conectado.",
     playersUrlNotConfigured: "A URL de jogadores não está configurada.",

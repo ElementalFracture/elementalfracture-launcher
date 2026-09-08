@@ -148,3 +148,69 @@ fn a_playtest_archive_with_no_pak_is_an_error() {
         ErrorCode::PlaytestArchiveEmpty
     );
 }
+
+/// The declared total is what drives the progress bar as well as the ceiling,
+/// so it has to be the real sum and not an approximation.
+#[test]
+fn the_declared_size_is_the_sum_of_the_entries() {
+    let tmp = tempfile::tempdir().unwrap();
+    let zip = zip_file(
+        tmp.path(),
+        "base.zip",
+        &[("a.pak", b"1234567890"), ("nested/b.pak", b"12345")],
+    );
+    let mut archive = zip::ZipArchive::new(File::open(&zip).unwrap()).unwrap();
+    assert_eq!(declared_size(&mut archive).unwrap(), 15);
+}
+
+/// A bomb is a small file whose central directory promises terabytes, so the
+/// refusal has to land on the *declared* total, before anything is written.
+#[test]
+fn an_archive_declaring_more_than_the_ceiling_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let zip = zip_file(tmp.path(), "bomb.zip", &[("a.pak", b"1234567890")]);
+    let mut archive = zip::ZipArchive::new(File::open(&zip).unwrap()).unwrap();
+
+    let err = declared_size_within(&mut archive, 9).unwrap_err();
+    assert_eq!(err.code, ErrorCode::ArchiveTooLarge);
+    // The user is told what it wanted and what it was allowed.
+    assert!(err.params.contains_key("size"), "{:?}", err.params);
+    assert!(err.params.contains_key("limit"), "{:?}", err.params);
+    // Exactly at the ceiling is fine — only past it fails.
+    assert_eq!(declared_size_within(&mut archive, 10).unwrap(), 10);
+}
+
+/// The declared size is written by whoever built the archive, so the copy has
+/// its own budget: an entry that lies low and streams on forever is stopped at
+/// the ceiling rather than when the disk fills.
+#[test]
+fn a_copy_that_outruns_its_budget_is_stopped() {
+    let tmp = tempfile::tempdir().unwrap();
+    let out_path = tmp.path().join("out");
+
+    let mut budget = 4u64;
+    let mut out = File::create(&out_path).unwrap();
+    let err = copy_within_budget(&mut &b"12345"[..], &mut out, &mut budget).unwrap_err();
+    assert_eq!(err.code, ErrorCode::ArchiveTooLarge);
+
+    // Within budget it copies faithfully and leaves the remainder.
+    let mut budget = 16u64;
+    let mut out = File::create(&out_path).unwrap();
+    copy_within_budget(&mut &b"12345"[..], &mut out, &mut budget).unwrap();
+    drop(out);
+    assert_eq!(fs::read(&out_path).unwrap(), b"12345");
+    assert_eq!(budget, 11);
+}
+
+/// `spend` is the whole ceiling in one line, so its edge is worth pinning:
+/// spending exactly what is left is allowed, one byte more is not.
+#[test]
+fn spending_the_last_byte_is_allowed_and_the_next_one_is_not() {
+    let mut budget = 2u64;
+    spend(&mut budget, 2).unwrap();
+    assert_eq!(budget, 0);
+    assert_eq!(
+        spend(&mut budget, 1).unwrap_err().code,
+        ErrorCode::ArchiveTooLarge
+    );
+}

@@ -418,6 +418,8 @@ export const en = {
       "No game runtime was found and python3 is missing (umu / Proton needs it). Install python3 with your package manager, or install Wine, then try again.",
     launcherVersionUnreadable:
       "Couldn't read the launcher version from the CDN.",
+    archiveTooLarge:
+      "This download unpacks to {size}, over the {limit} limit — it was refused rather than filling your disk. Try again; if it keeps happening, report it.",
 
     notSignedIn: "You're not signed in.",
     playersUrlNotConfigured: "Players URL not configured.",

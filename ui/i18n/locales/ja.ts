@@ -389,6 +389,8 @@ export const ja: Catalogue = {
       "ゲームのランタイムが見つからず、python3 もありません（umu / Proton に必要です）。パッケージマネージャーで python3 をインストールするか、Wine をインストールしてから、もう一度お試しください。",
     launcherVersionUnreadable:
       "CDN からランチャーのバージョンを読み取れませんでした。",
+    archiveTooLarge:
+      "このダウンロードは展開すると {size} になり、{limit} の上限を超えます — ディスクを埋める代わりに拒否しました。もう一度お試しください。繰り返す場合は報告してください。",
 
     notSignedIn: "サインインしていません。",
     playersUrlNotConfigured: "プレイヤー数 URL が設定されていません。",
