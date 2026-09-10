@@ -56,16 +56,22 @@ pub fn verify_install(app: tauri::AppHandle) -> Vec<FileCheck> {
     out
 }
 
+/// The CDN path of the mod package, and its key in the signed manifest.
+pub const MOD_ZIP: &str = "patch/mod/mod.zip";
+
 /// Download mod.zip from the CDN and install it into the game folder.
 /// Port of install.bat: purge old Mods/dlls/*.dll, drop the loader into
 /// g3/Binaries/Win64, copy the mod DLLs. Shared by the Mods-view button
 /// and the install/update pipeline (patch → mods → version bump).
-pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> AppResult<Vec<String>> {
+///
+/// `sha256` is the manifest's entry for the package; nothing is written into
+/// the game folder unless the bytes hash to it.
+pub async fn fetch_and_install(cdn_base: &str, root: PathBuf, sha256: &str) -> AppResult<Vec<String>> {
     if !win64_dir(&root).is_dir() {
         return Err(AppError::new(ErrorCode::NotSpellbreakInstall));
     }
 
-    let url = format!("{}/patch/mod/mod.zip", cdn_base.trim_end_matches('/'));
+    let url = format!("{}/{MOD_ZIP}", cdn_base.trim_end_matches('/'));
     let client = reqwest::Client::builder()
         // Timeout after 15s if no connexion established
         .connect_timeout(std::time::Duration::from_secs(15))
@@ -86,6 +92,13 @@ pub async fn fetch_and_install(cdn_base: &str, root: PathBuf) -> AppResult<Vec<S
     if bytes.len() < 1024 {
         return Err(AppError::new(ErrorCode::ModArchiveTooSmall));
     }
+    let actual = crate::download::manifest::sha256_hex(&bytes);
+    if actual != sha256.to_ascii_lowercase() {
+        return Err(AppError::new(ErrorCode::DownloadHashMismatch)
+            .with("file", "mod.zip")
+            .with("expected", sha256)
+            .with("actual", actual));
+    }
 
     tauri::async_runtime::spawn_blocking(move || install_from_zip(&root, &bytes))
         .await
@@ -99,7 +112,13 @@ pub async fn install_mods(app: tauri::AppHandle) -> AppResult<Vec<String>> {
     if s.game_path.is_empty() {
         return Err(AppError::new(ErrorCode::NoGameFolder));
     }
-    fetch_and_install(&s.cdn_base, PathBuf::from(&s.game_path)).await
+    let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| AppError::detail(ErrorCode::ModDownloadFailed, e))?;
+    let manifest = crate::download::manifest::fetch_manifest(&app, &client, &cdn).await?;
+    fetch_and_install(&cdn, PathBuf::from(&s.game_path), manifest.hash_for(MOD_ZIP)?).await
 }
 
 fn extract_one(

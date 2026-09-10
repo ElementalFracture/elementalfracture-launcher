@@ -394,6 +394,17 @@ export const ja: Catalogue = {
     archiveTooLarge:
       "このダウンロードは展開すると {size} になり、{limit} の上限を超えます — ディスクを埋める代わりに拒否しました。もう一度お試しください。繰り返す場合は報告してください。",
 
+    manifestSignatureInvalid:
+      "CDN 上のリリースマニフェストは Elemental Fracture によって署名されていません。何もインストールされませんでした。後でもう一度お試しください。続く場合は報告してください。",
+    manifestRolledBack:
+      "CDN が提供しているリリース一覧（バージョン {offered}）は、このランチャーが既に受け入れたもの（{seen}）より古いものです。何もインストールされませんでした。",
+    manifestMissingFile:
+      "リリースマニフェストに {file} の項目がないため、検証できません。何もインストールされませんでした。",
+    downloadHashMismatch:
+      "{file} が公開されているチェックサムと一致しなかったため破棄しました。もう一度お試しください。続く場合は報告してください。",
+    manifestUnavailable:
+      "CDN からリリースマニフェストを取得できませんでした: {detail}",
+
     notSignedIn: "サインインしていません。",
     playersUrlNotConfigured: "プレイヤー数 URL が設定されていません。",
     enterEmailAndPassword: "メールアドレスとパスワードを入力してください。",

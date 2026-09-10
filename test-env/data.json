@@ -138,7 +138,8 @@
     "launcher_version": "3.2.1",
     "game_version": "6.8.1",
     "stall": false,
-    "size_mb": 0
+    "size_mb": 0,
+    "manifest_version": 0
   },
   "players": {
     "online": 42,

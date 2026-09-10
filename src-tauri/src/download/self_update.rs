@@ -1,7 +1,8 @@
 //! The launcher replacing itself: what it compares against, and the swap.
 
 use super::config::fetch_remote_launcher_version;
-use super::transfer::{download_to_file, http};
+use super::manifest::fetch_manifest;
+use super::transfer::{discard, download_to_file, http, state_path};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::settings;
 use serde::Serialize;
@@ -101,17 +102,21 @@ pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
 
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
-    let remote = fetch_remote_launcher_version(&http()?, &cdn)
+    let client = http()?;
+    let remote = fetch_remote_launcher_version(&client, &cdn)
         .await
         .ok_or_else(|| AppError::new(ErrorCode::LauncherVersionUnreadable))?;
+    let manifest = fetch_manifest(&app, &client, &cdn).await?;
 
     let (exe, binary) = update_target()?;
+    let key = format!("launcher/{binary}");
     let staged = exe.with_extension("new");
-    download_to_file(&app, "download-launcher", &format!("{cdn}/launcher/{binary}"), &staged).await?;
+    download_to_file(&app, "download-launcher", &format!("{cdn}/{key}"), &staged, manifest.hash_for(&key)?).await?;
+    let _ = fs::remove_file(state_path(&staged));
 
     let size = fs::metadata(&staged).map(|m| m.len()).unwrap_or(0);
     if size < 1024 * 1024 {
-        let _ = fs::remove_file(&staged);
+        discard(&staged);
         return Err(AppError::new(ErrorCode::LauncherArchiveTooSmall));
     }
 

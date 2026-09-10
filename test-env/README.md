@@ -406,6 +406,20 @@ after ~30s with a "download stalled" error.
 downloader switches to its segmented, multi-connection path (range requests are
 honored, so that path works too). Leave it at 0 for a quick single-stream run.
 
+**The manifest.** The launcher installs nothing that isn't in a signed release
+manifest (`src-tauri/src/download/manifest.rs`), so the server also answers
+`/launcher/manifest.json` and `.sig`: it mints an ed25519 pair when it starts,
+hashes the zips it builds, and signs the list. A release build only trusts the
+real release key, which this server doesn't have; a **debug** build also
+trusts the key served at `/launcher/manifest.pub`, which is what makes the
+fixture installable. Two knobs follow from that: `manifest_version` (0 = the
+server's start time, always newer than the last one a dev profile accepted;
+set it to `1` to see the rollback refusal) and, since the manifest is rebuilt
+per request from the current assets, changing `size_mb` between the manifest
+fetch and the download is one way to provoke a hash mismatch. The umu runtime
+is not served here, so `ensure_runtime` against the test env fails on its
+manifest lookup by design.
+
 ## Patch notes
 
 The **News** card drives the "What's new" row on the home view. Unlike

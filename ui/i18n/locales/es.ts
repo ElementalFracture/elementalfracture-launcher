@@ -388,6 +388,17 @@ export const es: Catalogue = {
     archiveTooLarge:
       "Esta descarga se descomprime en {size}, por encima del límite de {limit}: se rechazó en lugar de llenar tu disco. Inténtalo de nuevo; si sigue ocurriendo, repórtalo.",
 
+    manifestSignatureInvalid:
+      "El manifiesto de la versión en el CDN no está firmado por Elemental Fracture. No se instaló nada. Inténtalo más tarde; si persiste, repórtalo.",
+    manifestRolledBack:
+      "El CDN ofrece una lista de versiones más antigua (versión {offered}) que la que este launcher ya aceptó ({seen}). No se instaló nada.",
+    manifestMissingFile:
+      "El manifiesto de la versión no tiene entrada para {file}, así que no se puede verificar. No se instaló nada.",
+    downloadHashMismatch:
+      "{file} no coincide con su suma de comprobación publicada y se descartó. Inténtalo de nuevo; si persiste, repórtalo.",
+    manifestUnavailable:
+      "No se pudo obtener el manifiesto de la versión desde el CDN: {detail}",
+
     notSignedIn: "No has iniciado sesión.",
     playersUrlNotConfigured: "La URL de jugadores no está configurada.",
     enterEmailAndPassword: "Escribe tu correo y tu contraseña.",

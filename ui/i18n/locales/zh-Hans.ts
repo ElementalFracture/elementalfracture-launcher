@@ -371,6 +371,17 @@ export const zhHans: Catalogue = {
     archiveTooLarge:
       "此下载解压后为 {size}，超过 {limit} 的上限——已拒绝，以免占满磁盘。请重试；如果反复出现，请反馈。",
 
+    manifestSignatureInvalid:
+      "CDN 上的发布清单未经 Elemental Fracture 签名。未安装任何内容。请稍后重试；若持续出现，请反馈。",
+    manifestRolledBack:
+      "CDN 提供的发布清单（版本 {offered}）比此启动器已接受的版本（{seen}）更旧。未安装任何内容。",
+    manifestMissingFile:
+      "发布清单中没有 {file} 的条目，因此无法校验。未安装任何内容。",
+    downloadHashMismatch:
+      "{file} 与已发布的校验和不匹配，已丢弃。请重试；若持续出现，请反馈。",
+    manifestUnavailable:
+      "无法从 CDN 获取发布清单：{detail}",
+
     notSignedIn: "你尚未登录。",
     playersUrlNotConfigured: "尚未配置玩家数地址。",
     enterEmailAndPassword: "请输入你的邮箱和密码。",

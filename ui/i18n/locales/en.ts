@@ -423,6 +423,17 @@ export const en = {
     archiveTooLarge:
       "This download unpacks to {size}, over the {limit} limit — it was refused rather than filling your disk. Try again; if it keeps happening, report it.",
 
+    manifestSignatureInvalid:
+      "The release manifest on the CDN isn't signed by Elemental Fracture. Nothing was installed. Try again later; if it keeps happening, report it.",
+    manifestRolledBack:
+      "The CDN is offering an older release list (version {offered}) than this launcher has already accepted ({seen}). Nothing was installed.",
+    manifestMissingFile:
+      "The release manifest has no entry for {file}, so it can't be verified. Nothing was installed.",
+    downloadHashMismatch:
+      "{file} didn't match its published checksum and was discarded. Try again; if it keeps happening, report it.",
+    manifestUnavailable:
+      "Couldn't fetch the release manifest from the CDN: {detail}",
+
     notSignedIn: "You're not signed in.",
     playersUrlNotConfigured: "Players URL not configured.",
     enterEmailAndPassword: "Enter your email and password.",

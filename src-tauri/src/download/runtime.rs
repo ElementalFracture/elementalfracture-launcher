@@ -3,8 +3,9 @@
 
 use super::archive::extract_umu_run;
 use super::config::fetch_remote_config;
+use super::manifest::fetch_manifest;
 use super::progress::emit;
-use super::transfer::{download_to_file, http};
+use super::transfer::{discard, download_to_file, http};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{game, settings};
 use std::fs;
@@ -79,27 +80,30 @@ pub async fn ensure_runtime(app: tauri::AppHandle) -> AppResult<String> {
     let umu_run = runtime_dir.join("umu-run");
 
     // Allow the CDN to redirect the runtime URL without shipping a new launcher.
+    // The redirect buys nothing on its own: whatever the URL, the tarball has
+    // to hash to the manifest's `runtime/<file name>` entry, so a config.ini
+    // pointing at a hostile build is refused the same as a swapped one.
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
-    let url = match http() {
-        Ok(client) => fetch_remote_config(&client, &cdn)
-            .await
-            .get("umu_zipapp_url")
-            .filter(|u| u.starts_with("https://"))
-            .cloned()
-            .unwrap_or_else(|| UMU_ZIPAPP_URL.to_string()),
-        Err(_) => UMU_ZIPAPP_URL.to_string(),
-    };
+    let client = http()?;
+    let url = fetch_remote_config(&client, &cdn)
+        .await
+        .get("umu_zipapp_url")
+        .filter(|u| u.starts_with("https://"))
+        .cloned()
+        .unwrap_or_else(|| UMU_ZIPAPP_URL.to_string());
+    let manifest = fetch_manifest(&app, &client, &cdn).await?;
+    let key = format!("runtime/{}", url.rsplit('/').next().unwrap_or(""));
 
     emit(&app, "runtime", "Downloading game runtime (umu)…".into(), 0.0, 0, 0);
     let tar_path = runtime_dir.join("umu-launcher-zipapp.tar");
-    download_to_file(&app, "runtime", &url, &tar_path).await?;
+    download_to_file(&app, "runtime", &url, &tar_path, manifest.hash_for(&key)?).await?;
 
     emit(&app, "runtime", "Installing game runtime…".into(), 0.0, 0, 0);
     let (tar2, umu2) = (tar_path.clone(), umu_run.clone());
     tauri::async_runtime::spawn_blocking(move || extract_umu_run(&tar2, &umu2))
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
-    let _ = fs::remove_file(&tar_path);
+    discard(&tar_path);
 
     #[cfg(unix)]
     {

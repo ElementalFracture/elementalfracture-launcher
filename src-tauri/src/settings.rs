@@ -59,6 +59,11 @@ pub struct Settings {
     /// for "follow the OS". Resolved in the UI, which is the only side that
     /// holds prose — the backend never reads this.
     pub language: String,
+    /// The highest signed-manifest `version` this install has accepted. A
+    /// manifest below it is a replay of an old release and is refused, so a
+    /// CDN that has been rolled back can't roll the install back with it.
+    /// See `download/manifest.rs`.
+    pub manifest_version: u64,
 }
 
 /// Base the account endpoints hang off. Debug builds aim at the local test env
@@ -127,6 +132,7 @@ impl Default for Settings {
             close_on_launch: false,
             // Empty = follow the OS; the picker in Settings writes a tag.
             language: String::new(),
+            manifest_version: 0,
         }
     }
 }

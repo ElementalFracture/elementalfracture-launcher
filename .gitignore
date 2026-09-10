@@ -22,3 +22,7 @@ packaging/wixui/ui/License.rtf
 packaging/wixui/ui/bitmaps/
 *.msi
 *.exe
+
+# Release staging (scripts/release.sh, scripts/sign-manifest.sh). Outside dist/,
+# which `npm run build` empties on every cargo tauri build.
+staging/

@@ -69,6 +69,19 @@ pub enum ErrorCode {
     /// bomb, or a payload that has outgrown the limit. `params: size, limit`
     ArchiveTooLarge,
 
+    /* ---- authored: the signed manifest (download/manifest.rs) ---- */
+    /// The manifest's signature doesn't check out against any trusted key.
+    ManifestSignatureInvalid,
+    /// The CDN offered a manifest older than one this install has already
+    /// accepted. `params: seen, offered`
+    ManifestRolledBack,
+    /// A payload the launcher wanted has no entry in the manifest.
+    /// `params: file`
+    ManifestMissingFile,
+    /// A finished download doesn't hash to what the manifest says.
+    /// `params: file, expected, actual`
+    DownloadHashMismatch,
+
     /* ---- authored: account ---- */
     /// A signed-in session is required and there isn't one.
     NotSignedIn,
@@ -109,6 +122,9 @@ pub enum ErrorCode {
     BadJson,
     /// `params: url, detail`
     DownloadFailed,
+    /// `params: url, detail` — the manifest or its signature couldn't be
+    /// fetched, or the (verified) document wouldn't parse.
+    ManifestUnavailable,
     /// `params: detail` — installing the mod payload.
     ModDownloadFailed,
     /// `params: command, detail` — spawning the game.

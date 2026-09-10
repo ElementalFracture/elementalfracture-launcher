@@ -5,11 +5,13 @@
 //! of an archive — and the rest are the four things built on it that the
 //! frontend can actually call: installing/patching the game, reading the
 //! remote config, provisioning a Linux game runtime, and replacing the
-//! launcher itself.
+//! launcher itself. `manifest` sits between the two layers: the signed list
+//! of hashes every one of those downloads is checked against.
 
 mod archive;
 mod config;
 mod install;
+pub mod manifest;
 mod progress;
 mod runtime;
 mod self_update;

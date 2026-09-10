@@ -385,6 +385,17 @@ export const ko: Catalogue = {
     archiveTooLarge:
       "이 다운로드는 압축을 풀면 {size}로, {limit} 제한을 넘습니다 — 디스크를 채우는 대신 거부했습니다. 다시 시도하고, 계속되면 제보해 주세요.",
 
+    manifestSignatureInvalid:
+      "CDN의 릴리스 매니페스트가 Elemental Fracture의 서명이 아닙니다. 아무것도 설치되지 않았습니다. 나중에 다시 시도하고, 계속되면 신고해 주세요.",
+    manifestRolledBack:
+      "CDN이 제공하는 릴리스 목록(버전 {offered})이 이 런처가 이미 수락한 것({seen})보다 오래되었습니다. 아무것도 설치되지 않았습니다.",
+    manifestMissingFile:
+      "릴리스 매니페스트에 {file} 항목이 없어 검증할 수 없습니다. 아무것도 설치되지 않았습니다.",
+    downloadHashMismatch:
+      "{file}이(가) 공개된 체크섬과 일치하지 않아 폐기되었습니다. 다시 시도하고, 계속되면 신고해 주세요.",
+    manifestUnavailable:
+      "CDN에서 릴리스 매니페스트를 가져오지 못했습니다: {detail}",
+
     notSignedIn: "로그인되어 있지 않습니다.",
     playersUrlNotConfigured: "플레이어 수 URL이 설정되지 않았습니다.",
     enterEmailAndPassword: "이메일과 비밀번호를 입력하세요.",

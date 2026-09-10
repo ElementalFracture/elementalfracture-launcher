@@ -390,6 +390,17 @@ export const ptBR: Catalogue = {
     archiveTooLarge:
       "Este download descompacta para {size}, acima do limite de {limit} — foi recusado em vez de encher seu disco. Tente de novo; se continuar, reporte.",
 
+    manifestSignatureInvalid:
+      "O manifesto de lançamento no CDN não está assinado pela Elemental Fracture. Nada foi instalado. Tente novamente mais tarde; se continuar, reporte.",
+    manifestRolledBack:
+      "O CDN está oferecendo uma lista de lançamentos mais antiga (versão {offered}) do que a que este launcher já aceitou ({seen}). Nada foi instalado.",
+    manifestMissingFile:
+      "O manifesto de lançamento não tem entrada para {file}, então ele não pode ser verificado. Nada foi instalado.",
+    downloadHashMismatch:
+      "{file} não corresponde à soma de verificação publicada e foi descartado. Tente novamente; se continuar, reporte.",
+    manifestUnavailable:
+      "Não foi possível obter o manifesto de lançamento no CDN: {detail}",
+
     notSignedIn: "Você não está conectado.",
     playersUrlNotConfigured: "A URL de jogadores não está configurada.",
     enterEmailAndPassword: "Digite seu e-mail e sua senha.",

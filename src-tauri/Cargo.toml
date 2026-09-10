@@ -1,6 +1,6 @@
 [package]
 name = "ef-launcher"
-version = "3.1.0"
+version = "3.1.1"
 description = "Elemental Fracture Launcher"
 authors = ["Elemental Fracture"]
 edition = "2021"
@@ -16,6 +16,10 @@ serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 tokio = { version = "1", features = ["net", "io-util", "time", "rt"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# The signed release manifest (download/manifest.rs): every payload's SHA-256,
+# signed with a key the CDN never holds.
+sha2 = "0.10"
+ed25519-dalek = "2"
 open = "5"
 specta = { version = "2.0.0-rc.21", features = ["serde_json"] }
 specta-typescript = "0.0.9"

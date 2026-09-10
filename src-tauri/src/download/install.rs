@@ -4,14 +4,20 @@
 
 use super::archive::{extract_all, extract_flat, stage_test_pak};
 use super::config::fetch_remote_game_version;
+use super::manifest::{fetch_manifest, Manifest};
 use super::progress::emit;
 use super::runtime::ensure_runtime;
-use super::transfer::{download_to_file, http};
+use super::transfer::{discard, download_to_file, http};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{game, settings};
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// CDN paths of the game payloads, which double as their manifest keys.
+const BASE_ZIP: &str = "game/elefracbase.zip";
+const PATCH_ZIP: &str = "patch/latest.zip";
+const PLAYTEST_ZIP: &str = "patch/dev.zip";
 
 /// Bring an install in agreement with the CDN: fetch the latest version,
 /// pull the balance patch into g3/Content/Paks, install the mod package,
@@ -19,7 +25,10 @@ use std::path::{Path, PathBuf};
 /// a half-provisioned install keeps looking outdated and gets retried.
 /// Shared by fresh installs, manual updates, newly-pointed-at game folders,
 /// and the automatic startup update check.
-async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> AppResult<String> {
+///
+/// `manifest` is the signed list the caller already fetched for this run;
+/// both payloads here are checked against it before anything is extracted.
+async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &Manifest) -> AppResult<String> {
     let paks = game::paks_dir(root);
     if !paks.is_dir() {
         return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
@@ -28,14 +37,21 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> AppResul
     let remote_version = fetch_remote_game_version(&http()?, cdn).await;
 
     let tmp = root.join("_efpatch.zip");
-    download_to_file(app, "download-patch", &format!("{cdn}/patch/latest.zip"), &tmp).await?;
+    download_to_file(
+        app,
+        "download-patch",
+        &format!("{cdn}/{PATCH_ZIP}"),
+        &tmp,
+        manifest.hash_for(PATCH_ZIP)?,
+    )
+    .await?;
 
     emit(app, "extract-patch", "Installing patch…".into(), 0.0, 0, 0);
     let (tmp2, paks2) = (tmp.clone(), paks.clone());
     let names = tauri::async_runtime::spawn_blocking(move || extract_flat(&tmp2, &paks2))
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
-    let _ = fs::remove_file(&tmp);
+    discard(&tmp);
     if !game::balance_pak_present(root) {
         return Err(AppError::new(ErrorCode::PatchPakMissing)
             .with("paks", paks.display())
@@ -44,7 +60,12 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> AppResul
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
 
     emit(app, "install-mods", "Downloading mod package…".into(), 0.0, 0, 0);
-    let mod_log = crate::mods::fetch_and_install(cdn, root.to_path_buf()).await?;
+    let mod_log = crate::mods::fetch_and_install(
+        cdn,
+        root.to_path_buf(),
+        manifest.hash_for(crate::mods::MOD_ZIP)?,
+    )
+    .await?;
     let installed = mod_log.iter().filter(|l| l.starts_with("Installed")).count();
     emit(app, "install-mods", format!("Mods installed ({installed} files)"), 100.0, 0, 0);
 
@@ -68,15 +89,27 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
     let dest = PathBuf::from(dest);
     fs::create_dir_all(&dest)?;
 
+    let manifest = fetch_manifest(&app, &http()?, &cdn).await?;
+
+    // The .part file and its .state sidecar survive a failed run on purpose:
+    // the next attempt resumes them (see transfer.rs). They go only once the
+    // archive has been extracted.
     let tmp_zip = dest.join("_elefracbase.zip.part");
     emit(&app, "download-base", "Starting download…".into(), 0.0, 0, 0);
-    download_to_file(&app, "download-base", &format!("{cdn}/game/elefracbase.zip"), &tmp_zip).await?;
+    download_to_file(
+        &app,
+        "download-base",
+        &format!("{cdn}/{BASE_ZIP}"),
+        &tmp_zip,
+        manifest.hash_for(BASE_ZIP)?,
+    )
+    .await?;
 
     let (app2, dest2, zip2) = (app.clone(), dest.clone(), tmp_zip.clone());
     tauri::async_runtime::spawn_blocking(move || extract_all(&app2, "extract-base", &zip2, &dest2))
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
-    let _ = fs::remove_file(&tmp_zip);
+    discard(&tmp_zip);
 
     // The zip may either contain g3/Engine at its root or a single wrapper dir.
     let root = if dest.join("g3").is_dir() {
@@ -89,7 +122,7 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
             .ok_or_else(|| AppError::new(ErrorCode::ArchiveMissingGameFolder))?
     };
 
-    apply_patch(&app, &cdn, &root).await?;
+    apply_patch(&app, &cdn, &root, &manifest).await?;
 
     let mut s = settings::load(&app);
     s.game_path = root.to_string_lossy().into_owned();
@@ -116,7 +149,8 @@ pub async fn update_patch(app: tauri::AppHandle) -> AppResult<String> {
         return Err(AppError::new(ErrorCode::NoGameFolder));
     }
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
-    let version = apply_patch(&app, &cdn, Path::new(&s.game_path)).await?;
+    let manifest = fetch_manifest(&app, &http()?, &cdn).await?;
+    let version = apply_patch(&app, &cdn, Path::new(&s.game_path), &manifest).await?;
     emit(&app, "done", "Update complete".into(), 100.0, 0, 0);
     Ok(version)
 }
@@ -168,16 +202,24 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> 
         return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
     }
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    let manifest = fetch_manifest(&app, &http()?, &cdn).await?;
 
     let tmp = root.join("_efplaytest.zip");
-    download_to_file(&app, "download-playtest", &format!("{cdn}/patch/dev.zip"), &tmp).await?;
+    download_to_file(
+        &app,
+        "download-playtest",
+        &format!("{cdn}/{PLAYTEST_ZIP}"),
+        &tmp,
+        manifest.hash_for(PLAYTEST_ZIP)?,
+    )
+    .await?;
 
     emit(&app, "extract-playtest", "Installing the playtest build…".into(), 0.0, 0, 0);
     let (tmp2, paks2) = (tmp.clone(), paks.clone());
     let staged = tauri::async_runtime::spawn_blocking(move || stage_test_pak(&tmp2, &paks2))
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
-    let _ = fs::remove_file(&tmp);
+    discard(&tmp);
     emit(
         &app,
         "extract-playtest",

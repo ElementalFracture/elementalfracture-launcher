@@ -14,6 +14,18 @@
  *   {cdn}/patch/dev.zip         the playtest balance pak (Enable Playtest)
  *   {cdn}/patch/mod/mod.zip     the mod loader + DLLs
  *   {cdn}/game/elefracbase.zip  the base install (download_game)
+ *   {cdn}/launcher/manifest.json (+.sig)  the signed hash list every zip is checked against
+ *   {cdn}/launcher/manifest.pub           this server's throwaway public key (debug builds only)
+ *
+ * The launcher refuses any payload that isn't in a manifest signed by a key it
+ * trusts (src-tauri/src/download/manifest.rs). A release build trusts only the
+ * compiled-in release key, which this server does not have; a debug build also
+ * trusts whatever `/launcher/manifest.pub` says, so the server mints an ed25519 pair on
+ * start, hashes the assets it builds, and signs the list with it. The manifest
+ * `version` defaults to the server's start time in seconds (the same clock the
+ * real release tooling stamps), so it is always newer than the last one the
+ * dev profile accepted; set `update.manifest_version` to drive the rollback
+ * refusal on purpose.
  *
  * The point of the harness is the `stall` switch: the bug it was written for is
  * an updater that FREEZES mid-progress, which is what a connection that sends
@@ -25,6 +37,8 @@
  * No dependencies, on purpose (see README): the zips are built here by hand as
  * store-only (uncompressed) archives, which is all `zip::ZipArchive` needs.
  */
+
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 
 /* ── CRC32 (store-only zips still carry a checksum per entry) ─────────────── */
 const CRC_TABLE = (() => {
@@ -205,6 +219,63 @@ export function asset(path, state) {
   }
 }
 
+/* ── The signed manifest ──────────────────────────────────────────────────── */
+
+const SIGNING = generateKeyPairSync("ed25519");
+/** Raw 32-byte public key as hex, the shape `/manifest.pub` serves. */
+const PUBLIC_HEX = SIGNING.publicKey
+  .export({ type: "spki", format: "der" })
+  .subarray(-32)
+  .toString("hex");
+const STARTED = Math.floor(Date.now() / 1000);
+
+/** The payloads the manifest lists, keyed the way the launcher looks them up
+ *  (CDN-relative, no leading slash). config.ini is deliberately not here: it
+ *  is configuration, not a payload, and the launcher never hashes it. */
+const PAYLOAD_PATHS = ["/patch/latest.zip", "/patch/dev.zip", "/patch/mod/mod.zip", "/game/elefracbase.zip"];
+
+/** The manifest for the assets as they are built right now, and its signature.
+ *  Rebuilt per request: the assets are cheap and `size_mb` may have changed. */
+function manifest(state) {
+  const u = cfg(state);
+  const files = {};
+  for (const path of PAYLOAD_PATHS) {
+    files[path.slice(1)] = createHash("sha256").update(asset(path, state).bytes).digest("hex");
+  }
+  const json = Buffer.from(
+    JSON.stringify({
+      version: Number(u.manifest_version) || STARTED,
+      released_at: new Date(STARTED * 1000).toISOString(),
+      launcher_version: u.launcher_version ?? "3.2.1",
+      files,
+    }),
+    "utf8"
+  );
+  return { json, sig: sign(null, json, SIGNING.privateKey) };
+}
+
+/** Serve the manifest, its signature, or the public key; false if `path` is
+ *  none of them. */
+function serveManifest(res, path, state, log) {
+  let body;
+  let type = "application/octet-stream";
+  if (path === "/launcher/manifest.json") {
+    body = manifest(state).json;
+    type = "application/json";
+  } else if (path === "/launcher/manifest.json.sig") {
+    body = manifest(state).sig;
+  } else if (path === "/launcher/manifest.pub") {
+    body = Buffer.from(PUBLIC_HEX + "\n", "utf8");
+    type = "text/plain";
+  } else {
+    return false;
+  }
+  res.writeHead(200, { "content-type": type, "content-length": body.length });
+  res.end(body);
+  log?.(`  ${path} — ${body.length} bytes`);
+  return true;
+}
+
 /** Which stage a path belongs to, for matching against `update.stall`. */
 function stageOf(path) {
   if (path === "/patch/latest.zip") return "patch";
@@ -240,6 +311,7 @@ function parseRange(header, total) {
  * a zip is padded past 64 MB) and the stall that reproduces the freeze.
  */
 export function serveUpdate(req, res, path, state, log) {
+  if (serveManifest(res, path, state, log)) return true;
   const built = asset(path, state);
   if (!built) return false;
 
@@ -289,4 +361,7 @@ export const UPDATE_PATHS = [
   "/patch/dev.zip",
   "/patch/mod/mod.zip",
   "/game/elefracbase.zip",
+  "/launcher/manifest.json",
+  "/launcher/manifest.json.sig",
+  "/launcher/manifest.pub",
 ];

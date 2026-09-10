@@ -23,6 +23,7 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     minimize_on_close: false,
     close_on_launch: false,
     language: "",
+    manifest_version: 0,
     ...over,
   };
 }

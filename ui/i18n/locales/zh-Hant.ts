@@ -372,6 +372,17 @@ export const zhHant: Catalogue = {
     archiveTooLarge:
       "此下載解壓後為 {size}，超過 {limit} 的上限——已拒絕，以免佔滿磁碟。請重試；如果反覆出現，請回報。",
 
+    manifestSignatureInvalid:
+      "CDN 上的發佈清單未經 Elemental Fracture 簽署。未安裝任何內容。請稍後再試；若持續發生，請回報。",
+    manifestRolledBack:
+      "CDN 提供的發佈清單（版本 {offered}）比此啟動器已接受的版本（{seen}）更舊。未安裝任何內容。",
+    manifestMissingFile:
+      "發佈清單中沒有 {file} 的項目，因此無法驗證。未安裝任何內容。",
+    downloadHashMismatch:
+      "{file} 與已發佈的校驗和不符，已丟棄。請再試一次；若持續發生，請回報。",
+    manifestUnavailable:
+      "無法從 CDN 取得發佈清單：{detail}",
+
     notSignedIn: "你尚未登入。",
     playersUrlNotConfigured: "尚未設定玩家數網址。",
     enterEmailAndPassword: "請輸入你的電子郵件與密碼。",

@@ -1,0 +1,95 @@
+//! Tests for `download/transfer.rs`: the resume bookkeeping. The wire itself
+//! is exercised against test-env (`update.stall`, `update.size_mb`).
+
+use super::*;
+
+const SHA: &str = "670064fa1048e4225b000509becbb78ccdf96479163226b114c6078c73118bb3";
+
+fn state(total: u64) -> State {
+    State {
+        url: "https://cdn.example/game/elefracbase.zip".into(),
+        total,
+        etag: "\"abc-6\"".into(),
+        sha256: SHA.into(),
+        segments: layout(total),
+        complete: false,
+    }
+}
+
+#[test]
+fn small_files_get_one_segment_and_large_ones_six() {
+    assert_eq!(layout(1).len(), 1);
+    assert_eq!(layout(MIN_SEGMENT * 2 - 1).len(), 1);
+    assert_eq!(layout(MIN_SEGMENT * 2).len(), 2);
+    assert_eq!(layout(MIN_SEGMENT * 100).len(), SEGMENTS as usize);
+}
+
+#[test]
+fn a_layout_covers_every_byte_exactly_once() {
+    let total = 10 * 1024 * 1024 * 1024 + 12345;
+    let segs = layout(total);
+    assert_eq!(segs[0].start, 0);
+    assert_eq!(segs.last().unwrap().end, total - 1);
+    for pair in segs.windows(2) {
+        assert_eq!(pair[0].end + 1, pair[1].start);
+    }
+    assert!(segs.iter().all(|s| s.pos == s.start));
+}
+
+#[test]
+fn done_sums_progress_across_segments() {
+    let mut st = state(MIN_SEGMENT * 4);
+    assert_eq!(st.done(), 0);
+    st.segments[0].pos = st.segments[0].start + 10;
+    st.segments[3].pos = st.segments[3].end + 1;
+    assert_eq!(st.done(), 10 + (st.segments[3].end + 1 - st.segments[3].start));
+}
+
+#[test]
+fn a_state_resumes_only_the_same_object_with_the_same_target() {
+    let total = MIN_SEGMENT * 4;
+    let st = state(total);
+    let url = st.url.clone();
+    assert!(st.resumes(&url, total, "\"abc-6\"", SHA, total));
+    // The server has a different object now.
+    assert!(!st.resumes(&url, total, "\"zzz-1\"", SHA, total));
+    assert!(!st.resumes(&url, total + 1, "\"abc-6\"", SHA, total));
+    // The manifest wants different bytes.
+    assert!(!st.resumes(&url, total, "\"abc-6\"", &"0".repeat(64), total));
+    // Another URL altogether, or a payload file that isn't preallocated.
+    assert!(!st.resumes("https://cdn.example/other.zip", total, "\"abc-6\"", SHA, total));
+    assert!(!st.resumes(&url, total, "\"abc-6\"", SHA, 0));
+    // A finished download isn't resumed; it's reused (or re-hashed and dropped).
+    let done = State { complete: true, ..st.clone() };
+    assert!(!done.resumes(&url, total, "\"abc-6\"", SHA, total));
+    // A corrupt position can't be trusted.
+    let mut bad = st.clone();
+    bad.segments[1].pos = bad.segments[1].end + 2;
+    assert!(!bad.resumes(&url, total, "\"abc-6\"", SHA, total));
+}
+
+#[test]
+fn state_round_trips_through_its_sidecar() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dest = tmp.path().join("_elefracbase.zip.part");
+    assert_eq!(state_path(&dest), tmp.path().join("_elefracbase.zip.part.state"));
+    assert!(State::load(&dest).is_none());
+
+    let mut st = state(MIN_SEGMENT * 3);
+    st.segments[1].pos += 4096;
+    st.save(&dest);
+    assert_eq!(State::load(&dest).unwrap(), st);
+
+    fs::write(&dest, b"payload").unwrap();
+    discard(&dest);
+    assert!(!dest.exists());
+    assert!(!state_path(&dest).exists());
+}
+
+#[test]
+fn a_garbled_sidecar_reads_as_no_state() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dest = tmp.path().join("x.zip");
+    fs::write(state_path(&dest), b"{not json").unwrap();
+    assert!(State::load(&dest).is_none());
+}

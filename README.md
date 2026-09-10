@@ -53,6 +53,7 @@ Static `index.html` + `styles.css` + `app.js`, loaded by the webview with
 | `settings.rs` | Persisted config (`settings.json` in the OS config dir), folder picker, external-link opener, `game_host()` URL→host helper. |
 | `game.rs`     | Locate/launch the game, EF↔Classic pak toggle, write the hidden `.ef_mode` marker, read local `version.txt`.                 |
 | `download.rs` | Segmented base-game download, patch application, `version.txt` bump, update check.                                           |
+| `download/manifest.rs` | The signed release manifest: every payload's SHA-256, checked before anything is extracted or swapped in. See [Release integrity](#release-integrity). |
 | `mods.rs`     | Install/verify the loader + mod DLLs from `mod.zip`.                                                                         |
 | `remote.rs`   | Player counts, live events, patch-notes RSS, and sign-in + session validation.                                                           |
 
@@ -209,6 +210,42 @@ APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=true cargo tauri build --bundles appimage
 Self-update on Linux replaces the `.AppImage` file itself (`$APPIMAGE`),
 pulling `{cdn}/launcher/ef-launcher.AppImage`; plain binaries and Windows
 pull `ef-launcher`/`ef-launcher.exe` and swap in place.
+
+The AppImage inherits the **glibc of the box that built it** (linuxdeploy
+bundles gtk/webkit, not libc). Build it on Ubuntu 22.04 (glibc 2.35, the
+`Humble-ROS2` toolbox); `scripts/release.sh` refuses a host or a bundle above
+that floor, because a build from a newer distro fails on every LTS and the
+Steam Deck with `GLIBC_2.4x not found`.
+
+### Release integrity
+
+Every payload the launcher downloads (base game, balance patch, playtest pak,
+`mod.zip`, the launcher binaries, the umu runtime tarball) has to hash to an
+entry in `{cdn}/launcher/manifest.json`, and that manifest has to carry a valid
+ed25519 signature (`manifest.json.sig`) from a key compiled into the launcher
+(`RELEASE_KEYS` in `download/manifest.rs`). No entry, no signature, or a bad
+hash: the install is refused and nothing on disk is touched. The manifest's
+`version` is monotonic (publish time in seconds) and each install remembers the
+highest it has accepted, so a rolled-back CDN can't roll an install back.
+
+What that means for publishing: **every payload change on the CDN needs a
+re-sign**, or every launcher out there fails to update until it gets one.
+
+```sh
+scripts/sign-manifest.sh --upload        # hash the live objects, sign, publish
+```
+
+`release.sh --upload` runs it for you. Publishing a new `mod.zip` or
+`latest.zip` by hand (or with Marla's `/cdn upload`) does not; run it after.
+The private key lives with the release tooling (`~/.config/ef-release/`),
+never on the CDN or in a repo; hashes are cached per object ETag so a re-sign
+after a small payload change doesn't re-read the 10 GB base game.
+
+Downloads are **resumable**: a `.state` sidecar beside each in-flight payload
+records the segment positions, and the next attempt continues from there if
+the server still offers the same object (same ETag and size). A finished
+payload whose extraction failed is reused rather than fetched again. Both rest
+on the hash check above, which is what makes trusting partial bytes safe.
 
 ---
 

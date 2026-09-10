@@ -390,6 +390,17 @@ export const de: Catalogue = {
     archiveTooLarge:
       "Dieser Download entpackt sich zu {size} und liegt damit über dem Limit von {limit} — er wurde abgelehnt, statt deine Festplatte zu füllen. Versuche es erneut; wenn es weiter passiert, melde es.",
 
+    manifestSignatureInvalid:
+      "Das Release-Manifest auf dem CDN ist nicht von Elemental Fracture signiert. Es wurde nichts installiert. Versuche es später erneut; falls es weiterhin passiert, melde es.",
+    manifestRolledBack:
+      "Das CDN bietet eine ältere Release-Liste (Version {offered}) an als die, die dieser Launcher bereits akzeptiert hat ({seen}). Es wurde nichts installiert.",
+    manifestMissingFile:
+      "Das Release-Manifest enthält keinen Eintrag für {file}, daher kann die Datei nicht geprüft werden. Es wurde nichts installiert.",
+    downloadHashMismatch:
+      "{file} stimmt nicht mit der veröffentlichten Prüfsumme überein und wurde verworfen. Versuche es erneut; falls es weiterhin passiert, melde es.",
+    manifestUnavailable:
+      "Das Release-Manifest konnte nicht vom CDN geladen werden: {detail}",
+
     notSignedIn: "Du bist nicht angemeldet.",
     playersUrlNotConfigured: "Die Spieler-URL ist nicht konfiguriert.",
     enterEmailAndPassword: "Gib deine E-Mail-Adresse und dein Passwort ein.",
