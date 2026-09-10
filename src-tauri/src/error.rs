@@ -120,6 +120,8 @@ pub enum ErrorCode {
     /// `params: detail` — chmod +x on the unpacked umu-run.
     RuntimeNotExecutable,
     /// The patch landed but the version stamp didn't. `params: detail`
+    /// The patch archive extracted but did not contain the balance pak.
+    PatchPakMissing,
     PatchVersionWriteFailed,
     /// Self-update, at each of the three points it can fail after downloading.
     /// `params: detail`

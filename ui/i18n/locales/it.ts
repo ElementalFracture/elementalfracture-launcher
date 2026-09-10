@@ -295,6 +295,8 @@ export const it: Catalogue = {
     locate: "Trova l'installazione",
     checkUpdates: "Cerca aggiornamenti del gioco",
     checking: "Ricerca…",
+    forceUpdate: "Forza l'ultimo aggiornamento",
+    forcing: "Aggiornamento…",
     download: "Scarica il gioco…",
     location: "Cartella di installazione",
     locationPlaceholder: "Non impostata",

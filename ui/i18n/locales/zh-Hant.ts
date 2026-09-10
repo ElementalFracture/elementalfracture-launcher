@@ -287,6 +287,8 @@ export const zhHant: Catalogue = {
     locate: "尋找安裝位置",
     checkUpdates: "檢查遊戲更新",
     checking: "檢查中…",
+    forceUpdate: "強制更新至最新版本",
+    forcing: "更新中…",
     download: "下載遊戲…",
     location: "安裝位置",
     locationPlaceholder: "未設定",

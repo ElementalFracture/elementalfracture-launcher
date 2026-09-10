@@ -294,6 +294,8 @@ export const es: Catalogue = {
     locate: "Localizar la instalación",
     checkUpdates: "Buscar actualizaciones del juego",
     checking: "Buscando…",
+    forceUpdate: "Forzar la última actualización",
+    forcing: "Actualizando…",
     download: "Descargar el juego…",
     location: "Carpeta de instalación",
     locationPlaceholder: "Sin definir",

@@ -294,6 +294,8 @@ export const ko: Catalogue = {
     locate: "설치 위치 찾기",
     checkUpdates: "게임 업데이트 확인",
     checking: "확인 중…",
+    forceUpdate: "최신 업데이트 강제 적용",
+    forcing: "업데이트 중…",
     download: "게임 내려받기…",
     location: "설치 위치",
     locationPlaceholder: "설정되지 않음",

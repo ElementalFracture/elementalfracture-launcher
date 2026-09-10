@@ -36,6 +36,11 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> AppResul
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     let _ = fs::remove_file(&tmp);
+    if !game::balance_pak_present(root) {
+        return Err(AppError::new(ErrorCode::PatchPakMissing)
+            .with("paks", paks.display())
+            .with("delivered", names.join(", ")));
+    }
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
 
     emit(app, "install-mods", "Downloading mod package…".into(), 0.0, 0, 0);
@@ -127,8 +132,11 @@ pub struct VersionInfo {
 #[specta::specta]
 pub async fn get_versions(app: tauri::AppHandle) -> VersionInfo {
     let s = settings::load(&app);
-    let local = (!s.game_path.is_empty())
-        .then(|| game::read_local_version(Path::new(&s.game_path)))
+    let root = Path::new(&s.game_path);
+    // An install missing its balance pak is out of date no matter what
+    // version.txt says, so reporting no local version lights the update badge.
+    let local = (!s.game_path.is_empty() && game::balance_pak_present(root))
+        .then(|| game::read_local_version(root))
         .flatten();
 
     let cdn = s.cdn_base.trim_end_matches('/').to_string();

@@ -287,6 +287,8 @@ export const zhHans: Catalogue = {
     locate: "查找安装位置",
     checkUpdates: "检查游戏更新",
     checking: "检查中…",
+    forceUpdate: "强制更新到最新版本",
+    forcing: "更新中…",
     download: "下载游戏…",
     location: "安装位置",
     locationPlaceholder: "未设置",

@@ -50,6 +50,19 @@ pub fn read_local_version(root: &Path) -> Option<String> {
     (!v.is_empty()).then_some(v)
 }
 
+/// True when the balance pak is on disk, active or parked by a channel switch.
+///
+/// The patch is only half of an install: version.txt can say 6.2.10 while
+/// g3/Content/Paks has no ElefracBalance_P.pak at all (a patch that failed
+/// midway, a hand-cleaned Paks folder, a game reinstall over the top). Treat
+/// that as out of date so the update path re-pulls latest.zip.
+pub fn balance_pak_present(root: &Path) -> bool {
+    let paks = paks_dir(root);
+    ["ElefracBalance_P.pak", "ElefracBalance_P.pak.bak", "ElefracBalance_P.pak.1"]
+        .iter()
+        .any(|n| paks.join(n).exists())
+}
+
 /// Look for an existing Spellbreak install in the usual places.
 #[tauri::command]
 #[specta::specta]

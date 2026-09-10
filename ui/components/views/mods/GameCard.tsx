@@ -30,6 +30,8 @@ export function GameCard() {
     downloadGame,
     provisionInstall,
     checkGameUpdate,
+    applyGameUpdate,
+    updating,
   } = useGame();
   const { settings, saveSettings } = useSettings();
   const [checkingUpdates, setCheckingUpdates] = useState(false);
@@ -125,6 +127,23 @@ export function GameCard() {
                 </>
               ) : (
                 _("game.checkUpdates")
+              )}
+            </Button>
+          )}
+          {located && (
+            <Button
+              variant="secondary"
+              disabled={updating || installBusy}
+              onClick={applyGameUpdate}
+              title={_("game.forceUpdate")}
+            >
+              {updating ? (
+                <>
+                  <Spinner />
+                  {_("game.forcing")}
+                </>
+              ) : (
+                _("game.forceUpdate")
               )}
             </Button>
           )}

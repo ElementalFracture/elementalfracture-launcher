@@ -293,6 +293,8 @@ export const ptBR: Catalogue = {
     locate: "Localizar instalação",
     checkUpdates: "Procurar atualizações do jogo",
     checking: "Procurando…",
+    forceUpdate: "Forçar atualização mais recente",
+    forcing: "Atualizando…",
     download: "Baixar o jogo…",
     location: "Pasta de instalação",
     locationPlaceholder: "Não definida",

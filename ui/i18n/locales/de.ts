@@ -293,6 +293,8 @@ export const de: Catalogue = {
     locate: "Installation suchen",
     checkUpdates: "Nach Spiel-Updates suchen",
     checking: "Suche läuft…",
+    forceUpdate: "Neuestes Update erzwingen",
+    forcing: "Wird aktualisiert…",
     download: "Spiel herunterladen…",
     location: "Installationsordner",
     locationPlaceholder: "Nicht gesetzt",

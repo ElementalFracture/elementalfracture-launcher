@@ -297,6 +297,8 @@ export const ja: Catalogue = {
     locate: "インストール先を探す",
     checkUpdates: "ゲームの更新を確認",
     checking: "確認中…",
+    forceUpdate: "最新のアップデートを強制",
+    forcing: "更新中…",
     download: "ゲームをダウンロード…",
     location: "インストール先",
     locationPlaceholder: "未設定",

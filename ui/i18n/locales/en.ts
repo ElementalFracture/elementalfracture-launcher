@@ -328,6 +328,8 @@ export const en = {
     locate: "Locate install",
     checkUpdates: "Check for game updates",
     checking: "Checking…",
+    forceUpdate: "Force latest update",
+    forcing: "Updating…",
     download: "Download game…",
     location: "Install location",
     locationPlaceholder: "Not set",
