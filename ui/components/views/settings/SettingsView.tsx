@@ -1,36 +1,30 @@
-import { useState } from "react";
-import { Button } from "@/components/shadcn/button";
 import { useUI } from "@/context/UIContext";
-import { AdvancedCard } from "./AdvancedCard";
-import { AdvancedToggleCard } from "./AdvancedToggleCard";
+import { isWindows } from "@/lib/platform";
+import { LanguageCard } from "./LanguageCard";
 import { LauncherCard } from "./LauncherCard";
-import { LauncherVersionCard } from "./LauncherVersionCard";
 import { ResetButton } from "./ResetButton";
+import { UrlsCard } from "./UrlsCard";
+import { WrapperCard } from "./WrapperCard";
 import { useSettingsForm } from "./useSettingsForm";
 import "./SettingsView.css";
 
-/** The Settings tab. One Save button covers every card's fields, so the form
-    state lives here (in useSettingsForm) rather than in the cards. */
+/** The Settings tab. Every field writes as you leave it — there is no Save —
+    but they share one writer, so the form state lives here (in useSettingsForm)
+    rather than in the cards that draw it. */
 export function SettingsView() {
   const { view } = useUI();
   const form = useSettingsForm();
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
     <section className={"view" + (view === "settings" ? " active" : "")}>
       <LauncherCard form={form} />
-      <LauncherVersionCard />
-      <AdvancedToggleCard
-        shown={showAdvanced}
-        onShownChange={setShowAdvanced}
-      />
-      {showAdvanced && <AdvancedCard form={form} />}
+      <LanguageCard form={form} />
+      {/* Both of its fields are Wine's; on Windows there is nothing to show. */}
+      {!isWindows && <WrapperCard form={form} />}
+      <UrlsCard form={form} />
 
-      <div className="save-row">
-        <ResetButton onReset={() => setShowAdvanced(false)} />
-        <Button disabled={form.saving} onClick={form.onSave}>
-          Save settings
-        </Button>
+      <div className="reset-row">
+        <ResetButton />
       </div>
     </section>
   );

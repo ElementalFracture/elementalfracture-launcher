@@ -47,8 +47,8 @@ describe("refreshAccount", () => {
     expect(result.current.settings?.is_tester).toBe(true);
   });
 
-  it("clears the cached identity when the stored token has expired", async () => {
-    // An expired token: refresh_account clears the identity on disk and answers
+  it("clears the cached identity when the stored session has expired", async () => {
+    // An expired session: refresh_account clears the identity on disk and answers
     // with the emptied account (truthy, not null), so the UI re-reads and the
     // pill flips to "session expired".
     commands.getSettings.mockResolvedValue(
@@ -160,12 +160,17 @@ describe("saveSettings", () => {
     const { result } = renderSettings();
     await waitFor(() => expect(result.current.settings).not.toBeNull());
 
-    commands.saveSettings.mockResolvedValue({ status: "error", error: "path is not writable" });
+    commands.saveSettings.mockResolvedValue({
+      status: "error",
+      error: { code: "io", params: { detail: "path is not writable" } },
+    });
+    /* The throw carries the code; `message` is it, since the prose is only
+       chosen once a locale is known. */
     await expect(
       act(async () => {
         await result.current.saveSettings(makeSettings({ game_path: "/read-only" }));
       })
-    ).rejects.toThrow("path is not writable");
+    ).rejects.toThrow("io");
     expect(result.current.settings?.game_path).toBe("/games/spellbreak");
   });
 });
@@ -177,7 +182,7 @@ describe("loginEmail", () => {
 
     commands.loginEmail.mockResolvedValue({
       status: "ok",
-      data: { username: "Breaker", is_staff: true, is_dev: false, verified: true, warning: null },
+      data: { username: "Breaker", is_staff: true, is_dev: false, is_tester: false },
     });
     commands.getSettings.mockResolvedValue(makeSettings({ username: "Breaker", is_staff: true }));
 

@@ -41,3 +41,10 @@
   font-size: 30px;
   letter-spacing: 0.03em;
 }
+
+/* One more step down, for a label a translation made longer than any English
+   one — "METTRE À JOUR" against "UPDATE". */
+.launch-plate-label.longest {
+  font-size: 24px;
+  letter-spacing: 0.02em;
+}

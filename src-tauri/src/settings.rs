@@ -1,3 +1,4 @@
+use crate::error::AppResult;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -17,22 +18,24 @@ pub struct Settings {
     /// Base URL of the account portal (serves web/api.php).
     pub play_base: String,
     pub cdn_base: String,
-    /// HTTPS endpoint that validates a token → username (POST {"token"}).
+    /// HTTPS endpoint that validates a live session → username.
     /// The in-game server host the injector connects to is derived from this.
     pub auth_url: String,
     /// Player-count sidecar endpoint (players_sidecar.py).
     pub players_url: String,
-    /// Registered username resolved from the auth token via the portal.
+    /// Registered username resolved from the stored session via the portal.
     pub username: String,
-    /// Role flags resolved alongside the username at token validation.
+    /// Role flags resolved alongside the username on each session refresh.
     /// Drive the account subheading (only staff/dev get one).
     pub is_staff: bool,
     pub is_dev: bool,
     /// Tester badge: unlocks the hidden Playtest variant.
     /// A peer of staff/dev, not implied by either.
     pub is_tester: bool,
-    /// The auth token itself — kept here so it survives before a game
-    /// folder exists and gets written into Mods/commands when one does.
+    /// The session key `/login` exchanged the email + password for. Presented
+    /// to `/auth` and the friend routes, and handed to the game through its
+    /// environment at launch (`EF_AUTH_TOKEN`) — never written into the game
+    /// folder.
     pub auth_token: String,
     /// Public "Spellbreak ID" (the unique username), from email sign-in.
     pub spellbreak_id: String,
@@ -52,18 +55,23 @@ pub struct Settings {
     pub minimize_on_close: bool,
     /// quit the launcher when the game starts.
     pub close_on_launch: bool,
+    /// UI language: a tag the frontend catalogues know ("en", "fr"), or ""
+    /// for "follow the OS". Resolved in the UI, which is the only side that
+    /// holds prose — the backend never reads this.
+    pub language: String,
 }
 
 /// Base the account endpoints hang off. Debug builds aim at the local test env
 /// (`npm run test-env`), which serves `/auth`, `/players` and the friend routes,
 /// so a fresh dev profile talks to the fixture without anyone hand-editing
-/// Settings → Advanced. Both are overridable there and the override sticks —
+/// Settings → URLs. Both are overridable there and the override sticks —
 /// this only decides where a profile starts.
 ///
-/// `play_base` stays live even in debug: the test env has no patch notes or
-/// portal API to serve, and 404s from it would be less useful than the real
-/// thing. `cdn_base` has a fixture (test-env/update.mjs) and follows the same
-/// rule as the account endpoints — see `cdn_base()`.
+/// `play_base` stays live even in debug: the test env has no portal API to
+/// serve, and 404s from it would be less useful than the real thing. (Patch
+/// notes used to be on that list; the test env serves those now — see
+/// `feed_url()` in remote.rs.) `cdn_base` has a fixture (test-env/update.mjs)
+/// and follows the same rule as the account endpoints — see `cdn_base()`.
 fn portal_base() -> &'static str {
     if cfg!(debug_assertions) {
         "http://localhost:8787"
@@ -82,7 +90,7 @@ fn portal_base() -> &'static str {
 /// debug build simply has no remote version — nothing is offered, nothing is
 /// downloaded. And with one running, an update installs *fixture* paks and a
 /// stub loader into whatever `game_path` the profile points at, so point that
-/// at a copy. Overridable in Settings → Advanced either way.
+/// at a copy. Overridable in Settings → URLs either way.
 fn cdn_base() -> &'static str {
     if cfg!(debug_assertions) {
         "http://localhost:8787"
@@ -117,6 +125,8 @@ impl Default for Settings {
             onboarded: false,
             minimize_on_close: false,
             close_on_launch: false,
+            // Empty = follow the OS; the picker in Settings writes a tag.
+            language: String::new(),
         }
     }
 }
@@ -127,7 +137,7 @@ pub fn config_dir(app: &tauri::AppHandle) -> PathBuf {
         .app_config_dir()
         .expect("no app config dir available");
     // Debug builds get their own profile under the same app dir, so `tauri dev`
-    // can't overwrite the settings — and the token — of the launcher you
+    // can't overwrite the settings — and the session — of the launcher you
     // actually play with. It also makes states the app has no way back to
     // (signed out, pre-onboarding) safe to reach: wreck the dev profile freely.
     if cfg!(debug_assertions) {
@@ -141,9 +151,9 @@ fn settings_path(app: &tauri::AppHandle) -> PathBuf {
     config_dir(app).join("settings.json")
 }
 
-/// Serializes all settings WRITES, so two load-modify-store calls (a token
-/// paste racing the install flow) can't clobber each other and silently drop a
-/// field like the token.
+/// Serializes all settings WRITES, so two load-modify-store calls (a sign-in
+/// racing the install flow) can't clobber each other and silently drop a field
+/// like the session key.
 static WRITE_LOCK: Mutex<()> = Mutex::new(());
 
 pub fn load(app: &tauri::AppHandle) -> Settings {
@@ -157,8 +167,8 @@ pub fn load(app: &tauri::AppHandle) -> Settings {
         Ok(v) => v,
         Err(e) => {
             // The file exists but won't parse (corrupted / half-written). Do
-            // NOT silently reset to defaults — that is exactly how a saved auth
-            // token vanishes without a trace. Keep the bad file so the loss is
+            // NOT silently reset to defaults — that is exactly how a saved
+            // session vanishes without a trace. Keep the bad file so the loss is
             // visible and recoverable, then fall back to defaults.
             let bak = path.with_extension("json.corrupt");
             let _ = fs::rename(&path, &bak);
@@ -175,26 +185,27 @@ pub fn load(app: &tauri::AppHandle) -> Settings {
 /// Crash-safe write: serialize to a temp file, then rename over settings.json,
 /// so an interrupted write can never leave a half-written config for the next
 /// load to treat as corrupt.
-fn write_atomic(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(s).map_err(|e| e.to_string())?;
+fn write_atomic(app: &tauri::AppHandle, s: &Settings) -> AppResult<()> {
+    let json = serde_json::to_string_pretty(s)?;
     let path = settings_path(app);
     let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, json).map_err(|e| format!("{}: {e}", tmp.display()))?;
-    fs::rename(&tmp, &path).map_err(|e| format!("{}: {e}", path.display()))
+    fs::write(&tmp, json)?;
+    fs::rename(&tmp, &path)?;
+    Ok(())
 }
 
-pub fn store(app: &tauri::AppHandle, s: &Settings) -> Result<(), String> {
+pub fn store(app: &tauri::AppHandle, s: &Settings) -> AppResult<()> {
     let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     write_atomic(app, s)
 }
 
 /// Load-modify-store under the write lock, so no concurrent writer can slip a
 /// whole-settings overwrite between the read and the write and undo an
-/// in-flight token. Returns the settings as written.
+/// in-flight sign-in. Returns the settings as written.
 pub fn mutate(
     app: &tauri::AppHandle,
     f: impl FnOnce(&mut Settings),
-) -> Result<Settings, String> {
+) -> AppResult<Settings> {
     let _guard = WRITE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let mut s = load(app);
     f(&mut s);
@@ -218,7 +229,7 @@ pub fn get_settings(app: tauri::AppHandle) -> Settings {
 
 #[tauri::command]
 #[specta::specta]
-pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
+pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> AppResult<()> {
     store(&app, &settings)
 }
 
@@ -226,125 +237,12 @@ pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), St
 /// settings so the frontend can re-run first-boot onboarding.
 #[tauri::command]
 #[specta::specta]
-pub fn reset_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+pub fn reset_settings(app: tauri::AppHandle) -> AppResult<Settings> {
     let s = Settings::default();
     store(&app, &s)?;
     Ok(s)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn pick_game_dir(app: tauri::AppHandle, title: Option<String>) -> Option<String> {
-    use tauri_plugin_dialog::DialogExt;
-    app.dialog()
-        .file()
-        .set_title(title.unwrap_or_else(|| "Select your Spellbreak folder (contains g3 and Engine)".into()))
-        .blocking_pick_folder()
-        .and_then(|f| f.into_path().ok())
-        .map(|p| p.to_string_lossy().into_owned())
-}
-
-/// True when the launcher itself runs inside a container (distrobox dev
-/// builds) — programs like the browser or wine live on the host there.
-#[cfg(target_os = "linux")]
-pub fn in_container() -> bool {
-    std::path::Path::new("/run/.containerenv").exists()
-        || std::path::Path::new("/.dockerenv").exists()
-        || std::env::var_os("container").is_some()
-}
-
-#[cfg(not(target_os = "linux"))]
-pub fn in_container() -> bool {
-    false
-}
-
-/// When in a container, xdg-open would look for a browser inside the
-/// container and silently fail. Hand the URL to the host instead.
-#[cfg(target_os = "linux")]
-fn host_open(url: &str) -> bool {
-    if !in_container() {
-        return false;
-    }
-    for prog in ["distrobox-host-exec", "flatpak-spawn"] {
-        let mut cmd = std::process::Command::new(prog);
-        if prog == "flatpak-spawn" {
-            cmd.arg("--host");
-        }
-        cmd.arg("xdg-open")
-            .arg(url)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null());
-        if cmd.spawn().is_ok() {
-            return true;
-        }
-    }
-    false
-}
-
-#[cfg(not(target_os = "linux"))]
-fn host_open(_url: &str) -> bool {
-    false
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Which branch this checks depends on the profile it's built under —
-    /// `cargo test` is a debug build, `cargo test --release` isn't — so it
-    /// pins both. The dev half is the one a "tidy up the defaults" edit would
-    /// quietly undo; the release half is the one that must never ship pointing
-    /// at localhost.
-    #[test]
-    fn account_defaults_follow_the_build_profile() {
-        let s = Settings::default();
-        if cfg!(debug_assertions) {
-            assert_eq!(s.auth_url, "http://localhost:8787/auth");
-            assert_eq!(s.players_url, "http://localhost:8787/players");
-        } else {
-            assert_eq!(s.auth_url, "https://play.elefrac.com/auth");
-            assert_eq!(s.players_url, "https://play.elefrac.com/players");
-        }
-        if cfg!(debug_assertions) {
-            assert_eq!(s.cdn_base, "http://localhost:8787");
-        } else {
-            assert_eq!(s.cdn_base, "https://cdn.elefrac.com");
-        }
-        // The portal API has no fixture, so it stays live either way.
-        assert_eq!(s.play_base, "https://play.elefrac.com");
-    }
-
-    /// `signed-out` in test-env/dev-profile.sh seeds a profile by *omitting*
-    /// the URL keys rather than writing them, which only lands on the test env
-    /// because the struct carries `#[serde(default)]`.
-    #[test]
-    fn omitted_keys_fall_back_to_defaults() {
-        let json = r#"{"game_path":"/games/ef","onboarded":true}"#;
-        let s: Settings = serde_json::from_str(json).unwrap();
-        assert_eq!(s.game_path, "/games/ef");
-        assert!(s.onboarded);
-        assert_eq!(s.auth_url, Settings::default().auth_url);
-        assert_eq!(s.players_url, Settings::default().players_url);
-        assert_eq!(s.auth_token, "");
-    }
-
-    /// The in-game server host rides on the auth URL, so pointing that at the
-    /// test env moves the host too — localhost, here.
-    #[test]
-    fn game_host_follows_the_auth_url() {
-        assert_eq!(game_host("https://play.elefrac.com/auth"), "play.elefrac.com");
-        assert_eq!(game_host("http://localhost:8787/auth"), "localhost");
-    }
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn open_url(url: String) -> Result<(), String> {
-    if !url.starts_with("https://") && !url.starts_with("http://") {
-        return Err("only http(s) links can be opened".into());
-    }
-    if host_open(&url) {
-        return Ok(());
-    }
-    open::that_detached(&url).map_err(|e| e.to_string())
-}
+#[path = "__tests/settings.rs"]
+mod tests;

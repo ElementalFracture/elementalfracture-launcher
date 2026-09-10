@@ -1,81 +1,69 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/shadcn/button";
 import { Dialog, DialogContent } from "@/components/shadcn/dialog";
-import { Input } from "@/components/shadcn/input";
+import { SignInForm } from "@/components/modals/SignInForm";
 import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import * as rust from "@/lib/rust";
-import { openLink } from "@/lib/links";
+import type { LoginResult } from "@/lib/rust";
+import { errorText } from "@/i18n/errors";
+import { _ } from "@/i18n";
 import "./modals/Dialog.css";
-
-const LINKS = {
-  discord: "https://dsc.gg/elefrac",
-  register: "https://elefrac.com/register",
-  guide: "https://elefrac.com/docs/quick-start-guide",
-};
 
 type Step = "welcome" | "game" | "signin" | "done";
 
 export function Wizard() {
-  const { showWizard, finishWizard } = useUI();
-  const { settings, saveSettings, loginEmail } = useSettings();
+  const { showWizard } = useUI();
+  return showWizard ? <WizardSteps /> : null;
+}
+
+function WizardSteps() {
+  const { finishWizard } = useUI();
+  const { settings, saveSettings } = useSettings();
   const { provisionInstall } = useGame();
 
   const [step, setStep] = useState<Step>("welcome");
   const [gameResult, setGameResult] = useState("");
   const [gameError, setGameError] = useState("");
   const [gameBusy, setGameBusy] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [signinBusy, setSigninBusy] = useState(false);
-  const [signinError, setSigninError] = useState("");
-  const [doneTitle, setDoneTitle] = useState("You're all set!");
+  /* The name, not the finished sentence — the title is built at render, so a
+     language picked after signing in still reads right. */
+  const [doneName, setDoneName] = useState("");
 
-  // Re-arm the wizard's local UI state each time it's (re)opened — this can
-  // happen more than once per app lifetime via "Reset configuration".
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (showWizard) {
-      setStep("welcome");
-      setGameResult("");
-      setGameError("");
-      setEmail("");
-      setPassword("");
-      setSigninError("");
-      setDoneTitle("You're all set!");
-    }
-  }, [showWizard]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  if (!showWizard) {
-    return null;
-  }
+  const onSignedIn = (res: LoginResult) => {
+    setDoneName(res.username ?? "");
+    setStep("done");
+  };
 
   const onLocateGame = async () => {
     setGameBusy(true);
     setGameError("");
-    setGameResult("Looking for an existing install…");
+    setGameResult(_("wizard.looking"));
     try {
       let dir = await rust.autoFindGame();
       if (!dir) {
-        dir = await rust.pickGameDir("Select your Spellbreak folder (contains g3 and Engine)");
+        dir = await rust.pickGameDir(_("wizard.pickFolder"));
       }
       if (!dir) {
-        setGameResult("No folder selected, you can set it any time in Settings.");
+        setGameResult(_("wizard.noFolder"));
         return;
       }
       if (!settings) {
         return;
       }
       await saveSettings({ ...settings, game_path: dir });
-      setGameResult("Hooked: " + dir + ", installing updates & mods…");
+      setGameResult(
+        _("wizard.hooked", { path: dir, step: _("wizard.installingMods") })
+      );
       const ok = await provisionInstall((msg, isError) => {
         if (isError) {
           setGameResult("");
           setGameError(msg);
         } else {
-          setGameResult("Hooked: " + dir + ", " + msg.toLowerCase());
+          setGameResult(
+            _("wizard.hooked", { path: dir, step: msg.toLowerCase() })
+          );
         }
       });
       // Only move on once the install actually succeeded — a failure leaves
@@ -85,35 +73,14 @@ export function Wizard() {
       }
     } catch (e) {
       setGameResult("");
-      setGameError(String(e));
+      setGameError(errorText(e));
     } finally {
       setGameBusy(false);
     }
   };
 
-  const onSignIn = async () => {
-    if (!email.trim() || !password) {
-      setSigninError("Enter your email and password.");
-      return;
-    }
-    setSigninBusy(true);
-    setSigninError("");
-    try {
-      const res = await loginEmail(email.trim(), password);
-      setDoneTitle(`You're all set, ${res.username}!`);
-      setEmail("");
-      setPassword("");
-      setStep("done");
-    } catch (e) {
-      // loginEmail throws a friendly message on any auth failure.
-      setSigninError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSigninBusy(false);
-    }
-  };
-
   return (
-    <Dialog open={showWizard} onOpenChange={() => {}}>
+    <Dialog open onOpenChange={() => {}}>
       <DialogContent
         className="wizard-panel"
         showCloseButton={false}
@@ -122,31 +89,30 @@ export function Wizard() {
       >
         {step === "welcome" && (
           <div className="wizard-step">
-            <h2>Welcome to Elemental Fracture</h2>
-            <p>We’re so glad you’re here.</p>
+            <h2>{_("wizard.welcomeTitle")}</h2>
+            <p>{_("wizard.welcomeSub")}</p>
             <div className="wizard-actions">
-              <Button onClick={() => setStep("game")}>Next</Button>
+              <Button onClick={() => setStep("game")}>
+                {_("wizard.next")}
+              </Button>
             </div>
           </div>
         )}
 
         {step === "game" && (
           <div className="wizard-step">
-            <h2>Have you set up the game before?</h2>
-            <p className="muted">
-              If Spellbreak is already on this machine, point the launcher at
-              its folder and you’re done.
-            </p>
+            <h2>{_("wizard.gameTitle")}</h2>
+            <p className="muted">{_("wizard.gameSub")}</p>
             <div className="wizard-actions">
               <Button
                 variant="secondary"
                 disabled={gameBusy}
                 onClick={() => setStep("signin")}
               >
-                No, not yet
+                {_("wizard.gameNo")}
               </Button>
               <Button disabled={gameBusy} onClick={onLocateGame}>
-                Yes, locate my install
+                {_("wizard.gameYes")}
               </Button>
             </div>
             {gameResult && <p className="muted wizard-result">{gameResult}</p>}
@@ -158,62 +124,29 @@ export function Wizard() {
 
         {step === "signin" && (
           <div className="wizard-step">
-            <h2>Sign in to Elemental Fracture</h2>
-            <p className="muted">
-              Use your Elemental Fracture email and password — the same account
-              as the website.
-            </p>
-            <Input
-              type="email"
-              placeholder="Email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setSigninError("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && onSignIn()}
+            <SignInForm
+              onSignedIn={onSignedIn}
+              actions={
+                <Button variant="ghost" onClick={() => setStep("done")}>
+                  {_("wizard.skip")}
+                </Button>
+              }
             />
-            <Input
-              type="password"
-              placeholder="Password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setSigninError("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && onSignIn()}
-            />
-            <p className="wizard-tooltip">
-              Don’t have an account?{" "}
-              <a onClick={() => openLink(LINKS.register)}>Create one</a>, or see
-              the <a onClick={() => openLink(LINKS.guide)}>quick-start guide</a>.
-            </p>
-            <div className="wizard-actions">
-              <Button
-                variant="secondary"
-                disabled={signinBusy}
-                onClick={() => setStep("done")}
-              >
-                Skip for now
-              </Button>
-              <Button disabled={signinBusy} onClick={onSignIn}>
-                {signinBusy ? "Signing in…" : "Sign in"}
-              </Button>
-            </div>
-            {signinError && (
-              <p className="wizard-result wizard-error">{signinError}</p>
-            )}
           </div>
         )}
 
         {step === "done" && (
           <div className="wizard-step">
-            <h2>{doneTitle}</h2>
-            <p className="muted">The Hollow Lands still beckon, breaker.</p>
+            <h2>
+              {doneName
+                ? _("wizard.doneTitleNamed", { name: doneName })
+                : _("wizard.doneTitle")}
+            </h2>
+            <p className="muted">{_("wizard.doneSub")}</p>
             <div className="wizard-actions">
-              <Button onClick={() => finishWizard()}>Enter the launcher</Button>
+              <Button onClick={() => finishWizard()}>
+                {_("wizard.enter")}
+              </Button>
             </div>
           </div>
         )}

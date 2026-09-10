@@ -1,4 +1,5 @@
 import type { Settings } from "@/lib/rust";
+import { DISCORD_CDN } from "@/lib/urls";
 
 /**
  * Resolve a player's chosen avatar to an image URL, or null for the
@@ -15,7 +16,7 @@ export function avatarUrl(settings: Settings | null): string | null {
     const hash = settings?.discord_avatar?.trim();
     if (id && hash) {
       const ext = hash.startsWith("a_") ? "gif" : "png";
-      return `https://cdn.discordapp.com/avatars/${id}/${hash}.${ext}?size=64`;
+      return `${DISCORD_CDN}/avatars/${id}/${hash}.${ext}?size=64`;
     }
     if (id) {
       // Default embed avatar for the new (pomelo) username scheme.
@@ -25,7 +26,7 @@ export function avatarUrl(settings: Settings | null): string | null {
       } catch {
         n = 0;
       }
-      return `https://cdn.discordapp.com/embed/avatars/${n}.png`;
+      return `${DISCORD_CDN}/embed/avatars/${n}.png`;
     }
     return null;
   }

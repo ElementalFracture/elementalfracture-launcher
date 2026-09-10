@@ -9,28 +9,29 @@ import {
 import * as rust from "@/lib/rust";
 import type { FriendStatus, FriendsData } from "@/lib/rust";
 import { useSettings } from "@/context/SettingsContext";
+import { errorText } from "@/i18n/errors";
+import { _, type Key } from "@/i18n";
 
-/** Error codes the sidecar answers with, in the wording the popover shows. */
-const FRIEND_ERRORS: Record<string, string> = {
-  user_not_found: "No player with that Spellbreak ID.",
-  cannot_friend_self: "That's you!",
-  invalid_token: "Set your account token first.",
-  username_required: "Enter a Spellbreak ID.",
-  no_pending_request: "No pending request from them.",
+/** Error codes the sidecar answers with, mapped onto the wording the popover
+    shows. */
+const FRIEND_ERRORS: Record<string, Key> = {
+  user_not_found: "friends.errors.userNotFound",
+  cannot_friend_self: "friends.errors.cannotFriendSelf",
+  invalid_token: "friends.errors.sessionExpired",
+  username_required: "friends.errors.usernameRequired",
+  no_pending_request: "friends.errors.noPendingRequest",
 };
 
 export function friendError(code?: string) {
-  return (
-    (code && FRIEND_ERRORS[code]) || "Friend server unavailable, try again."
-  );
+  return _((code && FRIEND_ERRORS[code]) || "friends.errors.unavailable");
 }
 
 export function getStatusText(status?: FriendStatus) {
   return status === "in_game"
-    ? "in game"
+    ? _("friends.inGame")
     : status === "online"
-      ? "online"
-      : "offline";
+      ? _("friends.online")
+      : _("friends.offline");
 }
 
 /** In-game first, then online, then offline. The sidecar pre-sorts by name,
@@ -59,7 +60,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const [friends, setFriends] = useState<FriendsData | null>(null);
 
-  // Every call needs a token, so a guest never reaches the sidecar at all.
+  // Every call needs a session, so a guest never reaches the sidecar at all.
   // Keyed on the value rather than the settings object: re-reading settings
   // for an unrelated field must not tear down the heartbeat below.
   const token = settings?.auth_token?.trim() ?? "";
@@ -95,13 +96,13 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         await refreshFriends();
         return null;
       } catch (e) {
-        return String(e);
+        return errorText(e);
       }
     },
     [refreshFriends]
   );
 
-  /* A new token is a new identity: drop the previous account's graph before
+  /* A new session is a new identity: drop the previous account's graph before
      pulling the new one, so no one else's friends flash up in between. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {

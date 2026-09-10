@@ -1,19 +1,25 @@
-/* ============ Settings: save row, and the switch rows its cards share ============ */
+/* ============ Settings: reset row, and the switch rows its cards share ============ */
 
-/* Destructive action on the left, primary save on the right. */
-.save-row {
+/* All that is left below the cards now that each field saves itself. Right,
+   in line with the cards' own actions — it sat left only to be opposite the
+   Save button it used to share the row with. */
+.reset-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
 }
 
 .switch-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
   font-size: 13px;
   font-weight: 600;
+}
+.switch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 /* Row label plus its "i" button, laid out inline. */
 .switch-text {

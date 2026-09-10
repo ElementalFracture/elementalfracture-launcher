@@ -15,11 +15,12 @@ import {
   type FriendAction,
 } from "@/context/FriendsContext";
 import type { FriendStatus } from "@/lib/rust";
+import { _, type Key } from "@/i18n";
 import "./FriendList.css";
 
 interface RowAction {
   label: string;
-  title: string;
+  title: Key;
   action: FriendAction;
   kind: "ok" | "no";
   /** Ask before firing. Only unfriending does — declining or cancelling a
@@ -31,18 +32,18 @@ interface RowAction {
 const FRIEND_ACTIONS: RowAction[] = [
   {
     label: "✕",
-    title: "Remove friend",
+    title: "friends.remove",
     action: "remove",
     kind: "no",
     confirm: true,
   },
 ];
 const INCOMING_ACTIONS: RowAction[] = [
-  { label: "✓", title: "Accept", action: "accept", kind: "ok" },
-  { label: "✕", title: "Decline", action: "remove", kind: "no" },
+  { label: "✓", title: "friends.accept", action: "accept", kind: "ok" },
+  { label: "✕", title: "friends.decline", action: "remove", kind: "no" },
 ];
 const OUTGOING_ACTIONS: RowAction[] = [
-  { label: "✕", title: "Cancel request", action: "remove", kind: "no" },
+  { label: "✕", title: "friends.cancelRequest", action: "remove", kind: "no" },
 ];
 
 /** One friend/request line: presence dot, name, and its actions. */
@@ -64,7 +65,6 @@ function FriendRow({
   onConfirm?: (username: string) => void;
 }) {
   const { runFriendAction } = useFriends();
-  const statusText = status ? getStatusText(status) : undefined;
   return (
     <div className="friend-row">
       <span className="status-dot" data-status={status} />
@@ -75,8 +75,10 @@ function FriendRow({
             {/* TODO verify if status is correct.
           I see online player in friend list but not in Online container
         */}
-            {statusText === "in game" && <small>{statusText}</small>}
-            {pending && <small className="friend-pending">requested</small>}
+            {status === "in_game" && <small>{getStatusText(status)}</small>}
+            {pending && (
+              <small className="friend-pending">{_("friends.requested")}</small>
+            )}
           </span>
         </div>
         {error && (
@@ -90,8 +92,11 @@ function FriendRow({
           <button
             key={a.action}
             className={a.kind}
-            title={a.title}
-            aria-label={`${a.title}: ${username}`}
+            title={_(a.title)}
+            aria-label={_("friends.actionFor", {
+              action: _(a.title),
+              name: username,
+            })}
             onClick={async () => {
               if (a.confirm && onConfirm) {
                 onConfirm(username);
@@ -163,7 +168,7 @@ export function FriendList() {
           maxLength={25}
           spellCheck={false}
           autoComplete="off"
-          placeholder="Add by Spellbreak ID (username)"
+          placeholder={_("friends.addPlaceholder")}
           value={addName}
           aria-invalid={addFriendError !== null}
           aria-describedby={addFriendError ? "friend-add-error" : undefined}
@@ -173,8 +178,12 @@ export function FriendList() {
           }}
           onKeyDown={(e) => e.key === "Enter" && onAdd()}
         />
-        <Button variant="secondary" title="Send friend request" onClick={onAdd}>
-          Add
+        <Button
+          variant="secondary"
+          title={_("friends.addTitle")}
+          onClick={onAdd}
+        >
+          {_("friends.add")}
         </Button>
       </div>
       {addFriendError && (
@@ -184,11 +193,9 @@ export function FriendList() {
       )}
 
       {!friends ? (
-        <p className="friend-empty">Loading…</p>
+        <p className="friend-empty">{_("friends.loading")}</p>
       ) : accepted.length === 0 && pending === 0 ? (
-        <p className="friend-empty">
-          No friends yet, add someone by their Spellbreak ID above.
-        </p>
+        <p className="friend-empty">{_("friends.none")}</p>
       ) : (
         /* Everything but the offline crowd starts open — that section is the
            long one and the least worth scrolling past. */
@@ -198,10 +205,12 @@ export function FriendList() {
           defaultValue={["friends", "requests"]}
         >
           <AccordionItem value="friends">
-            <AccordionTrigger>Friends ({online.length})</AccordionTrigger>
+            <AccordionTrigger>
+              {_("friends.onlineSection", { n: online.length })}
+            </AccordionTrigger>
             <AccordionContent>
               {online.length === 0 ? (
-                <p className="friend-empty">Nobody is online right now.</p>
+                <p className="friend-empty">{_("friends.onlineEmpty")}</p>
               ) : (
                 online.map((f) => (
                   <FriendRow
@@ -220,7 +229,9 @@ export function FriendList() {
 
           {pending > 0 && (
             <AccordionItem value="requests">
-              <AccordionTrigger>Requests ({pending})</AccordionTrigger>
+              <AccordionTrigger>
+                {_("friends.requestsSection", { n: pending })}
+              </AccordionTrigger>
               <AccordionContent>
                 {incoming.map((r) => (
                   <FriendRow
@@ -246,10 +257,12 @@ export function FriendList() {
           )}
 
           <AccordionItem value="offline">
-            <AccordionTrigger>Offline ({offline.length})</AccordionTrigger>
+            <AccordionTrigger>
+              {_("friends.offlineSection", { n: offline.length })}
+            </AccordionTrigger>
             <AccordionContent>
               {offline.length === 0 ? (
-                <p className="friend-empty">No offline friends.</p>
+                <p className="friend-empty">{_("friends.offlineEmpty")}</p>
               ) : (
                 offline.map((f) => (
                   <FriendRow
@@ -280,11 +293,14 @@ export function FriendList() {
           showOverlay={false}
         >
           <div className="wizard-step">
-            <h2>Remove {userToRemove} ?</h2>
+            <h2>{_("friends.confirmTitle", { name: userToRemove ?? "" })}</h2>
             <p className="muted">
-              This will remove {userToRemove} from your friends list.
+              {_("friends.confirmBody", { name: userToRemove ?? "" })}
             </p>
             <div className="wizard-actions">
+              <Button variant="secondary" onClick={() => setUserToRemove(null)}>
+                {_("friends.confirmCancel")}
+              </Button>
               <Button
                 onClick={async () => {
                   const name = userToRemove ?? "";
@@ -292,10 +308,7 @@ export function FriendList() {
                   setRowError(name, await runFriendAction("remove", name));
                 }}
               >
-                Remove
-              </Button>
-              <Button variant="secondary" onClick={() => setUserToRemove(null)}>
-                Cancel
+                {_("friends.confirmRemove")}
               </Button>
             </div>
           </div>

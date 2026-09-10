@@ -58,3 +58,10 @@
   background: var(--surface);
   color: var(--muted-foreground);
 }
+
+.row-empty {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.45;
+  padding: 2px 2px 6px;
+}

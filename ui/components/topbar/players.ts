@@ -1,12 +1,13 @@
 import type { PlayerServer } from "@/lib/rust";
 import type { GameVariant } from "@/lib/gameVariant";
+import { _, type Key } from "@/i18n";
 
 /** Server-name pattern → the mode bucket it belongs in. */
-const MODE_MATCHERS: readonly (readonly [RegExp, string])[] = [
-  [/solo/i, "Solos"],
-  [/duo/i, "Duos"],
-  [/squad/i, "Squads"],
-  [/arena|tdm|capture/i, "Arena/TDM"],
+const MODE_MATCHERS: readonly (readonly [RegExp, Key])[] = [
+  [/solo/i, "topbar.ingame.modes.solos"],
+  [/duo/i, "topbar.ingame.modes.duos"],
+  [/squad/i, "topbar.ingame.modes.squads"],
+  [/arena|tdm|capture/i, "topbar.ingame.modes.arena"],
 ];
 
 /**
@@ -33,22 +34,20 @@ export function variantOf(server: PlayerServer): GameVariant {
 
 export function modeLabel(server: PlayerServer) {
   const serverName = server.display_name || server.name || "";
-  for (const [pattern, label] of MODE_MATCHERS) {
+  for (const [pattern, key] of MODE_MATCHERS) {
     if (pattern.test(serverName)) {
-      return label;
+      return _(key);
     }
   }
-  return serverName || "Other";
+  return serverName || _("topbar.ingame.other");
 }
 
 /** Regions the breakdown leads with, in order; anything else trails them. */
 const REGION_ORDER: readonly string[] = ["NA", "EU"];
 
 /** Where a server with no region reported is filed, so it still shows up. */
-const NO_REGION = "Other";
-
 export function regionOf(server: PlayerServer): string {
-  return server.region || NO_REGION;
+  return server.region || _("topbar.ingame.other");
 }
 
 /**
@@ -83,8 +82,8 @@ export function modeRows(
   regions: readonly string[]
 ): ModeRow[] {
   const byMode = new Map<string, number[]>(
-    MODE_MATCHERS.map(([, label]): [string, number[]] => [
-      label,
+    MODE_MATCHERS.map(([, key]): [string, number[]] => [
+      _(key),
       regions.map(() => 0),
     ])
   );

@@ -334,6 +334,11 @@ main {
   line-height: 24px;
   font-weight: 700;
 }
+.title-note {
+  color: var(--muted-foreground);
+  font-weight: 400;
+  margin-left: 0.35em;
+}
 .panel-actions {
   display: flex;
   align-self: center;
@@ -401,6 +406,10 @@ code {
   font-weight: 600;
   line-height: normal;
   margin-bottom: 6px;
+}
+.field small,
+.field > [data-slot="label"] .info-btn {
+  margin-left: 0.4em;
 }
 .field small {
   color: var(--muted-foreground);

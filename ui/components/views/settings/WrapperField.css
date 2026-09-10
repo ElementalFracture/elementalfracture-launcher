@@ -1,5 +1,5 @@
 /* The wrapper picker is the Select primitive, not a native <select>; size it
-   like the text inputs next to it so the Advanced rows stay on one rhythm.
+   like the text inputs next to it so the rows around it stay on one rhythm.
    The primitive draws its own chevron. */
 [data-slot="select-trigger"] {
   height: auto;

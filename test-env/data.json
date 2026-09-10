@@ -52,26 +52,86 @@
     "Dunmarrow": "user_not_found"
   },
   "auth": {
-    "accounts": {
-      "dev": {
+    "accounts": [
+      {
+        "email": "dev@elefrac.com",
+        "password": "dev",
+        "token": "tok-dev",
         "username": "Lytion",
+        "spellbreak_id": "Lytion",
+        "avatar": "ArchLich",
         "is_dev": true
       },
-      "staff": {
+      {
+        "email": "staff@elefrac.com",
+        "password": "staff",
+        "token": "tok-staff",
         "username": "Marla",
+        "spellbreak_id": "Marla",
+        "avatar": "Pyromancer01",
         "is_staff": true
       },
-      "tester": {
+      {
+        "email": "tester@elefrac.com",
+        "password": "tester",
+        "token": "tok-tester",
         "username": "Wrenlow",
+        "spellbreak_id": "Wrenlow",
         "is_tester": true
       },
-      "player": {
-        "username": "Aurelith"
+      {
+        "email": "player@elefrac.com",
+        "password": "player",
+        "token": "tok-player",
+        "username": "Aurelith",
+        "spellbreak_id": "Aurelith",
+        "avatar": "Toxicologist02"
       },
-      "nameless": {}
-    },
-    "stall": [
-      "stall"
+      {
+        "email": "discord@elefrac.com",
+        "password": "discord",
+        "token": "tok-discord",
+        "username": "Caskwyn",
+        "spellbreak_id": "Caskwyn",
+        "avatar": "discord",
+        "discord_id": "216154200871501824",
+        "discord_avatar": ""
+      },
+      {
+        "email": "nameless@elefrac.com",
+        "password": "nameless",
+        "token": "tok-nameless"
+      },
+      {
+        "email": "unverified@elefrac.com",
+        "password": "unverified",
+        "token": "tok-unverified",
+        "username": "Pell",
+        "error": "email_unverified"
+      },
+      {
+        "email": "banned@elefrac.com",
+        "password": "banned",
+        "token": "tok-banned",
+        "username": "Vexley",
+        "error": "banned",
+        "ends": "12 September 2026",
+        "reason": "Third-party software"
+      },
+      {
+        "email": "throttled@elefrac.com",
+        "password": "throttled",
+        "token": "tok-throttled",
+        "username": "Halvard",
+        "error": "rate_limited"
+      },
+      {
+        "email": "slow@elefrac.com",
+        "password": "slow",
+        "token": "tok-slow",
+        "username": "Ilsabet",
+        "stall": true
+      }
     ]
   },
   "update": {
@@ -128,6 +188,20 @@
       "description": "Weekly casual lobbies, all ranks welcome.",
       "location": "EU West",
       "interested": 37
+    }
+  ],
+  "news": [
+    {
+      "title": "Patch 6.0.3 — Frost rework",
+      "body": "Frostbite stacks fall off faster, and the ice wall no longer blocks its own caster. Full notes on the site.",
+      "date": "Mon, 01 Sep 2026 18:00:00 +0000",
+      "url": "https://elefrac.com/patchnotes/6-0-3"
+    },
+    {
+      "title": "Community servers: EU West is live",
+      "body": "A third region joins NA and EU Central. Pick it from the server list in game.",
+      "date": "Thu, 21 Aug 2026 12:30:00 +0000",
+      "url": "https://elefrac.com/patchnotes/eu-west"
     }
   ]
 }

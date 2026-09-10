@@ -3,7 +3,12 @@
 .info-btn {
   width: 18px;
   height: 18px;
-  display: grid;
+  /* inline-grid, not grid: the button has to be able to sit on a line of text,
+     next to the label it explains. A block-level box would take the whole line
+     and drop under it. Inside a flex row — the switch rows, the variant pill —
+     this is blockified back to grid, so those are unaffected. */
+  display: inline-grid;
+  vertical-align: middle;
   place-items: center;
   flex: none;
   border: 1px solid var(--border);

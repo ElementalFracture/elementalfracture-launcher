@@ -1,5 +1,6 @@
 import "./App.css";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { LocaleGate } from "@/i18n/LocaleGate";
 import { GameProvider } from "@/context/GameContext";
 import { LiveDataProvider } from "@/context/LiveDataContext";
 import { FriendsProvider } from "@/context/FriendsContext";
@@ -23,20 +24,20 @@ function App() {
           <FriendsProvider>
             <ProgressProvider>
               <UIProvider>
-                <div id="app">
-                  <Sidebar />
-                  <main>
-                    <TopBar />
-                    <HomeView />
-                    <ModsView />
-                    <SettingsView />
-                    {/* After the views, so the scroller above it keeps the
-                        height and the strip stays on screen. */}
-                    <Footer />
-                  </main>
-                </div>
-                <Wizard />
-                <LauncherUpdatePop />
+                <LocaleGate>
+                  <div id="app">
+                    <Sidebar />
+                    <main>
+                      <TopBar />
+                      <HomeView />
+                      <ModsView />
+                      <SettingsView />
+                      <Footer />
+                    </main>
+                  </div>
+                  <Wizard />
+                  <LauncherUpdatePop />
+                </LocaleGate>
                 <Toaster />
               </UIProvider>
             </ProgressProvider>

@@ -14,17 +14,24 @@
  * Commands the backend declares fallible come back as `Result` and are
  * unwrapped here, so no caller ever branches on `status === "ok"` — they
  * use try/catch, the same as for the infallible ones.
+ *
+ * What they throw is a `BackendError`, which carries the backend's error
+ * *code* rather than a rendered sentence — the prose is picked in whatever
+ * language is on screen. Catch blocks render it with `errorText()`, or more
+ * often hand it straight to `toastError()`.
  */
 import { commands } from "@/generated/bindings";
+import { BackendError } from "@/i18n/errors";
 import type {
   Account,
+  AppError,
   FileCheck,
   GameStatus,
   LauncherUpdateInfo,
   NewsItem,
   Result,
   Settings,
-  TokenResult,
+  LoginResult,
   VersionInfo,
   WrapperOption,
 } from "@/generated/bindings";
@@ -32,22 +39,23 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type {
   Account,
+  AppError,
   FileCheck,
   GameStatus,
   LauncherUpdateInfo,
   NewsItem,
   Settings,
-  TokenResult,
+  LoginResult,
   VersionInfo,
   WrapperOption,
 };
 
 /** Collapse a backend `Result` to its value, turning the error case into a throw. */
-export function unwrap<T>(r: Result<T, string>): T {
+export function unwrap<T>(r: Result<T, AppError>): T {
   if (r.status === "ok") {
     return r.data;
   }
-  throw new Error(r.error);
+  throw new BackendError(r.error);
 }
 
 /* ---------------- settings ---------------- */
@@ -65,16 +73,16 @@ export async function resetSettings(): Promise<Settings> {
 }
 
 /** Email/password sign-in (the account the website uses). Throws on auth failure. */
-export async function loginEmail(email: string, password: string): Promise<TokenResult> {
+export async function loginEmail(email: string, password: string): Promise<LoginResult> {
   return unwrap(await commands.loginEmail(email, password));
 }
 
-/** Sign out: clears the stored token, name, avatar and roles. */
+/** Sign out: clears the stored session, name, avatar and roles. */
 export async function logout(): Promise<void> {
   unwrap(await commands.logout());
 }
 
-/** Re-check the stored token's roles. `null` = nothing to report, roles kept. */
+/** Re-check the stored session's roles. `null` = nothing to report, roles kept. */
 export async function refreshAccount(): Promise<Account | null> {
   return unwrap(await commands.refreshAccount());
 }

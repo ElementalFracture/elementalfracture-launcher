@@ -1,3 +1,5 @@
+import type { Key } from "@/i18n";
+
 export type GameVariant = "ef" | "classic" | "playtest";
 
 export interface GameVariantInfo {
@@ -5,7 +7,7 @@ export interface GameVariantInfo {
   // What the balance is called in a button, a tab or a section head.
   label: string;
   // The longer form, for a tooltip with room to say which balance it means.
-  title: string;
+  title: Key;
   /** Only shown to accounts holding the badge — the playtest channel. */
   testersOnly?: boolean;
 }
@@ -13,19 +15,19 @@ export interface GameVariantInfo {
 const EF = {
   id: "ef",
   label: "Elemental Fracture",
-  title: "Elemental Fracture Balance",
+  title: "topbar.variant.efTitle",
 } satisfies GameVariantInfo;
 
 const CLASSIC = {
   id: "classic",
   label: "Classic",
-  title: "Classic Spellbreak",
+  title: "topbar.variant.classicTitle",
 } satisfies GameVariantInfo;
 
 const PLAYTEST = {
   id: "playtest",
   label: "Playtest",
-  title: "Private playtest build",
+  title: "topbar.variant.playtestTitle",
   testersOnly: true,
 } satisfies GameVariantInfo;
 

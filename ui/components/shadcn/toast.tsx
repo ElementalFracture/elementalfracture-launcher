@@ -13,6 +13,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/shadcn/button";
+import { _ } from "@/i18n";
 
 const toast = ToastPrimitive.createToastManager();
 
@@ -124,7 +125,7 @@ function ToastClose({
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
-      aria-label="Close toast"
+      aria-label={_("common.closeToast")}
       render={render}
       className={cn(
         "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",

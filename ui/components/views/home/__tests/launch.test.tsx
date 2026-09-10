@@ -16,8 +16,12 @@ const commands = vi.hoisted(() => ({
   getVersions: vi.fn(),
   getLauncherUpdate: vi.fn(),
   updatePatch: vi.fn(),
+  // `rust.launchGame` self-heals the runtime before it launches anything, so
+  // this one is on the launch path even though no test is about it.
+  ensureRuntime: vi.fn(),
   launchGame: vi.fn(),
   quitLauncher: vi.fn(),
+  refreshAccount: vi.fn(),
   getPlayers: vi.fn(),
   getEvents: vi.fn(),
   getNews: vi.fn(),
@@ -45,8 +49,14 @@ beforeEach(() => {
   commands.getStatus.mockResolvedValue(makeStatus());
   commands.getVersions.mockResolvedValue(makeVersions());
   commands.getLauncherUpdate.mockResolvedValue({ current: "3.0.2", remote: null, update: false });
+  // The box already has a runtime, which is the branch that returns instantly.
+  commands.ensureRuntime.mockResolvedValue({
+    status: "ok",
+    data: "Game runtime already present (umu-run); nothing to set up.",
+  });
   commands.launchGame.mockResolvedValue({ status: "ok", data: null });
   commands.quitLauncher.mockResolvedValue(null);
+  commands.refreshAccount.mockResolvedValue({ status: "ok", data: null });
   commands.getPlayers.mockResolvedValue({ status: "ok", data: {} });
   commands.getEvents.mockResolvedValue({ status: "ok", data: { events: [] } });
   commands.getNews.mockResolvedValue({ status: "ok", data: [] });
@@ -180,7 +190,12 @@ describe("close on launch", () => {
 
   it("does not quit when the launch itself failed", async () => {
     commands.getSettings.mockResolvedValue(makeSettings({ close_on_launch: true }));
-    commands.launchGame.mockResolvedValue({ status: "error", error: "no wrapper" });
+    // A real AppError, not a bare string: `errorText` reads `params` off it,
+    // and a string shape only went unnoticed while the launch died earlier.
+    commands.launchGame.mockResolvedValue({
+      status: "error",
+      error: { code: "wrapperNotInstalled", params: { wrapper: "umu-run" } },
+    });
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     await launch();

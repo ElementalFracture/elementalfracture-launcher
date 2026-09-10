@@ -5,10 +5,12 @@ import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
 import { toast } from "@/lib/toast";
+import { _ } from "@/i18n";
+import { toastError } from "@/i18n/errors";
 
 /** Wipes the config back to a first-run state. Arms on the first click and
     disarms itself again shortly after, so it can't go off by accident. */
-export function ResetButton({ onReset }: { onReset: () => void }) {
+export function ResetButton() {
   const { setView } = useUI();
   const { resetSettings } = useSettings();
   const { refreshStatus } = useGame();
@@ -30,12 +32,10 @@ export function ResetButton({ onReset }: { onReset: () => void }) {
     try {
       await resetSettings();
     } catch (e) {
-      toast(String(e), true);
+      toastError(e);
       return;
     }
-    toast("Configuration reset");
-    // Back to a first-run state, advanced options included.
-    onReset();
+    toast(_("settings.reset.done"));
     refreshStatus();
     refreshPlayers();
     setView("home");
@@ -46,10 +46,10 @@ export function ResetButton({ onReset }: { onReset: () => void }) {
     <Button
       variant="destructive"
       className={armed ? "armed" : undefined}
-      title="Clear all launcher settings and run first-time setup again"
+      title={_("settings.reset.title")}
       onClick={onClick}
     >
-      {armed ? "Click again to confirm reset" : "Reset configuration"}
+      {armed ? _("settings.reset.confirm") : _("settings.reset.button")}
     </Button>
   );
 }

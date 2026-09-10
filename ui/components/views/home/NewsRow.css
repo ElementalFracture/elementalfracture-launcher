@@ -1,0 +1,25 @@
+/* ============ Home: the "What's new" carousel ============ */
+
+/* Title on the left, the carousel arrows on the same line to the right. */
+.news-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.news-nav {
+  display: flex;
+  gap: 6px;
+}
+
+/* The track clips horizontally, so leave room for the cards' hover lift. */
+.news-carousel [data-slot="carousel-content"] {
+  padding: 4px 0;
+  margin: -4px 0;
+}
+
+/* Cards share the height of the tallest one in view. */
+.news-card {
+  height: 100%;
+}

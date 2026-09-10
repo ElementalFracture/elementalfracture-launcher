@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { toGameVariant, type GameVariant } from "@/lib/gameVariant";
+import { _ } from "@/i18n";
 
 /** Hero copy per balance: EF sells the community edition, Classic the
-    preserved one, and the playtest one sets expectations for a playtest. */
-const HERO_TEXT = {
-  ef: {
-    title: "The Hollow Lands still beckon, breaker",
-    sub: "Community servers, restored battles, new balance. Spellbreak lives on.",
-  },
-  classic: {
-    title: "The Hollow Lands, as they were before.",
-    sub: "Community servers, restored battles, the original balance. Spellbreak, preserved.",
-  },
-  playtest: {
-    title: "The Hollow Lands, ahead of the storm.",
-    sub: "Unreleased balance, for testers. Expect rough edges: your feedback shapes what ships.",
-  },
-} as const;
+    preserved one, and the playtest one sets expectations for a playtest.
+
+    Read through `_` at the moment it is needed rather than held in a module
+    constant, so a language switch mid-session gets the new words — the copy
+    outlives a render here, riding in state across the fade. */
+function heroText(variant: GameVariant) {
+  return {
+    title: _(`home.hero.${variant}Title`),
+    sub: _(`home.hero.${variant}Sub`),
+  };
+}
 
 /* Both of these are the JS half of a duration the stylesheet also carries:
    they say how long to hold `body.theming` and when to swap the words, while
@@ -44,9 +41,7 @@ function setThemeClass(variant: GameVariant) {
  */
 // TODO: I think this could be done in css.
 export function useVariantTheme(variant: string | undefined) {
-  const [copy, setCopy] = useState<(typeof HERO_TEXT)[keyof typeof HERO_TEXT]>(
-    HERO_TEXT.ef
-  );
+  const [copy, setCopy] = useState(() => heroText("ef"));
   const [fading, setFading] = useState(false);
   // Which theme is on screen. Null until the first status arrives, which is
   // what tells a fresh load (apply instantly) from a real toggle (animate).
@@ -65,7 +60,7 @@ export function useVariantTheme(variant: string | undefined) {
 
     if (first) {
       setThemeClass(theme);
-      setCopy(HERO_TEXT[theme]);
+      setCopy(heroText(theme));
       return;
     }
 
@@ -79,7 +74,7 @@ export function useVariantTheme(variant: string | undefined) {
       THEME_MS
     );
     const swap = setTimeout(() => {
-      setCopy(HERO_TEXT[theme]);
+      setCopy(heroText(theme));
       setFading(false);
     }, COPY_SWAP_MS);
     return () => {

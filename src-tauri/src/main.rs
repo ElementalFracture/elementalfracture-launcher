@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod download;
+mod error;
 mod game;
 mod mods;
+mod platform;
 mod remote;
 mod settings;
 
@@ -35,8 +37,8 @@ fn main() {
         settings::get_settings,
         settings::save_settings,
         settings::reset_settings,
-        settings::pick_game_dir,
-        settings::open_url,
+        platform::pick_game_dir,
+        platform::open_url,
         game::get_status,
         game::set_variant,
         game::launch_game,

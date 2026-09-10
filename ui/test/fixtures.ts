@@ -22,6 +22,7 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     onboarded: true,
     minimize_on_close: false,
     close_on_launch: false,
+    language: "",
     ...over,
   };
 }
