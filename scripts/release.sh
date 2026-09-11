@@ -19,16 +19,24 @@
 # glibc of whatever box built it: a build from the Fedora toolbox (glibc 2.42)
 # refuses to start on every Ubuntu LTS and the Steam Deck. 2.35 is the floor
 # we ship, and the script refuses to stage anything above it.
-#     distrobox enter Humble-ROS2 -- bash scripts/release.sh <X.Y.Z> [--upload]
+#     distrobox enter Humble-ROS2 -- bash scripts/release.sh <X.Y.Z> [--upload|--upload-only]
 #
 set -euo pipefail
 
 VERSION="${1:-}"
 UPLOAD=0
-[ "${2:-}" = "--upload" ] && UPLOAD=1
+BUILD=1
+case "${2:-}" in
+    --upload)      UPLOAD=1 ;;
+    # Publish what a previous run left in staging/ (its upload failed, or it
+    # was staged on purpose) without building again.
+    --upload-only) UPLOAD=1; BUILD=0 ;;
+    "") ;;
+    *) echo "unknown option: $2" >&2; exit 1 ;;
+esac
 
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "usage: $(basename "$0") <X.Y.Z> [--upload]" >&2
+    echo "usage: $(basename "$0") <X.Y.Z> [--upload|--upload-only]" >&2
     exit 1
 fi
 
@@ -44,9 +52,11 @@ MAX_GLIBC="2.35"                             # Ubuntu 22.04; what the AppImage m
 export PATH="$HOME/.cargo/bin:$PATH"
 export APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1  # linuxdeploy/appimagetool can't FUSE-mount in a toolbox
 
-# Fail fast: the host's own glibc is the floor the bundle inherits.
+# Fail fast: the host's own glibc is the floor the bundle inherits. Only a
+# build cares; --upload-only can run anywhere the mc alias and release key are
+# (in practice the host, since the toolbox has its own HOME).
 HOST_GLIBC="$(getconf GNU_LIBC_VERSION | grep -oE '[0-9]+\.[0-9]+$')"
-if [ "$(printf '%s\n%s\n' "$MAX_GLIBC" "$HOST_GLIBC" | sort -V | tail -1)" != "$MAX_GLIBC" ]; then
+if [ "$BUILD" = 1 ] && [ "$(printf '%s\n%s\n' "$MAX_GLIBC" "$HOST_GLIBC" | sort -V | tail -1)" != "$MAX_GLIBC" ]; then
     echo "!! this box has glibc $HOST_GLIBC; the AppImage must be built on glibc <= $MAX_GLIBC (Humble-ROS2)." >&2
     exit 1
 fi
@@ -65,33 +75,106 @@ assert_glibc_floor() {
     fi
 }
 
-echo "==> Bumping version to $VERSION"
-sed -i -E 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "'"$VERSION"'"/' "$SRC/Cargo.toml"
-sed -i -E 's/("version"[[:space:]]*:[[:space:]]*)"[0-9]+\.[0-9]+\.[0-9]+"/\1"'"$VERSION"'"/' "$SRC/tauri.conf.json"
+# Libraries that must always come from the player's system, never the bundle.
+# linuxdeploy decides what to vendor from a built-in exclude list, and that list
+# differs between the linuxdeploy builds cargo-tauri downloads (no pin, no
+# checksum): the one fetched on 2026-09-10 vendors Ubuntu 22.04's libwayland
+# 1.20, which the 3.0.x builds never carried. Loaded ahead of the system copy it
+# breaks the host's Mesa EGL driver (libEGL_mesa needs libwayland >= 1.23
+# symbols), so on any machine without a second EGL vendor the WebKit web
+# process dies with "Could not create default EGL display: EGL_BAD_PARAMETER.
+# Aborting..." and the launcher is a blank window (3.1.0 and 3.1.1). NVIDIA
+# machines keep working, which is how it slipped through local testing.
+HOST_ONLY_LIBS='libwayland-client.so* libwayland-cursor.so* libwayland-egl.so* libwayland-server.so*'
 
-echo "==> Building Linux AppImage"
-( cd "$ROOT" && cargo tauri build --bundles appimage )
-assert_glibc_floor "$SRC/target/release/bundle/appimage/Elemental Fracture.AppDir"
+# strip_host_libs <AppDir>: drop HOST_ONLY_LIBS wherever linuxdeploy put them.
+strip_host_libs() {
+    local pat f
+    for pat in $HOST_ONLY_LIBS; do
+        for f in "$1"/usr/lib/$pat "$1"/usr/lib/x86_64-linux-gnu/$pat; do
+            [ -e "$f" ] || continue
+            echo "==> Dropping bundled $(basename "$f") (must come from the host)"
+            rm -f "$f"
+        done
+    done
+}
 
-echo "==> Building Windows exe"
-# MUST use `cargo tauri build`, not plain `cargo build`: on Tauri v2 a raw cargo build
-# produces a DEV binary that loads devUrl (http://localhost:1420) and shows
-# "localhost refused to connect" instead of the embedded frontend. The tauri CLI is what
-# sets the production context that serves the bundled UI. --no-bundle = just the exe.
-( cd "$ROOT" && cargo tauri build --target x86_64-pc-windows-gnu --no-bundle )
+# repack_appimage <AppDir> <out.AppImage>: linuxdeploy wrote the AppImage before
+# the AppDir was pruned, so pack it again with the same appimagetool plugin
+# cargo-tauri uses (it lands in ~/.cache/tauri during the build).
+repack_appimage() {
+    local appdir="$1" out="$2" plugin="$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage"
+    [ -x "$plugin" ] || { echo "!! $plugin missing; cargo tauri build should have fetched it" >&2; exit 1; }
+    rm -f "$out"
+    ( cd "$(dirname "$out")" && OUTPUT="$(basename "$out")" ARCH=x86_64 "$plugin" --appdir "$appdir" >/dev/null )
+    [ -s "$out" ] || { echo "!! repack produced no AppImage at $out" >&2; exit 1; }
+}
 
-echo "==> Staging artifacts -> $DIST"
-mkdir -p "$DIST"
-cp "$SRC/target/release/bundle/appimage/Elemental Fracture_${VERSION}_amd64.AppImage" "$DIST/ef-launcher.AppImage"
-cp "$SRC/target/x86_64-pc-windows-gnu/release/ef-launcher.exe"                        "$DIST/ef-launcher.exe"
+# assert_no_host_libs <AppImage>: the shipped image must not carry HOST_ONLY_LIBS.
+assert_no_host_libs() {
+    local tmp bad="" pat
+    tmp="$(mktemp -d)"
+    ( cd "$tmp" && "$1" --appimage-extract >/dev/null )
+    for pat in $HOST_ONLY_LIBS; do
+        bad+="$(find "$tmp/squashfs-root" -name "$pat" -printf '%f ')"
+    done
+    rm -rf "$tmp"
+    if [ -n "$bad" ]; then
+        echo "!! AppImage still bundles host-only libs: $bad. Not staging." >&2
+        exit 1
+    fi
+    echo "==> AppImage carries no host-only libs"
+}
 
-# config.ini: start from the live one so GameVersion is preserved, then bump LauncherVersion.
-if ! curl -fsSL "$CDN_PUBLIC/config.ini" -o "$DIST/config.ini" 2>/dev/null; then
-    printf '[Versions]\nLauncherVersion=%s\nGameVersion=6.0.2\n' "$VERSION" > "$DIST/config.ini"
-fi
-sed -i -E 's/^LauncherVersion=.*/LauncherVersion='"$VERSION"'/' "$DIST/config.ini"
+build_and_stage() {
+    echo "==> Bumping version to $VERSION"
+    sed -i -E 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "'"$VERSION"'"/' "$SRC/Cargo.toml"
+    sed -i -E 's/("version"[[:space:]]*:[[:space:]]*)"[0-9]+\.[0-9]+\.[0-9]+"/\1"'"$VERSION"'"/' "$SRC/tauri.conf.json"
 
-ls -la "$DIST"
+    echo "==> Building Linux AppImage"
+    ( cd "$ROOT" && cargo tauri build --bundles appimage )
+    APPDIR="$SRC/target/release/bundle/appimage/Elemental Fracture.AppDir"
+    APPIMAGE_OUT="$SRC/target/release/bundle/appimage/Elemental Fracture_${VERSION}_amd64.AppImage"
+    assert_glibc_floor "$APPDIR"
+    strip_host_libs "$APPDIR"
+    repack_appimage "$APPDIR" "$APPIMAGE_OUT"
+    assert_no_host_libs "$APPIMAGE_OUT"
+
+    echo "==> Building Windows exe"
+    # MUST use `cargo tauri build`, not plain `cargo build`: on Tauri v2 a raw cargo build
+    # produces a DEV binary that loads devUrl (http://localhost:1420) and shows
+    # "localhost refused to connect" instead of the embedded frontend. The tauri CLI is what
+    # sets the production context that serves the bundled UI. --no-bundle = just the exe.
+    ( cd "$ROOT" && cargo tauri build --target x86_64-pc-windows-gnu --no-bundle )
+
+    echo "==> Staging artifacts -> $DIST"
+    mkdir -p "$DIST"
+    cp "$APPIMAGE_OUT" "$DIST/ef-launcher.AppImage"
+    cp "$SRC/target/x86_64-pc-windows-gnu/release/ef-launcher.exe"                        "$DIST/ef-launcher.exe"
+
+    # config.ini: start from the live one so GameVersion is preserved, then bump LauncherVersion.
+    if ! curl -fsSL "$CDN_PUBLIC/config.ini" -o "$DIST/config.ini" 2>/dev/null; then
+        printf '[Versions]\nLauncherVersion=%s\nGameVersion=6.0.2\n' "$VERSION" > "$DIST/config.ini"
+    fi
+    sed -i -E 's/^LauncherVersion=.*/LauncherVersion='"$VERSION"'/' "$DIST/config.ini"
+
+    ls -la "$DIST"
+}
+
+# check_staged: --upload-only publishes what a previous run left in staging/.
+check_staged() {
+    local f
+    for f in ef-launcher.AppImage ef-launcher.exe config.ini; do
+        [ -s "$DIST/$f" ] || { echo "!! $DIST/$f missing; run without --upload-only to build $VERSION" >&2; exit 1; }
+    done
+    grep -qE "^LauncherVersion=$VERSION[[:space:]]*$" "$DIST/config.ini" \
+        || { echo "!! staged config.ini is not LauncherVersion=$VERSION" >&2; exit 1; }
+    assert_no_host_libs "$DIST/ef-launcher.AppImage"
+    echo "==> Publishing previously staged $VERSION from $DIST"
+    ls -la "$DIST"
+}
+
+if [ "$BUILD" = 1 ]; then build_and_stage; else check_staged; fi
 
 if [ "$UPLOAD" = 1 ]; then
     export MC_CONFIG_DIR="${MC_CONFIG_DIR:-$HOME/.mc}"
@@ -102,6 +185,14 @@ if [ "$UPLOAD" = 1 ]; then
             echo "==> Fetching mc (not on PATH)"
             curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o "$MC" && chmod +x "$MC"
         fi
+    fi
+    # The alias lives in the host user's ~/.mc. A toolbox with its own HOME
+    # (Humble-ROS2 uses ~/Dev/ARC) does not see it, mc then treats "efcdn/..."
+    # as a local path, and set -e would end the script without a word.
+    if ! "$MC" alias ls 2>/dev/null | grep -qx "${ALIAS%%/*}"; then
+        echo "!! mc alias '${ALIAS%%/*}' not found under MC_CONFIG_DIR=$MC_CONFIG_DIR." >&2
+        echo "   Pass MC_CONFIG_DIR=/var/home/<you>/.mc, or run '$(basename "$0") $VERSION --upload-only' on the host." >&2
+        exit 1
     fi
 
     PREV="$("$MC" cat "$ALIAS/config.ini" 2>/dev/null | sed -nE 's/^LauncherVersion=//p' | tr -d '[:space:]')"
@@ -127,6 +218,7 @@ else
     echo "    Upload the binaries with:  mc cp --attr Cache-Control=no-cache \"$DIST/ef-launcher.AppImage\" $ALIAS/  &&  mc cp --attr Cache-Control=no-cache \"$DIST/ef-launcher.exe\" $ALIAS/"
     echo "    Then publish from Discord:  /publishlauncher version:$VERSION"
     echo "    Then re-sign the manifest:  scripts/sign-manifest.sh --upload"
+    echo "    Or do all of that in one go:  scripts/release.sh $VERSION --upload-only"
 fi
 
 echo
