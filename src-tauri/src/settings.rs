@@ -239,14 +239,35 @@ pub fn save_settings(app: tauri::AppHandle, settings: Settings) -> AppResult<()>
     store(&app, &settings)
 }
 
-/// Wipe the stored configuration back to defaults. Returns the fresh
-/// settings so the frontend can re-run first-boot onboarding.
+/// Put the fields the Settings view draws back to their defaults, in place.
+/// Everything else the config holds — the install path, the signed-in session
+/// and the account it resolved to, onboarding, the accepted manifest version —
+/// is reached from elsewhere in the app, so the reset button on that view
+/// leaves it alone.
+fn reset_view_fields(s: &mut Settings) {
+    let d = Settings::default();
+    // Launcher card.
+    s.minimize_on_close = d.minimize_on_close;
+    s.close_on_launch = d.close_on_launch;
+    // Language card.
+    s.language = d.language;
+    // Wrapper card (hidden on Windows, but reset either way — a prefix left
+    // over from a Linux profile shouldn't survive a reset just because the
+    // card that writes it isn't on screen).
+    s.launch_command = d.launch_command;
+    s.wine_prefix = d.wine_prefix;
+    // URLs card.
+    s.cdn_base = d.cdn_base;
+    s.auth_url = d.auth_url;
+    s.players_url = d.players_url;
+}
+
+/// Reset the settings shown on the Settings view. Returns the settings as
+/// written, so the form can mirror them straight back out.
 #[tauri::command]
 #[specta::specta]
 pub fn reset_settings(app: tauri::AppHandle) -> AppResult<Settings> {
-    let s = Settings::default();
-    store(&app, &s)?;
-    Ok(s)
+    mutate(&app, reset_view_fields)
 }
 
 #[cfg(test)]

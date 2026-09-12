@@ -182,7 +182,7 @@ describe("the language picker", () => {
     commands.getSettings.mockResolvedValue(makeSettings({ language: "fr" }));
     renderApp();
     expect(
-      await screen.findByText("Réinitialiser la configuration")
+      await screen.findByText("Réinitialiser les paramètres")
     ).toBeTruthy();
   });
 
@@ -200,7 +200,7 @@ describe("the language picker", () => {
   it("falls back to English for a language with no catalogue", async () => {
     commands.getSettings.mockResolvedValue(makeSettings({ language: "de" }));
     renderApp();
-    expect(await screen.findByText("Reset configuration")).toBeTruthy();
+    expect(await screen.findByText("Reset settings")).toBeTruthy();
   });
 
   /* No restart, no reload: the write lands, LocaleGate sees the new setting
@@ -208,7 +208,7 @@ describe("the language picker", () => {
   it("switches the UI as soon as a language is picked", async () => {
     commands.getSettings.mockResolvedValue(makeSettings({ language: "" }));
     renderApp();
-    await screen.findByText("Reset configuration");
+    await screen.findByText("Reset settings");
 
     fireEvent.click(
       await screen.findByRole("combobox", { name: /Display language/ })
@@ -221,7 +221,7 @@ describe("the language picker", () => {
       )
     );
     expect(
-      await screen.findByText("Réinitialiser la configuration")
+      await screen.findByText("Réinitialiser les paramètres")
     ).toBeTruthy();
   });
 });

@@ -66,10 +66,10 @@ export const zhHans: Catalogue = {
       playersHelp: "（玩家数服务接口）",
     },
     reset: {
-      button: "重置配置",
+      button: "重置设置",
       confirm: "再次点击以确认重置",
-      title: "清除所有启动器设置并重新进行初次设置",
-      done: "配置已重置",
+      title: "将此页面的设置恢复为默认值",
+      done: "设置已重置",
     },
   },
 

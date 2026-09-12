@@ -65,11 +65,11 @@ export const it: Catalogue = {
       playersHelp: "(endpoint del servizio giocatori)",
     },
     reset: {
-      button: "Reimposta la configurazione",
+      button: "Reimposta le impostazioni",
       confirm: "Fai clic di nuovo per confermare",
       title:
-        "Cancella tutte le impostazioni del launcher e rifai la configurazione iniziale",
-      done: "Configurazione reimpostata",
+        "Riporta le impostazioni di questa pagina ai valori predefiniti",
+      done: "Impostazioni reimpostate",
     },
   },
 

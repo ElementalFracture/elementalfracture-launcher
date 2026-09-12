@@ -65,11 +65,11 @@ export const de: Catalogue = {
       playersHelp: "(Endpunkt des Spielerdiensts)",
     },
     reset: {
-      button: "Konfiguration zurücksetzen",
+      button: "Einstellungen zurücksetzen",
       confirm: "Zum Bestätigen erneut klicken",
       title:
-        "Alle Launcher-Einstellungen löschen und die Ersteinrichtung erneut starten",
-      done: "Konfiguration zurückgesetzt",
+        "Die Einstellungen auf dieser Seite auf die Standardwerte zurücksetzen",
+      done: "Einstellungen zurückgesetzt",
     },
   },
 

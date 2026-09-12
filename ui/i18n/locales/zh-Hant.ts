@@ -68,7 +68,7 @@ export const zhHant: Catalogue = {
     reset: {
       button: "重設設定",
       confirm: "再按一次以確認重設",
-      title: "清除所有啟動器設定並重新進行初次設定",
+      title: "將此頁面的設定還原為預設值",
       done: "設定已重設",
     },
   },

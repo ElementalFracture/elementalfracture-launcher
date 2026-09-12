@@ -47,3 +47,54 @@ fn game_host_follows_the_auth_url() {
     assert_eq!(game_host("https://play.elefrac.com/auth"), "play.elefrac.com");
     assert_eq!(game_host("http://localhost:8787/auth"), "localhost");
 }
+
+/// The reset button lives on the Settings view, so it undoes what that view
+/// can write and nothing more. The session, the install and onboarding are
+/// reached from elsewhere in the app and have to survive it — wiping the
+/// token here would sign the player out of a launcher they only wanted to
+/// put the URLs straight in.
+#[test]
+fn reset_only_touches_the_settings_view_fields() {
+    let mut s = Settings {
+        game_path: "/games/ef".into(),
+        auth_token: "session-key".into(),
+        username: "Zephyr".into(),
+        spellbreak_id: "Zephyr#1".into(),
+        is_tester: true,
+        avatar: "ArchLich".into(),
+        discord_id: "1234".into(),
+        onboarded: true,
+        manifest_version: 7,
+        // What the view owns, all moved off default.
+        minimize_on_close: true,
+        close_on_launch: true,
+        language: "ja".into(),
+        launch_command: "wine".into(),
+        wine_prefix: "/home/p/.wine".into(),
+        cdn_base: "http://elsewhere/cdn".into(),
+        auth_url: "http://elsewhere/auth".into(),
+        players_url: "http://elsewhere/players".into(),
+        ..Settings::default()
+    };
+    reset_view_fields(&mut s);
+
+    let d = Settings::default();
+    assert_eq!(s.minimize_on_close, d.minimize_on_close);
+    assert_eq!(s.close_on_launch, d.close_on_launch);
+    assert_eq!(s.language, d.language);
+    assert_eq!(s.launch_command, d.launch_command);
+    assert_eq!(s.wine_prefix, d.wine_prefix);
+    assert_eq!(s.cdn_base, d.cdn_base);
+    assert_eq!(s.auth_url, d.auth_url);
+    assert_eq!(s.players_url, d.players_url);
+
+    assert_eq!(s.game_path, "/games/ef");
+    assert_eq!(s.auth_token, "session-key");
+    assert_eq!(s.username, "Zephyr");
+    assert_eq!(s.spellbreak_id, "Zephyr#1");
+    assert!(s.is_tester);
+    assert_eq!(s.avatar, "ArchLich");
+    assert_eq!(s.discord_id, "1234");
+    assert!(s.onboarded);
+    assert_eq!(s.manifest_version, 7);
+}

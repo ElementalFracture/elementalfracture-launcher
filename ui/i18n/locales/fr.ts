@@ -64,11 +64,11 @@ export const fr: Catalogue = {
       playersHelp: "(point de terminaison du service de joueurs)",
     },
     reset: {
-      button: "Réinitialiser la configuration",
+      button: "Réinitialiser les paramètres",
       confirm: "Cliquez à nouveau pour confirmer",
       title:
-        "Effacer tous les paramètres du launcher et relancer la configuration initiale",
-      done: "Configuration réinitialisée",
+        "Rétablir les paramètres de cette page à leurs valeurs par défaut",
+      done: "Paramètres réinitialisés",
     },
   },
 

@@ -196,18 +196,40 @@ describe("loginEmail", () => {
 });
 
 describe("resetSettings", () => {
-  it("returns the wiped settings and clears onboarded so the wizard re-runs", async () => {
+  /* Reset is the Settings view's own button: it puts that view's fields back
+     and leaves the rest — install, session, onboarding — where they were, so
+     nobody is signed out or sent back through the wizard for straightening
+     out a URL. */
+  it("mirrors the reset settings without disturbing the install or session", async () => {
+    commands.getSettings.mockResolvedValue(
+      makeSettings({
+        game_path: "/games/ef",
+        username: "Doobs",
+        onboarded: true,
+        language: "ja",
+        wine_prefix: "/home/p/.wine",
+      })
+    );
     const { result } = renderSettings();
-    await waitFor(() => expect(result.current.settings).not.toBeNull());
+    await waitFor(() => expect(result.current.settings?.language).toBe("ja"));
 
     commands.resetSettings.mockResolvedValue({
       status: "ok",
-      data: makeSettings({ game_path: "", username: "", onboarded: false }),
+      data: makeSettings({
+        game_path: "/games/ef",
+        username: "Doobs",
+        onboarded: true,
+        language: "",
+        wine_prefix: "",
+      }),
     });
     await act(async () => {
       await result.current.resetSettings();
     });
-    expect(result.current.settings?.onboarded).toBe(false);
-    expect(result.current.settings?.game_path).toBe("");
+    expect(result.current.settings?.language).toBe("");
+    expect(result.current.settings?.wine_prefix).toBe("");
+    expect(result.current.settings?.onboarded).toBe(true);
+    expect(result.current.settings?.game_path).toBe("/games/ef");
+    expect(result.current.settings?.username).toBe("Doobs");
   });
 });

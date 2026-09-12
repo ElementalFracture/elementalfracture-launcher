@@ -71,7 +71,7 @@ export const ja: Catalogue = {
     reset: {
       button: "設定をリセット",
       confirm: "もう一度クリックでリセット",
-      title: "ランチャーの設定をすべて消去し、初回セットアップをやり直します",
+      title: "このページの設定を初期値に戻します",
       done: "設定をリセットしました",
     },
   },

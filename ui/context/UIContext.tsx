@@ -31,8 +31,8 @@ export function UIProvider({ children }: { children: ReactNode }) {
     setShowWizard(false);
   }, [settings, saveSettings]);
 
-  // Re-open onboarding whenever the loaded settings say it hasn't run yet —
-  // covers both first launch and "Reset configuration".
+  // Re-open onboarding whenever the loaded settings say it hasn't run yet.
+  // First launch, in practice: "Reset settings" leaves onboarded alone.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (settings && !settings.onboarded) {

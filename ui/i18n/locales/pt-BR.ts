@@ -66,11 +66,11 @@ export const ptBR: Catalogue = {
       playersHelp: "(endpoint do serviço de jogadores)",
     },
     reset: {
-      button: "Redefinir a configuração",
+      button: "Redefinir as configurações",
       confirm: "Clique de novo para confirmar",
       title:
-        "Apagar todas as configurações do launcher e refazer a configuração inicial",
-      done: "Configuração redefinida",
+        "Restaurar as configurações desta página para os valores padrão",
+      done: "Configurações redefinidas",
     },
   },
 

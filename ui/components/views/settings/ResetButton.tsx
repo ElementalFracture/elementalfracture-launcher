@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/shadcn/button";
-import { useUI } from "@/context/UIContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useGame } from "@/context/GameContext";
 import { useLiveData } from "@/context/LiveDataContext";
@@ -8,10 +7,11 @@ import { toast } from "@/lib/toast";
 import { _ } from "@/i18n";
 import { toastError } from "@/i18n/errors";
 
-/** Wipes the config back to a first-run state. Arms on the first click and
-    disarms itself again shortly after, so it can't go off by accident. */
+/** Puts the fields on this view back to their defaults — the session, the
+    install and onboarding are written elsewhere and are left alone. Arms on
+    the first click and disarms itself again shortly after, so it can't go off
+    by accident. */
 export function ResetButton() {
-  const { setView } = useUI();
   const { resetSettings } = useSettings();
   const { refreshStatus } = useGame();
   const { refreshPlayers } = useLiveData();
@@ -36,10 +36,10 @@ export function ResetButton() {
       return;
     }
     toast(_("settings.reset.done"));
+    // The wrapper and the URLs are back to defaults, so whatever reads them
+    // is re-pulled — same rule the form itself follows for a REPOINTS field.
     refreshStatus();
     refreshPlayers();
-    setView("home");
-    // UIProvider reactively re-opens the wizard once it sees onboarded: false.
   };
 
   return (

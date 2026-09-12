@@ -70,7 +70,7 @@ export const ko: Catalogue = {
     reset: {
       button: "설정 초기화",
       confirm: "초기화하려면 한 번 더 클릭",
-      title: "런처 설정을 모두 지우고 초기 설정을 다시 진행합니다",
+      title: "이 페이지의 설정을 기본값으로 되돌립니다",
       done: "설정을 초기화했습니다",
     },
   },

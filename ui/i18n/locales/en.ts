@@ -69,10 +69,10 @@ export const en = {
       playersHelp: "(players sidecar endpoint)",
     },
     reset: {
-      button: "Reset configuration",
+      button: "Reset settings",
       confirm: "Click again to confirm reset",
-      title: "Clear all launcher settings and run first-time setup again",
-      done: "Configuration reset",
+      title: "Put the settings on this page back to their defaults",
+      done: "Settings reset",
     },
   },
 
