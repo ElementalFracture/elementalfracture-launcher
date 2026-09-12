@@ -50,9 +50,13 @@ pub struct Manifest {
     /// Monotonic. The release tooling stamps the publish time in seconds, so
     /// a later release is always a higher number.
     pub version: u64,
+    // Part of the signed document (sign-manifest.sh writes both) for whoever
+    // reads it by hand; the launcher itself never acts on them.
     #[serde(default)]
+    #[allow(dead_code)]
     pub released_at: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub launcher_version: String,
     /// CDN-relative path → lowercase hex SHA-256. Every payload the launcher
     /// downloads is keyed here; a missing key fails the download.
@@ -125,6 +129,8 @@ async fn fetch_bytes(client: &reqwest::Client, url: &str) -> AppResult<Vec<u8>> 
 /// so the update flow can be driven against fixture bytes without the real
 /// signing key ever being near a dev box.
 async fn trusted_keys(client: &reqwest::Client, cdn: &str) -> Vec<[u8; 32]> {
+    // Only the debug-only block below pushes to it.
+    #[cfg_attr(not(debug_assertions), allow(unused_mut))]
     let mut keys: Vec<[u8; 32]> = RELEASE_KEYS.to_vec();
     #[cfg(debug_assertions)]
     {

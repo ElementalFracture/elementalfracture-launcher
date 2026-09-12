@@ -11,7 +11,7 @@ mod settings;
 // Only used by the debug-only bindings export below, so it has to carry the
 // same cfg or release builds warn about an unused import.
 #[cfg(debug_assertions)]
-use specta_typescript::Typescript;
+use specta_typescript::{BigIntExportBehavior, Typescript};
 use tauri::Manager;
 use tauri_specta::{collect_commands, Builder};
 
@@ -67,11 +67,15 @@ fn main() {
     ]);
 
     // Regenerated on every debug run so the frontend's typed bindings never
-    // drift from the actual Rust command signatures.
+    // drift from the actual Rust command signatures. u64s cross IPC as plain
+    // JSON numbers, so `number` is what JS really gets; specta's default is to
+    // refuse the export (and leave an empty bindings.ts) on any 64-bit field.
     #[cfg(debug_assertions)]
     builder
         .export(
-            Typescript::default().header("// @ts-nocheck\n"),
+            Typescript::default()
+                .header("// @ts-nocheck\n")
+                .bigint(BigIntExportBehavior::Number),
             "../ui/generated/bindings.ts",
         )
         .expect("failed to export typescript bindings");

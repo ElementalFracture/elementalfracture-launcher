@@ -15,9 +15,9 @@ use std::path::Path;
 /// Marked Hidden on Windows (a dot prefix only hides it on Linux).
 pub(super) fn write_hidden_mode(root: &Path, mode: &str) {
     let path = root.join(".ef_mode");
-    if fs::write(&path, format!("{mode}\n")).is_err() {
+    let Ok(()) = fs::write(&path, format!("{mode}\n")) else {
         return;
-    }
+    };
     #[cfg(windows)]
     {
         use std::os::windows::ffi::OsStrExt;
