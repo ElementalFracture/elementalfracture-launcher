@@ -119,8 +119,12 @@ ENTRIES+=("runtime/$(basename "$UMU_URL")=$(hash_url "$UMU_URL")")
 # re-serialised: compact JSON, sorted keys, `version` = publish time in seconds
 # (the launcher refuses a manifest whose version is below one it has seen, so
 # this must only ever go up).
+# Marla's /cdn signs too, and bumps past the live version when two releases land in the same second, so never
+# publish a version at or below the live one.
 VERSION="$(date -u +%s)"
-RELEASED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+LIVE_VERSION="$("$MC" cat "$ALIAS/launcher/manifest.json" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version", 0))' 2>/dev/null || echo 0)"
+if [ "${LIVE_VERSION:-0}" -ge "$VERSION" ]; then VERSION=$((LIVE_VERSION + 1)); fi
+RELEASED="$(date -u -d "@$VERSION" +%Y-%m-%dT%H:%M:%SZ)"
 python3 - "$OUT/manifest.json" "$VERSION" "$RELEASED" "$LAUNCHER_VERSION" "${ENTRIES[@]}" <<'EOF'
 import json, sys
 out, version, released, launcher, *entries = sys.argv[1:]

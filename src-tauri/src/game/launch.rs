@@ -219,6 +219,7 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     cmd.args(&argv[1..]);
     cmd.current_dir(exe.parent().unwrap());
     sanitize_appimage_env(&mut cmd);
+    crate::steam::restore_game_env(&mut cmd);
 
     // Auth handoff: the environment the game is spawned with. Nothing is
     // written to the game folder — the session key stays out of a directory
@@ -242,10 +243,10 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     let _ = fs::remove_file(cmds_dir.join("ef_server.txt"));
     let _ = fs::remove_file(root.join(".ef_auth"));
 
-    cmd.spawn()
-        .map_err(|e| {
-            AppError::detail(ErrorCode::LaunchFailed, e).with("command", argv.join(" "))
-        })?;
+    let child = cmd.spawn().map_err(|e| {
+        AppError::detail(ErrorCode::LaunchFailed, e).with("command", argv.join(" "))
+    })?;
+    crate::steam::watch_game(&app, child);
     Ok(())
 }
 

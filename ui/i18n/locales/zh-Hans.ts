@@ -37,6 +37,24 @@ export const zhHans: Catalogue = {
       closeOnLaunchHelp:
         "游戏启动后稍等片刻自动关闭启动器，以便在游戏时释放内存。",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "关闭 Steam",
+      closing: "正在请求 Steam 退出…",
+      closeFirst: "请先关闭 Steam 再更改这些设置。Steam 退出时会保存自己的设置，并撤销这里的更改。",
+      noUser: "请先在这台电脑上登录一次 Steam，再更改这些设置。",
+      link: "从 Steam 启动 Spellbreak",
+      linkHelp: "在 Steam 库中点击 Spellbreak 的“开始游戏”会打开本启动器。Steam 会把它当作 Spellbreak，因此手柄布局、游戏内覆盖和游戏时长都能正常使用。你的 Elemental Fracture 文件保持原位。",
+      linkUnavailable: "请先在 Steam 中安装 Spellbreak。Steam 只会为已安装的游戏显示“开始游戏”，但游戏仍从你的 Elemental Fracture 文件夹运行。",
+      linked: "现在在 Steam 中点击 Spellbreak 的“开始游戏”会打开 Elemental Fracture。",
+      unlinked: "Spellbreak 在 Steam 中的“开始游戏”按钮已恢复原样。",
+      quickstart: "直接进入游戏",
+      quickstartHelp: "在 Steam 中点击 Spellbreak 的“开始游戏”会直接启动游戏，不显示启动器，并使用你上次选择的游戏模式。若想打开启动器（例如切换游戏模式），请在点击“开始游戏”时按住 Shift，直到启动器出现。有更新需要安装或需要登录时，启动器也会自动打开。",
+      shortcut: "将 Elemental Fracture 添加到 Steam",
+      shortcutHelp: "把启动器作为非 Steam 游戏（带封面图）添加到你的 Steam 库，这样你就能为它设置 Steam 手柄布局。如果你没有在 Steam 上拥有 Spellbreak，请使用此项。",
+      added: "已添加到你的 Steam 库。",
+      removed: "已从你的 Steam 库移除。",
+    },
     language: {
       title: "语言",
       label: "显示语言",
@@ -130,18 +148,37 @@ export const zhHans: Catalogue = {
   topbar: {
     logo: "Elemental Fracture — 打开 elefrac.com",
     logoTitle: "打开 elefrac.com",
-    ingame: {
-      title: "游戏中的玩家：点击查看明细",
-      label: "游戏中",
-      empty: "当前无人在游戏中",
-      mode: "模式",
+    players: {
+      title: "在线玩家：点击查看详情",
+      label: "名玩家在线",
+      label_other: "名玩家在线",
+      inMatch: "对战中",
+      inMenus: "在菜单中",
+      empty: "没有服务器在报告。",
+      live: "对战进行中",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "其他",
-      /* Mode names as the community says them, like the nouns above. */
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "其他",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -402,6 +439,11 @@ export const zhHans: Catalogue = {
     foreignWinePrefix:
       "{prefix} 中的 prefix 是由另一个 Wine 创建的，{wrapper} 会将其永久转换（可能破坏拥有它的那个程序）。请选择一个空文件夹以新建 prefix，或清空该字段以使用默认值。",
 
+    steamNotFound: "这台电脑上没有安装 Steam。",
+    steamRunning: "请先关闭 Steam。它退出时会保存自己的设置，并撤销这里的更改。",
+    steamNoUser: "请先在这台电脑上登录一次 Steam，然后重试。",
+    spellbreakNotInSteam: "这台电脑上的 Spellbreak 不是通过 Steam 安装的。",
+
     unsupportedLinkScheme: "只能打开 http(s) 链接。",
 
     io: "文件错误：{detail}",
@@ -411,6 +453,7 @@ export const zhHans: Catalogue = {
     badJson: "无法解析的响应：{detail}",
     downloadFailed: "下载失败（{url}）：{detail}",
     modDownloadFailed: "模组下载失败：{detail}",
+    steamConfigUnreadable: "无法读取 Steam 的 {file}，因此未做任何更改：{detail}",
     launchFailed: "启动失败（{command}）：{detail}",
     signInUnreachable: "无法连接登录服务：{detail}",
     noAppDataDir: "没有可用的应用数据目录：{detail}",

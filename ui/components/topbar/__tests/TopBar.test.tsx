@@ -8,7 +8,7 @@ vi.mock("@/lib/links", () => links);
 /* Only the logo is under test; the pills carry their own suites and their own
    contexts, which this render has none of. */
 vi.mock("../GameVariantPill", () => ({ GameVariantPill: () => null }));
-vi.mock("../InGamePill", () => ({ InGamePill: () => null }));
+vi.mock("../PlayersPill", () => ({ PlayersPill: () => null }));
 vi.mock("../AccountPill", () => ({ AccountPill: () => null }));
 
 describe("the logo", () => {

@@ -37,6 +37,24 @@ export const zhHant: Catalogue = {
       closeOnLaunchHelp:
         "遊戲啟動後稍待片刻自動關閉啟動器，讓你遊玩時可以釋放記憶體。",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "關閉 Steam",
+      closing: "正在要求 Steam 結束…",
+      closeFirst: "請先關閉 Steam 再變更這些設定。Steam 結束時會儲存自己的設定，並還原這裡的變更。",
+      noUser: "請先在這台電腦上登入一次 Steam，再變更這些設定。",
+      link: "從 Steam 啟動 Spellbreak",
+      linkHelp: "在 Steam 收藏庫中點擊 Spellbreak 的「開始遊戲」會開啟本啟動器。Steam 會把它當作 Spellbreak，因此控制器配置、遊戲內覆蓋和遊戲時數都能正常運作。你的 Elemental Fracture 檔案保持原位。",
+      linkUnavailable: "請先在 Steam 中安裝 Spellbreak。Steam 只會為已安裝的遊戲顯示「開始遊戲」，但遊戲仍從你的 Elemental Fracture 資料夾執行。",
+      linked: "現在在 Steam 中點擊 Spellbreak 的「開始遊戲」會開啟 Elemental Fracture。",
+      unlinked: "Spellbreak 在 Steam 中的「開始遊戲」按鈕已恢復原狀。",
+      quickstart: "直接進入遊戲",
+      quickstartHelp: "在 Steam 中點擊 Spellbreak 的「開始遊戲」會直接啟動遊戲，不顯示啟動器，並使用你上次選擇的遊戲模式。若想開啟啟動器（例如切換遊戲模式），請在點擊「開始遊戲」時按住 Shift，直到啟動器出現。有更新需要安裝或需要登入時，啟動器也會自動開啟。",
+      shortcut: "將 Elemental Fracture 加入 Steam",
+      shortcutHelp: "把啟動器作為非 Steam 遊戲（附封面圖）加入你的 Steam 收藏庫，這樣你就能為它設定 Steam 控制器配置。如果你沒有在 Steam 上擁有 Spellbreak，請使用此項。",
+      added: "已加入你的 Steam 收藏庫。",
+      removed: "已從你的 Steam 收藏庫移除。",
+    },
     language: {
       title: "語言",
       label: "顯示語言",
@@ -130,18 +148,37 @@ export const zhHant: Catalogue = {
   topbar: {
     logo: "Elemental Fracture — 開啟 elefrac.com",
     logoTitle: "開啟 elefrac.com",
-    ingame: {
-      title: "遊戲中的玩家：點擊查看明細",
-      label: "遊戲中",
-      empty: "目前沒有人在遊戲中",
-      mode: "模式",
+    players: {
+      title: "線上玩家：點擊查看詳情",
+      label: "名玩家在線上",
+      label_other: "名玩家在線上",
+      inMatch: "對戰中",
+      inMenus: "在選單中",
+      empty: "沒有伺服器回報。",
+      live: "對戰進行中",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "其他",
-      /* Mode names as the community says them, like the nouns above. */
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "其他",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -403,6 +440,11 @@ export const zhHant: Catalogue = {
     foreignWinePrefix:
       "{prefix} 中的 prefix 是由另一個 Wine 建立的，{wrapper} 會將它永久轉換（可能破壞擁有它的那個程式）。請選擇一個空資料夾以建立新的 prefix，或清空此欄位以使用預設值。",
 
+    steamNotFound: "這台電腦上沒有安裝 Steam。",
+    steamRunning: "請先關閉 Steam。它結束時會儲存自己的設定，並還原這裡的變更。",
+    steamNoUser: "請先在這台電腦上登入一次 Steam，然後再試一次。",
+    spellbreakNotInSteam: "這台電腦上的 Spellbreak 不是透過 Steam 安裝的。",
+
     unsupportedLinkScheme: "只能開啟 http(s) 連結。",
 
     io: "檔案錯誤：{detail}",
@@ -412,6 +454,7 @@ export const zhHant: Catalogue = {
     badJson: "無法解析的回應：{detail}",
     downloadFailed: "下載失敗（{url}）：{detail}",
     modDownloadFailed: "模組下載失敗：{detail}",
+    steamConfigUnreadable: "無法讀取 Steam 的 {file}，因此未做任何變更：{detail}",
     launchFailed: "啟動失敗（{command}）：{detail}",
     signInUnreachable: "無法連線登入服務：{detail}",
     noAppDataDir: "沒有可用的應用程式資料目錄：{detail}",

@@ -14,6 +14,7 @@ import { ModsView } from "@/components/views/mods/ModsView";
 import { SettingsView } from "@/components/views/settings/SettingsView";
 import { Wizard } from "@/components/Wizard";
 import { LauncherUpdatePop } from "@/components/LauncherUpdatePop";
+import { QuickstartNotice } from "@/components/QuickstartNotice";
 import { Toaster } from "@/components/shadcn/toast";
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
                   </div>
                   <Wizard />
                   <LauncherUpdatePop />
+                  <QuickstartNotice />
                 </LocaleGate>
                 <Toaster />
               </UIProvider>

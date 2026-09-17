@@ -33,6 +33,31 @@ export const es: Catalogue = {
       closeOnLaunchHelp:
         "Cierra el launcher automáticamente poco después de iniciar el juego, para liberar memoria mientras juegas.",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "Cerrar Steam",
+      closing: "Pidiendo a Steam que se cierre…",
+      closeFirst:
+        "Cierra Steam para cambiar esto. Steam guarda sus propios ajustes al salir y desharía el cambio.",
+      noUser:
+        "Inicia sesión en Steam una vez en este equipo para cambiar esto.",
+      link: "Jugar a Spellbreak desde Steam",
+      linkHelp:
+        "Al pulsar Jugar en Spellbreak en tu biblioteca de Steam se abre este launcher. Steam lo trata como Spellbreak, así que funcionan sus configuraciones de mando, el overlay y el tiempo de juego. Tus archivos de Elemental Fracture se quedan donde están.",
+      linkUnavailable:
+        "Instala primero Spellbreak en Steam. Steam solo muestra Jugar en los juegos instalados, pero el juego se sigue ejecutando desde tu carpeta de Elemental Fracture.",
+      linked: "Ahora Jugar en Spellbreak en Steam abre Elemental Fracture.",
+      unlinked:
+        "El botón Jugar de Spellbreak en Steam vuelve a ser el de siempre.",
+      quickstart: "Entrar directamente al juego",
+      quickstartHelp:
+        "Al pulsar Jugar en Spellbreak en Steam, el juego se inicia sin mostrar el launcher, con el modo de juego que elegiste por última vez. Para abrir el launcher (por ejemplo, para cambiar de modo de juego), mantén pulsado Mayús al pulsar Jugar hasta que aparezca. También se abre solo si hay una actualización que instalar o tienes que iniciar sesión.",
+      shortcut: "Añadir Elemental Fracture a Steam",
+      shortcutHelp:
+        "Añade el launcher a tu biblioteca de Steam como juego ajeno a Steam, con imágenes, para que puedas asignarle una configuración de mando de Steam. Úsalo si no tienes Spellbreak en Steam.",
+      added: "Añadido a tu biblioteca de Steam.",
+      removed: "Quitado de tu biblioteca de Steam.",
+    },
     language: {
       title: "Idioma",
       label: "Idioma de la interfaz",
@@ -133,18 +158,37 @@ export const es: Catalogue = {
   topbar: {
     logo: "Elemental Fracture — abrir elefrac.com",
     logoTitle: "Abrir elefrac.com",
-    ingame: {
-      title: "Jugadores en partida: haz clic para ver el desglose",
-      label: "en partida",
-      empty: "Nadie en partida",
-      mode: "Modo",
+    players: {
+      title: "Jugadores en línea: haz clic para ver el desglose",
+      label: "jugador en línea",
+      label_other: "jugadores en línea",
+      inMatch: "En partida",
+      inMenus: "En los menús",
+      empty: "Ningún servidor está informando.",
+      live: "Partida en curso",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "Otros",
-      /* Mode names as the community says them, like the nouns above. */
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "Otros",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -422,6 +466,14 @@ export const es: Catalogue = {
     foreignWinePrefix:
       "El prefijo de {prefix} lo creó otro Wine, y {wrapper} lo convertiría de forma permanente (pudiendo romper la aplicación a la que pertenece). Elige una carpeta vacía para tener un prefijo nuevo, o deja el campo vacío para usar el predeterminado.",
 
+    steamNotFound: "Steam no está instalado en este equipo.",
+    steamRunning:
+      "Cierra Steam primero. Guarda sus propios ajustes al salir y desharía el cambio.",
+    steamNoUser:
+      "Inicia sesión en Steam una vez en este equipo y vuelve a intentarlo.",
+    spellbreakNotInSteam:
+      "Spellbreak no está instalado a través de Steam en este equipo.",
+
     unsupportedLinkScheme: "Solo se pueden abrir enlaces http(s).",
 
     io: "Error de archivo: {detail}",
@@ -432,6 +484,8 @@ export const es: Catalogue = {
     badJson: "Respuesta ilegible: {detail}",
     downloadFailed: "Fallo en la descarga ({url}): {detail}",
     modDownloadFailed: "Fallo en la descarga del mod: {detail}",
+    steamConfigUnreadable:
+      "No se pudo leer el archivo {file} de Steam, así que no se cambió nada: {detail}",
     launchFailed: "Fallo al iniciar ({command}): {detail}",
     signInUnreachable:
       "No se pudo contactar con el servicio de inicio de sesión: {detail}",

@@ -21,6 +21,12 @@
   flex-direction: column;
   gap: 6px;
 }
+/* A line above a card's rows saying why they can't be changed right now. */
+.card-note {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
 /* Row label plus its "i" button, laid out inline. */
 .switch-text {
   display: inline-flex;

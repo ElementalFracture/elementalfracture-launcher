@@ -37,6 +37,30 @@ export const ko: Catalogue = {
       closeOnLaunchHelp:
         "게임이 실행된 직후 런처를 자동으로 닫아, 플레이하는 동안 메모리를 확보합니다.",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "Steam 종료",
+      closing: "Steam에 종료를 요청하는 중…",
+      closeFirst:
+        "이 설정을 바꾸려면 Steam을 종료하세요. Steam은 종료할 때 자체 설정을 저장하므로 변경 사항이 되돌려집니다.",
+      noUser: "이 설정을 바꾸려면 이 컴퓨터에서 Steam에 한 번 로그인하세요.",
+      link: "Steam에서 Spellbreak 플레이",
+      linkHelp:
+        "Steam 라이브러리에서 Spellbreak의 플레이를 누르면 이 런처가 열립니다. Steam이 이를 Spellbreak로 인식하므로 컨트롤러 레이아웃, 오버레이, 플레이 시간이 모두 작동합니다. Elemental Fracture 파일은 그대로 유지됩니다.",
+      linkUnavailable:
+        "먼저 Steam에서 Spellbreak를 설치하세요. Steam은 설치된 게임에만 플레이를 표시하지만, 게임은 계속 Elemental Fracture 폴더에서 실행됩니다.",
+      linked:
+        "이제 Steam에서 Spellbreak의 플레이를 누르면 Elemental Fracture가 열립니다.",
+      unlinked: "Steam의 Spellbreak 플레이 버튼이 원래대로 돌아왔습니다.",
+      quickstart: "바로 게임 시작",
+      quickstartHelp:
+        "Steam에서 Spellbreak의 플레이를 누르면 런처를 표시하지 않고 마지막으로 선택한 게임 모드로 게임이 시작됩니다. 대신 런처를 열려면(예: 게임 모드 변경) 플레이를 누를 때 런처가 나타날 때까지 Shift를 누르고 있으세요. 설치할 업데이트가 있거나 로그인이 필요할 때도 런처가 자동으로 열립니다.",
+      shortcut: "Elemental Fracture를 Steam에 추가",
+      shortcutHelp:
+        "런처를 아트워크와 함께 비 Steam 게임으로 Steam 라이브러리에 추가하여 Steam 컨트롤러 레이아웃을 지정할 수 있게 합니다. Steam에서 Spellbreak를 보유하지 않았다면 이 옵션을 사용하세요.",
+      added: "Steam 라이브러리에 추가했습니다.",
+      removed: "Steam 라이브러리에서 제거했습니다.",
+    },
     language: {
       title: "언어",
       label: "표시 언어",
@@ -133,18 +157,37 @@ export const ko: Catalogue = {
   topbar: {
     logo: "Elemental Fracture — elefrac.com 열기",
     logoTitle: "elefrac.com 열기",
-    ingame: {
-      title: "게임 중인 플레이어: 클릭하면 자세히 볼 수 있습니다",
-      label: "게임 중",
-      empty: "게임 중인 사람이 없습니다",
-      mode: "모드",
+    players: {
+      title: "온라인 플레이어: 클릭하여 세부 정보 보기",
+      label: "명 온라인",
+      label_other: "명 온라인",
+      inMatch: "매치 중",
+      inMenus: "메뉴 화면",
+      empty: "응답하는 서버가 없습니다.",
+      live: "매치 진행 중",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "기타",
-      /* Mode names as the community says them, like the nouns above. */
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "기타",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -418,6 +461,13 @@ export const ko: Catalogue = {
     foreignWinePrefix:
       "{prefix}의 prefix는 다른 Wine이 만든 것이라, {wrapper}가 이를 영구히 변환합니다 (그 prefix를 쓰는 앱이 망가질 수 있습니다). 빈 폴더를 선택해 새 prefix를 만들거나, 칸을 비워 기본값을 쓰세요.",
 
+    steamNotFound: "이 컴퓨터에 Steam이 설치되어 있지 않습니다.",
+    steamRunning:
+      "먼저 Steam을 종료하세요. 종료할 때 자체 설정을 저장하므로 변경 사항이 되돌려집니다.",
+    steamNoUser: "이 컴퓨터에서 Steam에 한 번 로그인한 뒤 다시 시도하세요.",
+    spellbreakNotInSteam:
+      "이 컴퓨터에는 Spellbreak가 Steam을 통해 설치되어 있지 않습니다.",
+
     unsupportedLinkScheme: "http(s) 링크만 열 수 있습니다.",
 
     io: "파일 오류: {detail}",
@@ -427,6 +477,8 @@ export const ko: Catalogue = {
     badJson: "읽을 수 없는 응답: {detail}",
     downloadFailed: "내려받기에 실패했습니다 ({url}): {detail}",
     modDownloadFailed: "모드 내려받기에 실패했습니다: {detail}",
+    steamConfigUnreadable:
+      "Steam의 {file} 파일을 읽을 수 없어 아무것도 변경하지 않았습니다: {detail}",
     launchFailed: "실행에 실패했습니다 ({command}): {detail}",
     signInUnreachable: "로그인 서비스에 연결하지 못했습니다: {detail}",
     noAppDataDir: "사용할 수 있는 앱 데이터 폴더가 없습니다: {detail}",

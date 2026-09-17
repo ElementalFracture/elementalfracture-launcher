@@ -22,6 +22,7 @@ const commands = vi.hoisted(() => ({
   getPlayers: vi.fn(),
   getEvents: vi.fn(),
   getNews: vi.fn(),
+  steamStatus: vi.fn(),
 }));
 
 vi.mock("@/generated/bindings", () => ({ commands }));
@@ -49,6 +50,7 @@ beforeEach(() => {
   commands.getPlayers.mockResolvedValue({ status: "ok", data: {} });
   commands.getEvents.mockResolvedValue({ status: "ok", data: { events: [] } });
   commands.getNews.mockResolvedValue({ status: "ok", data: [] });
+  commands.steamStatus.mockResolvedValue({ found: false });
 });
 
 /* The Language card has a picker of its own, so a bare combobox query would

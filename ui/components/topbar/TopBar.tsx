@@ -2,7 +2,7 @@ import logoFull from "@/assets/logo-full.png";
 import { openLink } from "@/lib/links";
 import { URLS } from "@/lib/urls";
 import { _ } from "@/i18n";
-import { InGamePill } from "./InGamePill";
+import { PlayersPill } from "./PlayersPill";
 import { AccountPill } from "./AccountPill";
 import { GameVariantPill } from "./GameVariantPill";
 import "./TopBar.css";
@@ -22,7 +22,7 @@ export function TopBar() {
       </button>
       <div className="top-pills">
         <GameVariantPill />
-        <InGamePill />
+        <PlayersPill />
         <AccountPill />
       </div>
     </header>

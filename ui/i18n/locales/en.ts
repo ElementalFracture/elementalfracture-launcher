@@ -38,6 +38,30 @@ export const en = {
       closeOnLaunchHelp:
         "Automatically closes the launcher a moment after the game launches, to free up memory while you play.",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "Close Steam",
+      closing: "Asking Steam to close…",
+      closeFirst:
+        "Close Steam to change these. Steam saves its own settings when it exits and would undo the change.",
+      noUser: "Sign in to Steam once on this computer to change these.",
+      link: "Play Spellbreak from Steam",
+      linkHelp:
+        "Pressing Play on Spellbreak in your Steam library opens this launcher. Steam treats it as Spellbreak, so its controller layouts, overlay and playtime all work. Your Elemental Fracture files stay where they are.",
+      linkUnavailable:
+        "Install Spellbreak in Steam first. Steam only shows Play for installed games, but the game still runs from your Elemental Fracture folder.",
+      linked:
+        "Pressing Play on Spellbreak in Steam now opens Elemental Fracture.",
+      unlinked: "Spellbreak's Play button in Steam is back to normal.",
+      quickstart: "Go straight into the game",
+      quickstartHelp:
+        "Pressing Play on Spellbreak in Steam starts the game without showing the launcher, using the game mode you last picked. To open the launcher instead (to switch game modes, say), hold Shift while you press Play until it appears. It also opens by itself when there's an update to install or you need to sign in.",
+      shortcut: "Add Elemental Fracture to Steam",
+      shortcutHelp:
+        "Adds the launcher to your Steam library as a non-Steam game, with artwork, so you can give it a Steam controller layout. Use this if you don't own Spellbreak on Steam.",
+      added: "Added to your Steam library.",
+      removed: "Removed from your Steam library.",
+    },
     language: {
       title: "Language",
       label: "Display language",
@@ -141,20 +165,40 @@ export const en = {
   topbar: {
     logo: "Elemental Fracture — open elefrac.com",
     logoTitle: "Open elefrac.com",
-    ingame: {
-      title: "Players in game: click for a breakdown",
-      label: "in game",
-      empty: "No one in game",
-      /* Column head for the mode names, which are read out but not drawn. */
-      mode: "Mode",
-      /* Both the region with none reported and the mode that matched no
-         bucket land here. */
+    players: {
+      /* The count takes a `count` and reads "N players online": everyone
+         with the game open, menus included. Keep in step with the
+         website's header widget (ef-player-count.php). */
+      title: "Players online: click for a breakdown",
+      label: "player online",
+      label_other: "players online",
+      inMatch: "In a match",
+      inMenus: "In the menus",
+      empty: "No servers are reporting in.",
+      live: "Match in progress",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "Other",
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "Other",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -456,6 +500,13 @@ export const en = {
     foreignWinePrefix:
       "The prefix at {prefix} was made by a different Wine, and {wrapper} would permanently convert it (possibly breaking the app that owns it). Pick an empty folder to get a fresh prefix, or clear the field to use the default.",
 
+    steamNotFound: "Steam isn't installed on this computer.",
+    steamRunning:
+      "Close Steam first. It saves its own settings when it exits and would undo the change.",
+    steamNoUser: "Sign in to Steam once on this computer, then try again.",
+    spellbreakNotInSteam:
+      "Spellbreak isn't installed through Steam on this computer.",
+
     unsupportedLinkScheme: "Only http(s) links can be opened.",
 
     /* Pass-through: ours is the frame, {detail} is the library's own words. */
@@ -466,6 +517,8 @@ export const en = {
     badJson: "Unreadable response: {detail}",
     downloadFailed: "Download failed ({url}): {detail}",
     modDownloadFailed: "Mod download failed: {detail}",
+    steamConfigUnreadable:
+      "Steam's {file} couldn't be read, so nothing was changed: {detail}",
     launchFailed: "Failed to launch ({command}): {detail}",
     signInUnreachable: "Couldn't reach the sign-in service: {detail}",
     noAppDataDir: "No app data dir available: {detail}",

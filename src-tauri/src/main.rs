@@ -7,6 +7,7 @@ mod mods;
 mod platform;
 mod remote;
 mod settings;
+mod steam;
 
 // Only used by the debug-only bindings export below, so it has to carry the
 // same cfg or release builds warn about an unused import.
@@ -20,10 +21,43 @@ use tauri_specta::{collect_commands, Builder};
 #[tauri::command]
 #[specta::specta]
 fn quit_launcher(app: tauri::AppHandle) {
-    app.exit(0);
+    // Under Steam the session (and its controller remap) lives as long as this
+    // process, so the quit waits for the game.
+    if !steam::defer_quit(&app) {
+        app.exit(0);
+    }
+}
+
+/// A startup failure in a windowed build has no console to land in, so say it
+/// in a dialog rather than vanish.
+fn fatal(message: &str) -> ! {
+    eprintln!("{message}");
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+        let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
+        let (text, caption) = (wide(message), wide("Elemental Fracture"));
+        unsafe { MessageBoxW(std::ptr::null_mut(), text.as_ptr(), caption.as_ptr(), MB_OK | MB_ICONERROR) };
+    }
+    std::process::exit(1);
+}
+
+/// The window is declared in tauri.conf.json with `create: false` and built
+/// here, where the Steam session can adjust the webview and quickstart can
+/// skip it.
+fn open_window(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let config = &app.config().app.windows[0];
+    let mut window = tauri::WebviewWindowBuilder::from_config(app, config)?;
+    if let Some(args) = steam::browser_args() {
+        window = window.additional_browser_args(args);
+    }
+    window.build()?;
+    Ok(())
 }
 
 fn main() {
+    steam::init();
+
     // The webkit bundled into the AppImage trips webkit's DMA-BUF renderer
     // bug on many GPU/driver combos (blank white window). Native Linux
     // builds use the system webkit and don't need this.
@@ -64,6 +98,11 @@ fn main() {
         remote::friend_add,
         remote::friend_accept,
         remote::friend_remove,
+        steam::steam_status,
+        steam::steam_set_linked,
+        steam::steam_set_shortcut,
+        steam::steam_shutdown,
+        steam::take_quickstart_notice,
     ]);
 
     // Regenerated on every debug run so the frontend's typed bindings never
@@ -86,13 +125,32 @@ fn main() {
         // minimizes to the taskbar instead of quitting. Off by default = normal close.
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if settings::load(window.app_handle()).minimize_on_close {
+                if steam::defer_quit(window.app_handle()) {
+                    api.prevent_close();
+                } else if settings::load(window.app_handle()).minimize_on_close {
                     api.prevent_close();
                     let _ = window.minimize();
                 }
             }
         })
         .invoke_handler(builder.invoke_handler())
+        .setup(|app| {
+            steam::refresh_tool();
+            let handle = app.handle().clone();
+            if !steam::wanted(&handle) {
+                return Ok(open_window(&handle)?);
+            }
+            // Quickstart: no window unless the game can't be started from here.
+            tauri::async_runtime::spawn(async move {
+                if let Err(notice) = steam::run(&handle).await {
+                    steam::set_notice(notice);
+                    if let Err(e) = open_window(&handle) {
+                        fatal(&format!("Elemental Fracture failed to start:\n\n{e}"));
+                    }
+                }
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
-        .expect("error while running Elemental Fracture launcher");
+        .unwrap_or_else(|e| fatal(&format!("Elemental Fracture failed to start:\n\n{e}")));
 }

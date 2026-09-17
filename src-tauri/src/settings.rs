@@ -55,6 +55,16 @@ pub struct Settings {
     pub minimize_on_close: bool,
     /// quit the launcher when the game starts.
     pub close_on_launch: bool,
+    /// Started as Spellbreak through the Steam link, go straight into the game
+    /// (Shift held opens the launcher). Off by default: the player opts in
+    /// from Settings -> Steam.
+    ///
+    /// Stored as `steam_autostart`. 3.2.1 wrote this as `steam_quickstart`
+    /// defaulting to on, and every settings write serialized that default, so
+    /// a saved `true` can't be told apart from a choice. The old key is left
+    /// unread on purpose: everyone starts from off once, and whoever wants it
+    /// turns it back on.
+    pub steam_autostart: bool,
     /// UI language: a tag the frontend catalogues know ("en", "fr"), or ""
     /// for "follow the OS". Resolved in the UI, which is the only side that
     /// holds prose — the backend never reads this.
@@ -130,6 +140,7 @@ impl Default for Settings {
             onboarded: false,
             minimize_on_close: false,
             close_on_launch: false,
+            steam_autostart: false,
             // Empty = follow the OS; the picker in Settings writes a tag.
             language: String::new(),
             manifest_version: 0,
@@ -249,6 +260,8 @@ fn reset_view_fields(s: &mut Settings) {
     // Launcher card.
     s.minimize_on_close = d.minimize_on_close;
     s.close_on_launch = d.close_on_launch;
+    // Steam card.
+    s.steam_autostart = d.steam_autostart;
     // Language card.
     s.language = d.language;
     // Wrapper card (hidden on Windows, but reset either way — a prefix left

@@ -142,38 +142,96 @@
     "manifest_version": 0
   },
   "players": {
-    "online": 42,
+    "ok": true,
+    "region": "NA",
+    "online": 6,
+    "in_menu": 36,
+    "total": 42,
+    "connected": 42,
     "servers": [
       {
-        "display_name": "Solos NA 1",
-        "name": "solos1",
+        "name": "solo-1",
+        "display_name": "Solos 1",
         "region": "NA",
+        "state": "Started",
+        "mode": "Solo",
+        "family": "Battle Royale",
+        "flavor": "Elemental Fracture",
         "players": 1,
         "names": [
           "Aurelith"
         ]
       },
       {
-        "display_name": "Duos EU 1",
-        "name": "duos1",
+        "name": "duos-1",
+        "display_name": "Duos 1",
         "region": "EU",
+        "state": "WaitingForPlayers",
+        "mode": "Duo",
+        "family": "Battle Royale",
+        "flavor": "Elemental Fracture",
         "players": 1,
         "names": [
           "Lytion"
         ]
       },
       {
-        "display_name": "Classic Squads NA 1",
-        "name": "vsquad1",
+        "name": "vsquads-1",
+        "display_name": "Classic Squads 1",
         "region": "NA",
+        "state": "WaitingForPlayers",
+        "mode": "Squad",
+        "family": "Battle Royale",
+        "flavor": "Classic",
         "players": 0,
         "names": []
       },
       {
-        "name": "ptsolo-1",
-        "display_name": "Playtest Solos 1",
-        "players": 2,
+        "name": "arenas-1",
+        "display_name": "Arenas 1",
         "region": "NA",
+        "state": "Started",
+        "mode": "Capture",
+        "family": "Dominion",
+        "flavor": "Elemental Fracture",
+        "players": 1,
+        "names": [
+          "Kestrel"
+        ]
+      },
+      {
+        "name": "clash-1",
+        "display_name": "Clash 1",
+        "region": "EU",
+        "state": "WaitingForPlayers",
+        "mode": "Team Clash",
+        "family": "Clash",
+        "flavor": "Elemental Fracture",
+        "players": 1,
+        "names": [
+          "Marrow"
+        ]
+      },
+      {
+        "name": "ffa-1",
+        "display_name": "Free For All 1",
+        "region": "NA",
+        "state": "WaitingForPlayers",
+        "mode": "Free for all",
+        "family": "Clash",
+        "flavor": "Elemental Fracture",
+        "players": 0,
+        "names": []
+      },
+      {
+        "name": "tsolo-1",
+        "display_name": "Test Solos 1",
+        "region": "NA",
+        "state": "Started",
+        "mode": "Solo",
+        "family": "Battle Royale",
+        "flavor": "Test Build",
+        "players": 2,
         "names": [
           "Wrenlow",
           "Doobs"

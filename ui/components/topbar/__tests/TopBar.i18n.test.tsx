@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AccountPill } from "../AccountPill";
-import { InGamePill } from "../InGamePill";
+import { PlayersPill } from "../PlayersPill";
 import { GameVariantPill } from "../GameVariantPill";
 import { LocaleGate } from "@/i18n/LocaleGate";
 import { fr } from "@/i18n/locales/fr";
@@ -87,39 +87,46 @@ beforeEach(() => {
   });
 });
 
-describe("the in-game pill", () => {
+describe("the players pill", () => {
   it("translates the pill and its empty breakdown", async () => {
-    renderFr(<InGamePill />);
-    const pill = await screen.findByTitle(fr.topbar.ingame.title);
-    expect(pill.textContent).toContain(fr.topbar.ingame.label);
+    renderFr(<PlayersPill />);
+    const pill = await screen.findByTitle(fr.topbar.players.title);
+    // Before the first answer the count is a dash, which French files with
+    // the singular (0 and 1 take "one").
+    expect(pill.textContent).toContain(fr.topbar.players.label);
 
     fireEvent.click(pill);
-    expect(await screen.findByText(fr.topbar.ingame.empty)).toBeTruthy();
+    expect(await screen.findByText(fr.topbar.players.empty)).toBeTruthy();
   });
 
-  /* The mode names double as the row keys `modeRows` buckets by, so a language
-     that changed them mid-table would drop rows on the floor. */
-  it("keeps the breakdown's rows when the mode names are translated", async () => {
+  it("translates the totals and keeps the mode rows", async () => {
     commands.getPlayers.mockResolvedValue({
       status: "ok",
       data: {
         online: 7,
+        total: 9,
+        in_menu: 2,
         servers: [
-          { name: "solo-1", display_name: "Solo 1", region: "EU", players: 4 },
-          { name: "duo-1", display_name: "Duo 1", region: "EU", players: 3 },
+          { name: "solo-1", mode: "Solo", region: "EU", players: 4 },
+          { name: "duos-1", mode: "Duo", region: "EU", players: 3 },
         ],
       },
     });
-    renderFr(<InGamePill />);
-    fireEvent.click(await screen.findByTitle(fr.topbar.ingame.title));
+    renderFr(<PlayersPill />);
+    const pill = await screen.findByTitle(fr.topbar.players.title);
+    await waitFor(() =>
+      expect(pill.textContent).toContain(`9 ${fr.topbar.players.label_other}`)
+    );
+    fireEvent.click(pill);
 
+    expect(await screen.findByText(fr.topbar.players.inMenus)).toBeTruthy();
     expect(
       await screen.findByRole("rowheader", {
-        name: fr.topbar.ingame.modes.solos,
+        name: fr.topbar.players.modes.solo,
       })
     ).toBeTruthy();
     expect(
-      screen.getByRole("rowheader", { name: fr.topbar.ingame.modes.duos })
+      screen.getByRole("rowheader", { name: fr.topbar.players.modes.duo })
     ).toBeTruthy();
   });
 });

@@ -68,6 +68,7 @@ fn reset_only_touches_the_settings_view_fields() {
         // What the view owns, all moved off default.
         minimize_on_close: true,
         close_on_launch: true,
+        steam_autostart: true,
         language: "ja".into(),
         launch_command: "wine".into(),
         wine_prefix: "/home/p/.wine".into(),
@@ -81,6 +82,7 @@ fn reset_only_touches_the_settings_view_fields() {
     let d = Settings::default();
     assert_eq!(s.minimize_on_close, d.minimize_on_close);
     assert_eq!(s.close_on_launch, d.close_on_launch);
+    assert_eq!(s.steam_autostart, d.steam_autostart);
     assert_eq!(s.language, d.language);
     assert_eq!(s.launch_command, d.launch_command);
     assert_eq!(s.wine_prefix, d.wine_prefix);

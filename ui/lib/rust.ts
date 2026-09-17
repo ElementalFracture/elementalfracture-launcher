@@ -32,6 +32,7 @@ import type {
   Result,
   Settings,
   LoginResult,
+  SteamStatus,
   VersionInfo,
   WrapperOption,
 } from "@/generated/bindings";
@@ -168,6 +169,33 @@ export async function openUrl(url: string): Promise<void> {
   unwrap(await commands.openUrl(url));
 }
 
+/* ---------------- Steam ---------------- */
+
+export async function steamStatus(): Promise<SteamStatus> {
+  return await commands.steamStatus();
+}
+
+/** Point Spellbreak's Play button in Steam at the launcher, or put it back. */
+export async function steamSetLinked(linked: boolean): Promise<SteamStatus> {
+  return unwrap(await commands.steamSetLinked(linked));
+}
+
+/** Add the launcher to Steam as a non-Steam game, or remove it. */
+export async function steamSetShortcut(added: boolean): Promise<SteamStatus> {
+  return unwrap(await commands.steamSetShortcut(added));
+}
+
+/** Throws the reason quickstart opened the launcher instead of the game, if
+    it did; resolves when there's nothing to tell. Only answers once. */
+export async function takeQuickstartNotice(): Promise<void> {
+  unwrap(await commands.takeQuickstartNotice());
+}
+
+/** Ask Steam to exit, so its settings can be changed. */
+export async function steamShutdown(): Promise<void> {
+  unwrap(await commands.steamShutdown());
+}
+
 /** Fully exit the launcher — the real quit path, bypassing minimize-on-close. */
 export async function quitLauncher(): Promise<void> {
   await commands.quitLauncher();
@@ -182,12 +210,26 @@ export interface PlayerServer {
   players?: number;
   names?: string[];
   region?: string;
+  /** Match state off the broadcast feed ("WaitingForPlayers" = lobby). */
+  state?: string;
+  /** "Solo", "Capture", "Team Clash", ... (players_sidecar.py server_kind). */
+  mode?: string;
+  /** "Battle Royale" | "Dominion" | "Clash". */
+  family?: string;
+  /** "Elemental Fracture" | "Classic" | "Test Build". */
+  flavor?: string;
 }
 
 /** Sidecar player-count payload. */
 export interface PlayersData {
+  /** Players on a game server (lobby or match). */
   online?: number;
-  connected?: number;
+  /** Everyone with the game open, menus included (router presence). */
+  total?: number;
+  /** `total` minus `online`. */
+  in_menu?: number;
+  /** Router presence alone; what `total` falls back to on older sidecars. */
+  connected?: number | null;
   servers?: PlayerServer[];
 }
 

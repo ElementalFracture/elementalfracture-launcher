@@ -29,6 +29,8 @@ export interface SettingsForm {
   setMinimizeOnClose: (v: boolean) => void;
   closeOnLaunch: boolean;
   setCloseOnLaunch: (v: boolean) => void;
+  steamQuickstart: boolean;
+  setSteamQuickstart: (v: boolean) => void;
 
   /* Text is a draft while you type, `commitText` save it. */
   winePrefix: string;
@@ -70,6 +72,7 @@ export function useSettingsForm(): SettingsForm {
   const [language, setLanguageState] = useState<LanguageSetting>("");
   const [minimizeOnClose, setMinimizeOnCloseState] = useState(false);
   const [closeOnLaunch, setCloseOnLaunchState] = useState(false);
+  const [steamQuickstart, setSteamQuickstartState] = useState(true);
   const [winePrefix, setWinePrefix] = useState("");
   const [cdnBase, setCdnBase] = useState("");
   const [authUrl, setAuthUrl] = useState("");
@@ -124,6 +127,7 @@ export function useSettingsForm(): SettingsForm {
   const srcLanguage = (settings?.language ?? "") as LanguageSetting;
   const srcMinimizeOnClose = settings?.minimize_on_close ?? false;
   const srcCloseOnLaunch = settings?.close_on_launch ?? false;
+  const srcSteamQuickstart = settings?.steam_autostart ?? false;
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -137,7 +141,8 @@ export function useSettingsForm(): SettingsForm {
     setLanguageState(srcLanguage);
     setMinimizeOnCloseState(srcMinimizeOnClose);
     setCloseOnLaunchState(srcCloseOnLaunch);
-  }, [srcLanguage, srcMinimizeOnClose, srcCloseOnLaunch]);
+    setSteamQuickstartState(srcSteamQuickstart);
+  }, [srcLanguage, srcMinimizeOnClose, srcCloseOnLaunch, srcSteamQuickstart]);
 
   // Separate pass: the detected wrapper list arrives after settings do, and
   // the saved command can only be classified as known-vs-custom once it's in.
@@ -172,6 +177,11 @@ export function useSettingsForm(): SettingsForm {
     persist({ close_on_launch: v });
   };
 
+  const setSteamQuickstart = (v: boolean) => {
+    setSteamQuickstartState(v);
+    persist({ steam_autostart: v });
+  };
+
   const commitText = (key: TextKey, value: string) => {
     const trimmed = value.trim();
     // Leaving a field you didn't change shouldn't cost a write.
@@ -196,6 +206,8 @@ export function useSettingsForm(): SettingsForm {
     setMinimizeOnClose,
     closeOnLaunch,
     setCloseOnLaunch,
+    steamQuickstart,
+    setSteamQuickstart,
     winePrefix,
     setWinePrefix,
     cdnBase,

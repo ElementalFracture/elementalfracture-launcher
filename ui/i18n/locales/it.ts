@@ -34,6 +34,24 @@ export const it: Catalogue = {
       closeOnLaunchHelp:
         "Chiude automaticamente il launcher poco dopo l'avvio del gioco, per liberare memoria mentre giochi.",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "Chiudi Steam",
+      closing: "Richiesta di chiusura inviata a Steam…",
+      closeFirst: "Chiudi Steam per modificare queste opzioni. Steam salva le proprie impostazioni all'uscita e annullerebbe la modifica.",
+      noUser: "Accedi a Steam almeno una volta su questo computer per modificare queste opzioni.",
+      link: "Gioca a Spellbreak da Steam",
+      linkHelp: "Premendo Gioca su Spellbreak nella tua libreria di Steam si apre questo launcher. Steam lo tratta come Spellbreak, quindi configurazioni del controller, overlay e tempo di gioco funzionano. I tuoi file di Elemental Fracture restano dove sono.",
+      linkUnavailable: "Installa prima Spellbreak su Steam. Steam mostra Gioca solo per i giochi installati, ma il gioco continua ad avviarsi dalla tua cartella di Elemental Fracture.",
+      linked: "Ora Gioca su Spellbreak in Steam apre Elemental Fracture.",
+      unlinked: "Il pulsante Gioca di Spellbreak su Steam è tornato normale.",
+      quickstart: "Entra subito nel gioco",
+      quickstartHelp: "Premendo Gioca su Spellbreak in Steam il gioco si avvia senza mostrare il launcher, con l'ultima modalità di gioco scelta. Per aprire il launcher (ad esempio per cambiare modalità di gioco), tieni premuto Maiusc mentre premi Gioca finché non compare. Si apre da solo anche quando c'è un aggiornamento da installare o devi accedere.",
+      shortcut: "Aggiungi Elemental Fracture a Steam",
+      shortcutHelp: "Aggiunge il launcher alla tua libreria di Steam come gioco non di Steam, con le immagini, così puoi assegnargli una configurazione del controller di Steam. Usalo se non possiedi Spellbreak su Steam.",
+      added: "Aggiunto alla tua libreria di Steam.",
+      removed: "Rimosso dalla tua libreria di Steam.",
+    },
     language: {
       title: "Lingua",
       label: "Lingua dell'interfaccia",
@@ -133,18 +151,37 @@ export const it: Catalogue = {
   topbar: {
     logo: "Elemental Fracture — apri elefrac.com",
     logoTitle: "Apri elefrac.com",
-    ingame: {
-      title: "Giocatori in partita: fai clic per il dettaglio",
-      label: "in partita",
-      empty: "Nessuno in partita",
-      mode: "Modalità",
+    players: {
+      title: "Giocatori online: clicca per il dettaglio",
+      label: "giocatore online",
+      label_other: "giocatori online",
+      inMatch: "In partita",
+      inMenus: "Nei menu",
+      empty: "Nessun server sta rispondendo.",
+      live: "Partita in corso",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "Altro",
-      /* Mode names as the community says them, like the nouns above. */
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "Altro",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -425,6 +462,11 @@ export const it: Catalogue = {
     foreignWinePrefix:
       "Il prefix in {prefix} è stato creato da un altro Wine, e {wrapper} lo convertirebbe in modo permanente (rischiando di rompere l'applicazione a cui appartiene). Scegli una cartella vuota per avere un prefix nuovo, oppure svuota il campo per usare quello predefinito.",
 
+    steamNotFound: "Steam non è installato su questo computer.",
+    steamRunning: "Chiudi prima Steam. Salva le proprie impostazioni all'uscita e annullerebbe la modifica.",
+    steamNoUser: "Accedi a Steam almeno una volta su questo computer, poi riprova.",
+    spellbreakNotInSteam: "Spellbreak non è installato tramite Steam su questo computer.",
+
     unsupportedLinkScheme: "Si possono aprire solo link http(s).",
 
     io: "Errore di file: {detail}",
@@ -435,6 +477,7 @@ export const it: Catalogue = {
     badJson: "Risposta illeggibile: {detail}",
     downloadFailed: "Download non riuscito ({url}): {detail}",
     modDownloadFailed: "Download della mod non riuscito: {detail}",
+    steamConfigUnreadable: "Impossibile leggere il file {file} di Steam, quindi non è stato modificato nulla: {detail}",
     launchFailed: "Avvio non riuscito ({command}): {detail}",
     signInUnreachable:
       "Impossibile raggiungere il servizio di accesso: {detail}",

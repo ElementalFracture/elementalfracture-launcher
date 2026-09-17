@@ -1,0 +1,152 @@
+/* ============ Players online pill + its breakdown popover ============
+   Kept in step with the website's [ef_players] header widget
+   (ef-website mu-plugins/ef-player-count.php): same labels, same order,
+   same tokens. */
+
+.players-pill {
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.players-count strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.players-caret {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+.players-pill[data-state="open"] .players-caret,
+.players-pill[aria-expanded="true"] .players-caret {
+  transform: rotate(180deg);
+}
+
+/* Grey until someone is online, then a slow green pulse. */
+.players-dot,
+.player-breakdown .mode-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--muted-foreground);
+}
+.players-pill[data-live="1"] .players-dot {
+  background: var(--success);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);
+  animation: players-pulse 2.4s infinite;
+}
+@keyframes players-pulse {
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .players-pill[data-live="1"] .players-dot {
+    animation: none;
+  }
+}
+
+/* In a match / In the menus. */
+.player-breakdown .players-summary {
+  margin: 0 0 8px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.player-breakdown .players-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+}
+.player-breakdown .players-summary dt {
+  color: var(--muted-foreground);
+}
+.player-breakdown .players-summary dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* One table per family: the family name heads the mode column, the regions
+   head the count columns. */
+.player-breakdown .family-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.player-breakdown .family-table + .family-table {
+  margin-top: 10px;
+}
+.player-breakdown .family-table thead th {
+  padding: 0 4px 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.player-breakdown .family-table thead th:first-child {
+  width: 100%;
+  padding-left: 2px;
+  text-align: left;
+  color: var(--primary);
+}
+.player-breakdown .family-table tbody th {
+  padding: 4px 12px 4px 2px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.player-breakdown .family-table tbody td {
+  min-width: 28px;
+  padding: 4px;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.player-breakdown .mode-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+/* Nobody in that mode in that region: the cell holds the column, but recedes. */
+.player-breakdown .family-table tbody td.idle {
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+
+/* A mode whose match is under way gets the green dot; a lobby stays grey. */
+.player-breakdown .mode-dot {
+  width: 6px;
+  height: 6px;
+  opacity: 0.5;
+}
+.player-breakdown .mode-dot.live {
+  background: var(--success);
+  opacity: 1;
+}
+
+.player-breakdown .flavor-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: var(--primary-tint);
+  color: var(--primary);
+}
+
+/* No server reporting at all: the popover says so rather than sitting empty. */
+.player-breakdown .no-one {
+  padding: 4px 2px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}

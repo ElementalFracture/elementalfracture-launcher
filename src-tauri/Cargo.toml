@@ -1,6 +1,6 @@
 [package]
 name = "ef-launcher"
-version = "3.1.2"
+version = "3.2.2"
 description = "Elemental Fracture Launcher"
 authors = ["Elemental Fracture"]
 edition = "2021"
@@ -25,6 +25,20 @@ specta = { version = "2.0.0-rc.21", features = ["serde_json"] }
 specta-typescript = "0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "javascript", "typescript"] }
 specta-jsdoc = "0.0.9"
+
+# The startup-failure dialog (main.rs `fatal`), and finding Steam (steam/client.rs).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# Reading Shift for quickstart (steam/quickstart.rs). Already in the tree through tao.
+[target.'cfg(target_os = "linux")'.dependencies]
+x11-dl = "2.21"
 
 [profile.release]
 strip = true

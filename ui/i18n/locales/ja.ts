@@ -37,6 +37,31 @@ export const ja: Catalogue = {
       closeOnLaunchHelp:
         "ゲームが起動した少しあとにランチャーを自動で閉じ、プレイ中のメモリを解放します。",
     },
+    steam: {
+      title: "Steam",
+      closeSteam: "Steam を終了",
+      closing: "Steam に終了を要求しています…",
+      closeFirst:
+        "これらを変更するには Steam を終了してください。Steam は終了時に自身の設定を保存するため、変更が元に戻ってしまいます。",
+      noUser:
+        "これらを変更するには、このコンピューターで一度 Steam にサインインしてください。",
+      link: "Steam から Spellbreak をプレイ",
+      linkHelp:
+        "Steam ライブラリで Spellbreak の「プレイ」を押すと、このランチャーが開きます。Steam はこれを Spellbreak として扱うので、コントローラー設定、オーバーレイ、プレイ時間がすべて機能します。Elemental Fracture のファイルはそのままです。",
+      linkUnavailable:
+        "まず Steam で Spellbreak をインストールしてください。Steam はインストール済みのゲームにしか「プレイ」を表示しませんが、ゲーム自体は Elemental Fracture のフォルダーから起動します。",
+      linked:
+        "Steam で Spellbreak の「プレイ」を押すと Elemental Fracture が開くようになりました。",
+      unlinked: "Steam の Spellbreak の「プレイ」ボタンを元に戻しました。",
+      quickstart: "すぐにゲームを開始",
+      quickstartHelp:
+        "Steam で Spellbreak の「プレイ」を押すと、ランチャーを表示せずに、最後に選んだゲームモードでゲームが起動します。代わりにランチャーを開くには（ゲームモードを切り替えるときなど）、「プレイ」を押すときにランチャーが表示されるまで Shift を押し続けてください。インストールすべきアップデートがあるときや、サインインが必要なときも自動で開きます。",
+      shortcut: "Elemental Fracture を Steam に追加",
+      shortcutHelp:
+        "ランチャーを非 Steam ゲームとしてアートワーク付きで Steam ライブラリに追加し、Steam のコントローラー設定を割り当てられるようにします。Steam で Spellbreak を所有していない場合に使ってください。",
+      added: "Steam ライブラリに追加しました。",
+      removed: "Steam ライブラリから削除しました。",
+    },
     language: {
       title: "言語",
       label: "表示言語",
@@ -135,18 +160,37 @@ export const ja: Catalogue = {
   topbar: {
     logo: "Elemental Fracture — elefrac.com を開く",
     logoTitle: "elefrac.com を開く",
-    ingame: {
-      title: "ゲーム中のプレイヤー: クリックで内訳を表示",
-      label: "ゲーム中",
-      empty: "ゲーム中のプレイヤーはいません",
-      mode: "モード",
+    players: {
+      title: "オンラインのプレイヤー: クリックで内訳を表示",
+      label: "人がオンライン",
+      label_other: "人がオンライン",
+      inMatch: "マッチ中",
+      inMenus: "メニュー画面",
+      empty: "応答しているサーバーはありません。",
+      live: "マッチ進行中",
+      /* A region the sidecar didn't name, and a family no mode maps to. */
       other: "その他",
-      /* Mode names as the community says them, like the nouns above. */
+      /* Mode, family and build names are the game's own, kept in English
+         like the balance names. */
+      families: {
+        battleRoyale: "Battle Royale",
+        dominion: "Dominion",
+        clash: "Clash",
+        other: "その他",
+      },
       modes: {
-        solos: "Solos",
-        duos: "Duos",
-        squads: "Squads",
-        arena: "Arena/TDM",
+        solo: "Solo",
+        duo: "Duo",
+        squad: "Squad",
+        dominion: "Dominion",
+        tdm: "Team Deathmatch",
+        custom: "Custom Match",
+        clash: "Team Clash",
+        ffa: "Free for all",
+      },
+      flavors: {
+        classic: "Classic",
+        test: "Test Build",
       },
     },
     variant: {
@@ -427,6 +471,15 @@ export const ja: Catalogue = {
     foreignWinePrefix:
       "{prefix} の prefix は別の Wine が作成したもので、{wrapper} はそれを恒久的に変換してしまいます（その prefix を使っているアプリが壊れるおそれがあります）。空のフォルダーを選んで新しい prefix を作るか、欄を空にして既定の prefix を使ってください。",
 
+    steamNotFound:
+      "このコンピューターには Steam がインストールされていません。",
+    steamRunning:
+      "まず Steam を終了してください。終了時に自身の設定を保存するため、変更が元に戻ってしまいます。",
+    steamNoUser:
+      "このコンピューターで一度 Steam にサインインしてから、もう一度お試しください。",
+    spellbreakNotInSteam:
+      "このコンピューターの Spellbreak は Steam からインストールされていません。",
+
     unsupportedLinkScheme: "開けるのは http(s) のリンクだけです。",
 
     io: "ファイルエラー: {detail}",
@@ -436,6 +489,8 @@ export const ja: Catalogue = {
     badJson: "応答を読み取れません: {detail}",
     downloadFailed: "ダウンロードに失敗しました（{url}）: {detail}",
     modDownloadFailed: "MOD のダウンロードに失敗しました: {detail}",
+    steamConfigUnreadable:
+      "Steam の {file} を読み込めなかったため、何も変更していません: {detail}",
     launchFailed: "起動に失敗しました（{command}）: {detail}",
     signInUnreachable: "サインインサービスに接続できませんでした: {detail}",
     noAppDataDir: "アプリのデータディレクトリが利用できません: {detail}",

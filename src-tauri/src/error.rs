@@ -105,6 +105,16 @@ pub enum ErrorCode {
     /// `params: prefix, wrapper`
     ForeignWinePrefix,
 
+    /* ---- authored: Steam (steam/link.rs) ---- */
+    /// No native Steam client on this machine.
+    SteamNotFound,
+    /// Steam is running and would overwrite the change when it exits.
+    SteamRunning,
+    /// Steam has never been signed into here, so there's no account to write for.
+    SteamNoUser,
+    /// Linking needs Spellbreak installed through Steam.
+    SpellbreakNotInSteam,
+
     /* ---- authored: misc ---- */
     /// A link that isn't http(s), refused rather than handed to the OS.
     UnsupportedLinkScheme,
@@ -129,6 +139,8 @@ pub enum ErrorCode {
     ModDownloadFailed,
     /// `params: command, detail` — spawning the game.
     LaunchFailed,
+    /// A Steam config file that wouldn't parse; left untouched. `params: file, detail`
+    SteamConfigUnreadable,
     /// `params: detail` — the sign-in host didn't answer.
     SignInUnreachable,
     /// `params: detail` — no OS app-data directory.
