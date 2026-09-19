@@ -15,6 +15,9 @@ use std::path::Path;
 /// Marked Hidden on Windows (a dot prefix only hides it on Linux).
 pub(super) fn write_hidden_mode(root: &Path, mode: &str) {
     let path = root.join(".ef_mode");
+    // The in-game DLLs (auth_injector, appserver) know the Playtest build as "dev"; clients
+    // older than 6.3.12 read anything else as Production and queue the prod servers.
+    let mode = if mode == "playtest" { "dev" } else { mode };
     let Ok(()) = fs::write(&path, format!("{mode}\n")) else {
         return;
     };
