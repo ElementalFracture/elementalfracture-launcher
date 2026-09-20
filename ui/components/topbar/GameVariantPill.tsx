@@ -30,7 +30,11 @@ function Marked({ text }: { text: string }) {
 export function GameVariantPill() {
   const { status, refreshStatus } = useGame();
   const { settings } = useSettings();
-  const [installing, setInstalling] = useState(false);
+  // The variant being switched to, while it is being switched to. A switch now
+  // carries the build's mods as well as its balance pak, so any of them can
+  // take a download — not just the first trip to the playtest channel.
+  const [busy, setBusy] = useState<GameVariant | null>(null);
+  const installing = busy !== null;
 
   const activeGameVariant = toGameVariant(status?.variant);
   // The playtest channel is invisible to accounts without the badge — devs
@@ -44,12 +48,13 @@ export function GameVariantPill() {
     if (!picked || picked === activeGameVariant || installing) {
       return;
     }
+    setBusy(picked);
     try {
       // First time on this machine there is no pak to switch to, so the
       // channel is downloaded and switched onto in one go; the shared install
-      // progress bar carries it (download-playtest / extract-playtest).
+      // progress bar carries it (download-playtest / extract-playtest, then
+      // install-mods for the channel's own mod package).
       if (picked === "playtest" && !status?.test_installed) {
-        setInstalling(true);
         await rust.installPlaytestBuild();
       } else {
         await rust.setVariant(picked);
@@ -57,7 +62,7 @@ export function GameVariantPill() {
     } catch (e) {
       toastError(e);
     } finally {
-      setInstalling(false);
+      setBusy(null);
     }
     refreshStatus();
   };
@@ -72,7 +77,7 @@ export function GameVariantPill() {
     if (id !== "playtest") {
       return label;
     }
-    if (installing) {
+    if (busy === "playtest") {
       return _("topbar.variant.enabling");
     }
     return status?.test_installed ? label : _("topbar.variant.enable");

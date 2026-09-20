@@ -12,7 +12,7 @@ struct Progress {
     total: u64,
 }
 
-pub(super) fn emit(app: &tauri::AppHandle, stage: &str, message: String, percent: f64, done: u64, total: u64) {
+pub(crate) fn emit(app: &tauri::AppHandle, stage: &str, message: String, percent: f64, done: u64, total: u64) {
     let _ = app.emit(
         "install-progress",
         Progress { stage: stage.into(), message, percent, done, total },

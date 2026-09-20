@@ -12,7 +12,7 @@ mod archive;
 mod config;
 mod install;
 pub mod manifest;
-mod progress;
+pub(crate) mod progress;
 mod runtime;
 mod self_update;
 mod transfer;
@@ -21,6 +21,7 @@ mod transfer;
 // hidden items next to each function (`__cmd__*`, `__specta__fn__*`) that
 // `collect_commands!` in main.rs resolves through the same path, and a
 // by-name `pub use` leaves them behind.
+pub(crate) use archive::extract_entries;
 pub use config::*;
 pub use install::*;
 pub use runtime::*;

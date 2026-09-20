@@ -2,12 +2,12 @@
 //! install, the balance patch, the playtest channel, and the version readout
 //! the update badge hangs off.
 
-use super::archive::{extract_all, extract_flat, stage_test_pak};
+use super::archive::{bytes_to_unpack, ensure_room, extract_all, extract_flat, read_tail, stage_test_pak, Tail};
 use super::config::fetch_remote_game_version;
 use super::manifest::{fetch_manifest, Manifest};
 use super::progress::emit;
 use super::runtime::ensure_runtime;
-use super::transfer::{discard, download_to_file, http};
+use super::transfer::{discard, download_to_file, fetch_range, http, still_to_land};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{game, settings};
 use serde::Serialize;
@@ -34,6 +34,12 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
         return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
     }
 
+    // Which build this install is on decides what an update means: the Playtest
+    // channel gets the playtest pak and the playtest mods, Production and
+    // Vanilla the Elemental Fracture ones.
+    let variant = game::detect_variant(root);
+    let channel = crate::mods::channel_for_variant(&variant);
+
     let remote_version = fetch_remote_game_version(&http()?, cdn).await;
 
     let tmp = root.join("_efpatch.zip");
@@ -59,11 +65,24 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     }
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
 
+    // On the Playtest channel this update is the playtest build's update too,
+    // so its pak comes down in the same run.
+    if variant == "playtest" {
+        stage_playtest_pak(app, cdn, root, &paks, manifest).await?;
+    }
+    // The patch just dropped an *active* ElefracBalance_P.pak into Content/Paks.
+    // On any build that doesn't mount it, that would leave two balance paks
+    // loaded at once, so re-apply the layout the player is actually on.
+    if variant == "playtest" || variant == "classic" {
+        game::switch_to(&root.to_string_lossy(), &variant)?;
+    }
+
     emit(app, "install-mods", "Downloading mod package…".into(), 0.0, 0, 0);
     let mod_log = crate::mods::fetch_and_install(
         cdn,
         root.to_path_buf(),
-        manifest.hash_for(crate::mods::MOD_ZIP)?,
+        manifest.hash_for(crate::mods::zip_key(channel))?,
+        channel,
     )
     .await?;
     let installed = mod_log.iter().filter(|l| l.starts_with("Installed")).count();
@@ -80,6 +99,29 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     }
 }
 
+/// The base archive's size and file listing, read from its last bytes before
+/// any of the rest is fetched. None if the server or the archive doesn't
+/// cooperate: the check this feeds is advisory, and the exact one runs again
+/// before unpacking.
+async fn remote_listing(client: &reqwest::Client, url: &str) -> Option<(u64, Vec<(String, u64)>)> {
+    // The base archive's central directory is ~160 KB; 1 MiB covers several
+    // thousand entries. Past 64 MiB it isn't worth fetching just to check.
+    const TAIL: u64 = 1 << 20;
+    const MAX_DIRECTORY: u64 = 64 << 20;
+    let (size, start, bytes) = fetch_range(client, url, &format!("bytes=-{TAIL}")).await?;
+    match read_tail(&bytes, start)? {
+        Tail::Listing(listing) => Some((size, listing)),
+        Tail::NeedFrom(offset) if size.saturating_sub(offset) <= MAX_DIRECTORY => {
+            let (_, start, bytes) = fetch_range(client, url, &format!("bytes={offset}-")).await?;
+            match read_tail(&bytes, start)? {
+                Tail::Listing(listing) => Some((size, listing)),
+                Tail::NeedFrom(_) => None,
+            }
+        }
+        Tail::NeedFrom(_) => None,
+    }
+}
+
 /// Fresh install: base game zip → dest, then patch + version bump.
 #[tauri::command]
 #[specta::specta]
@@ -93,22 +135,41 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
 
     // The .part file and its .state sidecar survive a failed run on purpose:
     // the next attempt resumes them (see transfer.rs). They go only once the
-    // archive has been extracted.
+    // archive has been extracted and verified.
     let tmp_zip = dest.join("_elefracbase.zip.part");
+    let base_url = format!("{cdn}/{BASE_ZIP}");
+
+    // Fail now rather than after the download: the archive and everything it
+    // unpacks to must fit side by side, since the archive is only deleted once
+    // the unpacked files have been verified against it.
+    emit(&app, "download-base", "Checking free space…".into(), 0.0, 0, 0);
+    if let Some((size, listing)) = remote_listing(&http()?, &base_url).await {
+        let need = still_to_land(&tmp_zip, &base_url, size) + bytes_to_unpack(&listing, &dest);
+        ensure_room(&dest, need)?;
+    }
+
     emit(&app, "download-base", "Starting download…".into(), 0.0, 0, 0);
     download_to_file(
         &app,
         "download-base",
-        &format!("{cdn}/{BASE_ZIP}"),
+        &base_url,
         &tmp_zip,
         manifest.hash_for(BASE_ZIP)?,
     )
     .await?;
 
+    // Until every file has been read back and matched, the folder is not an
+    // install: the marker keeps `find_exe` (and with it "Locate game") from
+    // taking a half-unpacked folder for a finished one if this run dies.
+    let marker = dest.join(game::UNPACKING_MARKER);
+    fs::write(&marker, b"")?;
     let (app2, dest2, zip2) = (app.clone(), dest.clone(), tmp_zip.clone());
-    tauri::async_runtime::spawn_blocking(move || extract_all(&app2, "extract-base", &zip2, &dest2))
-        .await
-        .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
+    tauri::async_runtime::spawn_blocking(move || {
+        extract_all(&app2, "extract-base", "verify-base", &zip2, &dest2)
+    })
+    .await
+    .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
+    fs::remove_file(&marker)?;
     discard(&tmp_zip);
 
     // The zip may either contain g3/Engine at its root or a single wrapper dir.
@@ -204,9 +265,30 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> 
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
     let manifest = fetch_manifest(&app, &http()?, &cdn).await?;
 
+    stage_playtest_pak(&app, &cdn, &root, &paks, &manifest).await?;
+    // The playtest channel's own mods (its loader, its DLLs, its paks) —
+    // nothing of production's is left behind, and nothing of its is left behind
+    // when the player switches back.
+    crate::mods::sync_channel(&app, "playtest").await?;
+
+    let variant = game::switch_to(&s.game_path, "playtest")?;
+    emit(&app, "done", "Playtest build ready".into(), 100.0, 0, 0);
+    Ok(variant)
+}
+
+/// Pull `patch/dev.zip` and stage what it holds as the playtest balance pak.
+/// Shared by "enable the playtest build" and by an update run on a machine
+/// that's already on it.
+async fn stage_playtest_pak(
+    app: &tauri::AppHandle,
+    cdn: &str,
+    root: &Path,
+    paks: &Path,
+    manifest: &Manifest,
+) -> AppResult<()> {
     let tmp = root.join("_efplaytest.zip");
     download_to_file(
-        &app,
+        app,
         "download-playtest",
         &format!("{cdn}/{PLAYTEST_ZIP}"),
         &tmp,
@@ -214,22 +296,19 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> 
     )
     .await?;
 
-    emit(&app, "extract-playtest", "Installing the playtest build…".into(), 0.0, 0, 0);
-    let (tmp2, paks2) = (tmp.clone(), paks.clone());
+    emit(app, "extract-playtest", "Installing the playtest build…".into(), 0.0, 0, 0);
+    let (tmp2, paks2) = (tmp.clone(), paks.to_path_buf());
     let staged = tauri::async_runtime::spawn_blocking(move || stage_test_pak(&tmp2, &paks2))
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     discard(&tmp);
     emit(
-        &app,
+        app,
         "extract-playtest",
         format!("Playtest build installed ({staged})"),
         100.0,
         0,
         0,
     );
-
-    let variant = game::switch_to(&s.game_path, "playtest")?;
-    emit(&app, "done", "Playtest build ready".into(), 100.0, 0, 0);
-    Ok(variant)
+    Ok(())
 }

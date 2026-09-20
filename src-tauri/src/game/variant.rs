@@ -46,9 +46,17 @@ pub fn test_build_installed(root: &Path) -> bool {
 /// Switch the game between Production ("ef"), Vanilla ("classic") and the
 /// Playtest channel ("playtest") by parking the balance paks we don't want and
 /// restoring the one we do, exactly like the old rename.bat / restore.bat did.
+///
+/// The build's *mods* are swapped first (mods.rs: Production and Vanilla share
+/// the Elemental Fracture package, Playtest has its own). Mods first because
+/// that is the step that can fail — a download, a stale manifest — and failing
+/// it has to leave the player on the build they were already on rather than
+/// half-way between two. Switching onto a channel this machine has run before
+/// touches the network not at all.
 #[tauri::command]
 #[specta::specta]
-pub fn set_variant(app: tauri::AppHandle, variant: String) -> AppResult<String> {
+pub async fn set_variant(app: tauri::AppHandle, variant: String) -> AppResult<String> {
+    crate::mods::sync_channel(&app, &variant).await?;
     let s = settings::load(&app);
     switch_to(&s.game_path, &variant)
 }

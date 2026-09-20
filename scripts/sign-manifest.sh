@@ -51,6 +51,13 @@ PAYLOADS=(
     patch/dev.zip
     patch/mod/mod.zip
 )
+# Payloads that only exist once someone publishes them. The Playtest channel's
+# mod package is one: a CDN that hasn't got one yet is a perfectly good CDN, and
+# an entry for an object that isn't there would be a manifest nobody can satisfy.
+# Missing = skipped with a warning; present = signed like any other payload.
+OPTIONAL_PAYLOADS=(
+    patch/mod/mod-dev.zip
+)
 # The umu runtime is fetched from GitHub, not the CDN; the launcher keys it as
 # runtime/<file name> (runtime.rs). Read the pinned URL out of the source so the
 # two can't drift.
@@ -112,6 +119,13 @@ echo "==> Hashing payloads on $ALIAS"
 ENTRIES=()
 for p in "${PAYLOADS[@]}"; do
     ENTRIES+=("$p=$(hash_object "$p")")
+done
+for p in "${OPTIONAL_PAYLOADS[@]}"; do
+    if sha="$(hash_object "$p" 2>/dev/null)" && [ -n "$sha" ]; then
+        ENTRIES+=("$p=$sha")
+    else
+        echo "    skipping $p (not on the CDN)" >&2
+    fi
 done
 ENTRIES+=("runtime/$(basename "$UMU_URL")=$(hash_url "$UMU_URL")")
 
