@@ -147,14 +147,14 @@ describe("GameVariantPill", () => {
       await waitFor(() => expect(game.refreshStatus).toHaveBeenCalled());
     });
 
-    it("just switches once the pak is installed", async () => {
+    it("re-checks the CDN even once the pak is installed", async () => {
       account.is_tester = true;
       game.testInstalled = true;
       render(<GameVariantPill />);
       fireEvent.click(seg("Playtest"));
 
-      await waitFor(() => expect(rust.setVariant).toHaveBeenCalledWith("playtest"));
-      expect(rust.installPlaytestBuild).not.toHaveBeenCalled();
+      await waitFor(() => expect(rust.installPlaytestBuild).toHaveBeenCalled());
+      expect(rust.setVariant).not.toHaveBeenCalled();
     });
 
     it("puts a failed download in front of the player", async () => {

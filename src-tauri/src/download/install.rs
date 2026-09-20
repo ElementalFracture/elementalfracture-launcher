@@ -263,9 +263,19 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> 
         return Err(AppError::new(ErrorCode::PaksNotFound).with("path", paks.display()));
     }
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
-    let manifest = fetch_manifest(&app, &http()?, &cdn).await?;
-
-    stage_playtest_pak(&app, &cdn, &root, &paks, &manifest).await?;
+    // Enabling Playtest is also how a tester gets today's build: the paks are
+    // re-checked against the CDN every time, not just the first time. Nothing is
+    // downloaded when the staged build is already the one being served.
+    match fetch_manifest(&app, &http()?, &cdn).await {
+        Ok(manifest) => stage_playtest_pak(&app, &cdn, &root, &paks, &manifest).await?,
+        // Offline with the build already on disk: switch onto what's here rather
+        // than refuse. An install that has never had it still needs the network.
+        Err(e) if game::test_build_installed(&root) => {
+            emit(&app, "extract-playtest", "Offline — keeping the playtest build already installed".into(), 100.0, 0, 0);
+            eprintln!("playtest: could not check the CDN for a newer build ({e}); using the one on disk");
+        }
+        Err(e) => return Err(e),
+    }
     // The playtest channel's own mods (its loader, its DLLs, its paks) —
     // nothing of production's is left behind, and nothing of its is left behind
     // when the player switches back.
@@ -276,9 +286,21 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> 
     Ok(variant)
 }
 
-/// Pull `patch/dev.zip` and stage what it holds as the playtest balance pak.
-/// Shared by "enable the playtest build" and by an update run on a machine
-/// that's already on it.
+/// Which `patch/dev.zip` the staged playtest pak came out of. Kept beside the
+/// paks, like the mod channel's record, so the game folder can say for itself
+/// whether the build on disk is the one the CDN is serving.
+const PLAYTEST_RECORD: &str = "Mods/.ef_playtest.json";
+
+/// The SHA-256 recorded for the staged playtest pak, if there is one.
+fn staged_playtest_sha(root: &Path) -> Option<String> {
+    let raw = fs::read_to_string(root.join(PLAYTEST_RECORD)).ok()?;
+    let doc: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    Some(doc.get("sha256")?.as_str()?.to_ascii_lowercase())
+}
+
+/// Pull `patch/dev.zip` and stage what it holds as the playtest balance pak,
+/// unless the pak already on disk came out of exactly this one. Shared by
+/// "enable the playtest build" and by an update run on a machine already on it.
 async fn stage_playtest_pak(
     app: &tauri::AppHandle,
     cdn: &str,
@@ -286,13 +308,21 @@ async fn stage_playtest_pak(
     paks: &Path,
     manifest: &Manifest,
 ) -> AppResult<()> {
+    let want = manifest.hash_for(PLAYTEST_ZIP)?.to_ascii_lowercase();
+    // Already the current build: staging it again would re-extract the same
+    // bytes over the pak the game has open.
+    if staged_playtest_sha(root).as_deref() == Some(want.as_str()) && game::test_build_installed(root) {
+        emit(app, "extract-playtest", "Playtest build is up to date".into(), 100.0, 0, 0);
+        return Ok(());
+    }
+
     let tmp = root.join("_efplaytest.zip");
     download_to_file(
         app,
         "download-playtest",
         &format!("{cdn}/{PLAYTEST_ZIP}"),
         &tmp,
-        manifest.hash_for(PLAYTEST_ZIP)?,
+        &want,
     )
     .await?;
 
@@ -302,6 +332,12 @@ async fn stage_playtest_pak(
         .await
         .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
     discard(&tmp);
+    // Record what is now on disk, so the next enable can tell at a glance
+    // whether it is still the build the CDN is serving.
+    let _ = fs::write(
+        root.join(PLAYTEST_RECORD),
+        format!("{{\"sha256\":\"{want}\"}}"),
+    );
     emit(
         app,
         "extract-playtest",

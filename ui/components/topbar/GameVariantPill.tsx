@@ -50,11 +50,14 @@ export function GameVariantPill() {
     }
     setBusy(picked);
     try {
-      // First time on this machine there is no pak to switch to, so the
-      // channel is downloaded and switched onto in one go; the shared install
-      // progress bar carries it (download-playtest / extract-playtest, then
-      // install-mods for the channel's own mod package).
-      if (picked === "playtest" && !status?.test_installed) {
+      // Enabling Playtest always goes the install route, not just the first
+      // time: it re-checks the paks and the channel's mods against the CDN, so
+      // a tester who turned it on weeks ago lands on today's build rather than
+      // the one they happen to hold. Nothing is downloaded when the staged
+      // build is already what is being served. The shared install progress bar
+      // carries it (download-playtest / extract-playtest, then install-mods for
+      // the channel's own mod package).
+      if (picked === "playtest") {
         await rust.installPlaytestBuild();
       } else {
         await rust.setVariant(picked);
