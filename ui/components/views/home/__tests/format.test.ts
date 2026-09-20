@@ -117,6 +117,9 @@ describe("translated formatting", () => {
   afterEach(() => vi.useRealTimers());
 
   it("greets in the language on screen", () => {
+    /* The greeting goes by the player's own clock, so pin local noon — the
+       UTC noon above is 8am in New York and says "Bonjour". */
+    vi.setSystemTime(new Date(2026, 6, 27, 12, 0));
     setLocale("fr");
     expect(greeting("Lytion", 0)).toBe("Bon après-midi, Lytion !");
   });

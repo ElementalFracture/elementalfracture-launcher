@@ -323,6 +323,7 @@ export const es: Catalogue = {
     stages: {
       downloadBase: "Descargando el juego",
       extractBase: "Extrayendo el juego",
+      verifyBase: "Verificando los archivos del juego",
       downloadPatch: "Descargando la actualización",
       extractPatch: "Instalando la actualización",
       installMods: "Instalando los mods",
@@ -420,8 +421,10 @@ export const es: Catalogue = {
     downloadStalled: "Descarga detenida (rango {range}, quedan {remaining}).",
     launcherUpdateDisabledInDev:
       "La autoactualización del launcher está desactivada en las compilaciones de desarrollo (define EF_LAUNCHER_UPDATE=1).",
-    extractionIncomplete:
-      "Extracción incompleta: se escribieron {written} de {expected} archivos. Es probable que la descarga esté corrupta — borra la carpeta de instalación y vuelve a descargar.",
+    extractionMismatch:
+      "{count} archivo(s) del juego siguen sin coincidir con la descarga tras volver a extraerlos: {files}. Algo está modificando los archivos mientras se escriben — normalmente el antivirus. Añade una exclusión para la carpeta del juego y vuelve a instalar; la descarga se conserva, así que no se descargará de nuevo.",
+    notEnoughSpace:
+      "No hay suficiente espacio en {path}: la instalación necesita {need} libres y hay {free}. La descarga y el juego extraído tienen que caber a la vez hasta que se verifiquen los archivos.",
     archiveMissingGameFolder:
       "Los archivos extraídos no contienen una carpeta g3: estructura de archivo inesperada.",
     runtimeArchiveCorrupt: "El archivo del runtime está corrupto o incompleto.",

@@ -59,6 +59,7 @@ export function formatEventTime(ev: { status?: string; start?: string }) {
 const STAGE_KEYS: Record<string, Key> = {
   "download-base": "home.stages.downloadBase",
   "extract-base": "home.stages.extractBase",
+  "verify-base": "home.stages.verifyBase",
   "download-patch": "home.stages.downloadPatch",
   "extract-patch": "home.stages.extractPatch",
   "install-mods": "home.stages.installMods",

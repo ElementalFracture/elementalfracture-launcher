@@ -14,7 +14,26 @@ pub(super) const WIN64_EXES: &[&str] = &[
     "g3.exe",
 ];
 
+/// Dropped in the destination folder while the base archive unpacks, and
+/// removed once every file has been read back and matched. A folder that
+/// still has one was interrupted mid-install: its binary may well be there
+/// while half the game isn't.
+pub const UNPACKING_MARKER: &str = ".ef-unpacking";
+
+/// Whether `root` (or the folder it was unpacked into, when the archive had a
+/// wrapper directory) is an install that never finished unpacking.
+pub fn unpack_unfinished(root: &Path) -> bool {
+    root.join(UNPACKING_MARKER).exists()
+        || root.parent().is_some_and(|p| p.join(UNPACKING_MARKER).exists())
+}
+
+/// The game binary under `root`, or None — including for a folder whose
+/// install never finished unpacking, which is not an install yet however
+/// complete it looks.
 pub fn find_exe(root: &Path) -> Option<PathBuf> {
+    if unpack_unfinished(root) {
+        return None;
+    }
     let dir = root.join("g3").join("Binaries").join("Win64");
     for name in WIN64_EXES {
         let p = dir.join(name);

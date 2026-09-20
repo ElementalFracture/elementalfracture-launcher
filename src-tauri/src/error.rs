@@ -55,8 +55,11 @@ pub enum ErrorCode {
     DownloadStalled,
     /// Self-update is deliberately off in dev builds.
     LauncherUpdateDisabledInDev,
-    /// `params: written, expected`
-    ExtractionIncomplete,
+    /// Files that still didn't read back as the archive's bytes after being
+    /// written again. `params: count, files`
+    ExtractionMismatch,
+    /// The drive can't hold what the install needs. `params: need, free, path`
+    NotEnoughSpace,
     /// The install archive unpacked without the folder the game lives in.
     ArchiveMissingGameFolder,
     /// The runtime tarball ended mid-entry or has an unreadable header.

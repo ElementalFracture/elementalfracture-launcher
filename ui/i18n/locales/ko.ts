@@ -322,6 +322,7 @@ export const ko: Catalogue = {
     stages: {
       downloadBase: "게임 내려받는 중",
       extractBase: "게임 푸는 중",
+      verifyBase: "게임 파일 확인 중",
       downloadPatch: "업데이트 내려받는 중",
       extractPatch: "업데이트 설치 중",
       installMods: "모드 설치 중",
@@ -417,8 +418,10 @@ export const ko: Catalogue = {
     downloadStalled: "내려받기가 멈췄습니다 (범위 {range}, {remaining} 남음).",
     launcherUpdateDisabledInDev:
       "개발 빌드에서는 런처 자동 업데이트가 꺼져 있습니다 (EF_LAUNCHER_UPDATE=1을 설정하세요).",
-    extractionIncomplete:
-      "압축 풀기가 끝나지 않았습니다: {expected}개 중 {written}개 파일을 썼습니다. 내려받기가 손상되었을 가능성이 큽니다 — 설치 폴더를 지우고 다시 내려받으세요.",
+    extractionMismatch:
+      "다시 압축을 풀었는데도 게임 파일 {count}개가 내려받은 파일과 일치하지 않습니다: {files}. 파일을 쓰는 동안 무언가가 파일을 바꾸고 있습니다 — 보통 백신 프로그램입니다. 게임 폴더를 예외에 추가한 뒤 다시 설치하세요. 내려받은 파일은 보관되므로 다시 내려받지 않습니다.",
+    notEnoughSpace:
+      "{path}에 디스크 공간이 부족합니다: 설치에 {need}의 여유 공간이 필요하지만 {free}만 남아 있습니다. 파일 확인이 끝날 때까지 내려받은 파일과 압축을 푼 게임이 함께 들어갈 공간이 필요합니다.",
     archiveMissingGameFolder:
       "압축을 푼 파일에 g3 폴더가 없습니다: 예상과 다른 아카이브 구조입니다.",
     runtimeArchiveCorrupt: "런타임 아카이브가 손상되었거나 불완전합니다.",

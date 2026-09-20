@@ -808,9 +808,10 @@ dependencies = [
 
 [[package]]
 name = "ef-launcher"
-version = "3.2.2"
+version = "3.2.3"
 dependencies = [
  "ed25519-dalek",
+ "libc",
  "open",
  "reqwest 0.12.28",
  "serde",

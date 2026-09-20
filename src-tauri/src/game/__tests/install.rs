@@ -54,3 +54,27 @@ fn a_folder_with_no_binary_is_not_an_install() {
     let tmp = tempfile::tempdir().unwrap();
     assert_eq!(find_exe(tmp.path()), None);
 }
+
+/// An interrupted install can have its binary on disk and half the game
+/// missing. Until the unpack marker is gone it is not an install, whether the
+/// archive unpacked straight into the folder or into a wrapper inside it.
+#[test]
+fn a_folder_that_never_finished_unpacking_is_not_an_install() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dest = tmp.path();
+    let root = dest.join("Spellbreak");
+    let win64 = root.join("g3").join("Binaries").join("Win64");
+    fs::create_dir_all(&win64).unwrap();
+    fs::write(win64.join("g3-Win64-Test.exe"), b"exe").unwrap();
+    assert!(find_exe(&root).is_some());
+
+    fs::write(dest.join(UNPACKING_MARKER), b"").unwrap();
+    assert_eq!(find_exe(&root), None, "marker in the folder it was unpacked into");
+    fs::remove_file(dest.join(UNPACKING_MARKER)).unwrap();
+
+    fs::write(root.join(UNPACKING_MARKER), b"").unwrap();
+    assert_eq!(find_exe(&root), None, "marker in the install root");
+    fs::remove_file(root.join(UNPACKING_MARKER)).unwrap();
+
+    assert!(find_exe(&root).is_some());
+}

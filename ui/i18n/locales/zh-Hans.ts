@@ -309,6 +309,7 @@ export const zhHans: Catalogue = {
     stages: {
       downloadBase: "正在下载游戏",
       extractBase: "正在解压游戏",
+      verifyBase: "正在校验游戏文件",
       downloadPatch: "正在下载更新",
       extractPatch: "正在安装更新",
       installMods: "正在安装模组",
@@ -398,8 +399,10 @@ export const zhHans: Catalogue = {
     downloadStalled: "下载已停滞（范围 {range}，还剩 {remaining}）。",
     launcherUpdateDisabledInDev:
       "开发版中已关闭启动器自更新（可设置 EF_LAUNCHER_UPDATE=1）。",
-    extractionIncomplete:
-      "解压不完整：{expected} 个文件中只写入了 {written} 个。下载很可能已损坏 — 请删除安装文件夹并重新下载。",
+    extractionMismatch:
+      "重新解压后仍有 {count} 个游戏文件与下载内容不一致：{files}。有程序在写入时修改了文件 — 通常是杀毒软件。请将游戏文件夹加入排除列表后重新安装；已下载的文件会保留，不会重复下载。",
+    notEnoughSpace:
+      "{path} 磁盘空间不足：安装需要 {need} 可用空间，当前只有 {free}。在文件校验完成之前，下载文件和解压后的游戏需要同时存放。",
     archiveMissingGameFolder: "解压出的文件中没有 g3 文件夹：压缩包结构异常。",
     runtimeArchiveCorrupt: "运行时压缩包已损坏或不完整。",
     runtimeNeedsPython:

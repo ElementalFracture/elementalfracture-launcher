@@ -315,6 +315,7 @@ export const ptBR: Catalogue = {
     stages: {
       downloadBase: "Baixando o jogo",
       extractBase: "Extraindo o jogo",
+      verifyBase: "Verificando os arquivos do jogo",
       downloadPatch: "Baixando a atualização",
       extractPatch: "Instalando a atualização",
       installMods: "Instalando os mods",
@@ -414,8 +415,10 @@ export const ptBR: Catalogue = {
       "Download travado (intervalo {range}, faltam {remaining}).",
     launcherUpdateDisabledInDev:
       "A autoatualização do launcher está desligada nas builds de desenvolvimento (defina EF_LAUNCHER_UPDATE=1).",
-    extractionIncomplete:
-      "Extração incompleta: {written} de {expected} arquivos escritos. O download provavelmente está corrompido — apague a pasta de instalação e baixe de novo.",
+    extractionMismatch:
+      "{count} arquivo(s) do jogo ainda não batem com o download depois de extraídos de novo: {files}. Algo está alterando os arquivos enquanto são gravados — geralmente o antivírus. Adicione uma exclusão para a pasta do jogo e instale de novo; o download é mantido, então não será baixado outra vez.",
+    notEnoughSpace:
+      "Espaço em disco insuficiente em {path}: a instalação precisa de {need} livres e há {free}. O download e o jogo extraído precisam caber lado a lado até os arquivos serem verificados.",
     archiveMissingGameFolder:
       "Os arquivos extraídos não têm uma pasta g3: estrutura de arquivo inesperada.",
     runtimeArchiveCorrupt:

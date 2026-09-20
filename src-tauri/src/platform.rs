@@ -74,6 +74,41 @@ pub async fn pick_game_dir(app: tauri::AppHandle, title: Option<String>) -> Opti
         .map(|p| p.to_string_lossy().into_owned())
 }
 
+/// Bytes this user may still write on the filesystem holding `path` — what
+/// the OS will actually hand out, not the raw free count (ext4 keeps 5% back
+/// for root, and a quota can cap it lower still).
+#[cfg(unix)]
+pub fn free_space(path: &std::path::Path) -> std::io::Result<u64> {
+    use std::os::unix::ffi::OsStrExt;
+    let c = std::ffi::CString::new(path.as_os_str().as_bytes())?;
+    // SAFETY: statvfs only writes into the struct we hand it, and `c` is a
+    // valid NUL-terminated path for the length of the call.
+    let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+    if unsafe { libc::statvfs(c.as_ptr(), &mut st) } != 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // The field widths differ between unixes; on Linux these casts are no-ops.
+    #[allow(clippy::unnecessary_cast)]
+    Ok((st.f_bavail as u64).saturating_mul(st.f_frsize as u64))
+}
+
+#[cfg(windows)]
+pub fn free_space(path: &std::path::Path) -> std::io::Result<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let mut available = 0u64;
+    // SAFETY: `wide` is NUL-terminated and outlives the call; the two totals
+    // we don't want are allowed to be null.
+    let ok = unsafe {
+        GetDiskFreeSpaceExW(wide.as_ptr(), &mut available, std::ptr::null_mut(), std::ptr::null_mut())
+    };
+    if ok == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(available)
+}
+
 #[cfg(test)]
 #[path = "__tests/platform.rs"]
 mod tests;

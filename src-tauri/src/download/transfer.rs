@@ -137,6 +137,44 @@ pub(super) fn discard(dest: &Path) {
     let _ = fs::remove_file(state_path(dest));
 }
 
+/// How much of the payload at `dest` still has to arrive: none of a finished
+/// download of this object, the missing segments of an interrupted one, all
+/// of anything else.
+pub(super) fn still_to_land(dest: &Path, url: &str, total: u64) -> u64 {
+    match State::load(dest) {
+        Some(st) if st.url == url && st.total == total => {
+            if st.complete {
+                0
+            } else {
+                total.saturating_sub(st.done())
+            }
+        }
+        _ => total,
+    }
+}
+
+/// One byte range of `url`: `(object size, offset the bytes start at, bytes)`.
+/// None unless the server answers with exactly that — a 206 and a
+/// Content-Range to place it by.
+pub(super) async fn fetch_range(client: &reqwest::Client, url: &str, range: &str) -> Option<(u64, u64, Vec<u8>)> {
+    let r = client
+        .get(url)
+        .header(reqwest::header::RANGE, range)
+        .send()
+        .await
+        .ok()?;
+    if r.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+        return None;
+    }
+    // "bytes <first>-<last>/<size>"
+    let content_range = r.headers().get(reqwest::header::CONTENT_RANGE)?.to_str().ok()?;
+    let (span, size) = content_range.strip_prefix("bytes ")?.split_once('/')?;
+    let start = span.split_once('-')?.0.trim().parse().ok()?;
+    let size = size.trim().parse().ok()?;
+    let body = r.bytes().await.ok()?;
+    Some((size, start, body.to_vec()))
+}
+
 /// Download `url` to `dest` and confirm it hashes to `sha256`.
 ///
 /// Probes for HTTP range support first: servers that honor ranges (the CDN

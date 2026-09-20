@@ -354,6 +354,7 @@ export const en = {
     stages: {
       downloadBase: "Downloading game",
       extractBase: "Extracting game",
+      verifyBase: "Verifying game files",
       downloadPatch: "Downloading update",
       extractPatch: "Installing update",
       installMods: "Installing mods",
@@ -455,8 +456,10 @@ export const en = {
     downloadStalled: "Download stalled (range {range}, {remaining} left).",
     launcherUpdateDisabledInDev:
       "Launcher self-update is off in dev builds (set EF_LAUNCHER_UPDATE=1).",
-    extractionIncomplete:
-      "Extraction incomplete: wrote {written} of {expected} files. The download is likely corrupt — delete the install folder and download again.",
+    extractionMismatch:
+      "{count} game file(s) still didn't match the download after being extracted again: {files}. Something is changing files as they're written — usually antivirus. Add an exclusion for the game folder, then install again; the download is kept, so it won't be fetched twice.",
+    notEnoughSpace:
+      "Not enough disk space on {path}: the install needs {need} free and there's {free}. The download and the unpacked game have to fit side by side until the files are verified.",
     archiveMissingGameFolder:
       "Extracted files don't contain a g3 folder: unexpected archive layout.",
     runtimeArchiveCorrupt: "The runtime archive is corrupt or incomplete.",

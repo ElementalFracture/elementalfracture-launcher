@@ -326,6 +326,7 @@ export const ja: Catalogue = {
     stages: {
       downloadBase: "ゲームをダウンロード中",
       extractBase: "ゲームを展開中",
+      verifyBase: "ゲームファイルを検証中",
       downloadPatch: "更新をダウンロード中",
       extractPatch: "更新をインストール中",
       installMods: "MOD をインストール中",
@@ -426,8 +427,10 @@ export const ja: Catalogue = {
       "ダウンロードが停止しました（範囲 {range}、残り {remaining}）。",
     launcherUpdateDisabledInDev:
       "開発ビルドではランチャーの自動更新は無効です（EF_LAUNCHER_UPDATE=1 を設定してください）。",
-    extractionIncomplete:
-      "展開が不完全です: {expected} 個中 {written} 個のファイルを書き込みました。ダウンロードが壊れている可能性が高いです — インストールフォルダーを削除して、もう一度ダウンロードしてください。",
+    extractionMismatch:
+      "再展開後も {count} 個のゲームファイルがダウンロードと一致しません: {files}。書き込み中のファイルを何かが変更しています — 多くの場合ウイルス対策ソフトです。ゲームフォルダーを除外に追加してから、もう一度インストールしてください。ダウンロード済みのファイルは保持されるため、再ダウンロードは不要です。",
+    notEnoughSpace:
+      "{path} の空き容量が足りません: インストールには {need} の空きが必要ですが、現在 {free} です。ファイルの検証が終わるまで、ダウンロードと展開したゲームの両方を置ける容量が必要です。",
     archiveMissingGameFolder:
       "展開したファイルに g3 フォルダーがありません: 想定外のアーカイブ構造です。",
     runtimeArchiveCorrupt: "ランタイムのアーカイブが壊れているか、不完全です。",

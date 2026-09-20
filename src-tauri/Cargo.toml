@@ -1,6 +1,6 @@
 [package]
 name = "ef-launcher"
-version = "3.2.2"
+version = "3.2.3"
 description = "Elemental Fracture Launcher"
 authors = ["Elemental Fracture"]
 edition = "2021"
@@ -30,6 +30,7 @@ specta-jsdoc = "0.0.9"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
+    "Win32_Storage_FileSystem",
     "Win32_System_Registry",
     "Win32_System_Threading",
     "Win32_UI_Input_KeyboardAndMouse",
@@ -39,6 +40,10 @@ windows-sys = { version = "0.61", features = [
 # Reading Shift for quickstart (steam/quickstart.rs). Already in the tree through tao.
 [target.'cfg(target_os = "linux")'.dependencies]
 x11-dl = "2.21"
+
+# Free space before unpacking (platform.rs `free_space`). Already in the tree.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [profile.release]
 strip = true

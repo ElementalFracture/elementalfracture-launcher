@@ -309,6 +309,7 @@ export const zhHant: Catalogue = {
     stages: {
       downloadBase: "正在下載遊戲",
       extractBase: "正在解壓縮遊戲",
+      verifyBase: "正在驗證遊戲檔案",
       downloadPatch: "正在下載更新",
       extractPatch: "正在安裝更新",
       installMods: "正在安裝模組",
@@ -398,8 +399,10 @@ export const zhHant: Catalogue = {
     downloadStalled: "下載停滯（範圍 {range}，還剩 {remaining}）。",
     launcherUpdateDisabledInDev:
       "開發版本中已關閉啟動器自動更新（可設定 EF_LAUNCHER_UPDATE=1）。",
-    extractionIncomplete:
-      "解壓縮不完整：{expected} 個檔案中只寫入了 {written} 個。下載很可能已損毀 — 請刪除安裝資料夾並重新下載。",
+    extractionMismatch:
+      "重新解壓縮後仍有 {count} 個遊戲檔案與下載內容不一致：{files}。有程式在寫入時修改了檔案 — 通常是防毒軟體。請將遊戲資料夾加入排除清單後重新安裝；已下載的檔案會保留，不會重複下載。",
+    notEnoughSpace:
+      "{path} 磁碟空間不足：安裝需要 {need} 可用空間，目前只有 {free}。在檔案驗證完成之前，下載檔案和解壓縮後的遊戲需要同時存放。",
     archiveMissingGameFolder:
       "解壓縮出的檔案中沒有 g3 資料夾：壓縮檔結構不如預期。",
     runtimeArchiveCorrupt: "執行環境壓縮檔已損毀或不完整。",

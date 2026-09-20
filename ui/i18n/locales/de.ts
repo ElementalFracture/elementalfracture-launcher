@@ -322,6 +322,7 @@ export const de: Catalogue = {
     stages: {
       downloadBase: "Spiel wird heruntergeladen",
       extractBase: "Spiel wird entpackt",
+      verifyBase: "Spieldateien werden überprüft",
       downloadPatch: "Update wird heruntergeladen",
       extractPatch: "Update wird installiert",
       installMods: "Mods werden installiert",
@@ -421,8 +422,10 @@ export const de: Catalogue = {
     downloadStalled: "Download hängt (Bereich {range}, {remaining} übrig).",
     launcherUpdateDisabledInDev:
       "Das Selbst-Update des Launchers ist in Dev-Builds aus (setze EF_LAUNCHER_UPDATE=1).",
-    extractionIncomplete:
-      "Entpacken unvollständig: {written} von {expected} Dateien geschrieben. Der Download ist vermutlich beschädigt — lösche den Installationsordner und lade erneut herunter.",
+    extractionMismatch:
+      "{count} Spieldatei(en) stimmen auch nach erneutem Entpacken nicht mit dem Download überein: {files}. Etwas verändert die Dateien beim Schreiben — meist ein Virenscanner. Füge eine Ausnahme für den Spielordner hinzu und installiere erneut; der Download bleibt erhalten und wird nicht noch einmal geladen.",
+    notEnoughSpace:
+      "Nicht genug Speicherplatz auf {path}: Die Installation braucht {need} frei, verfügbar sind {free}. Download und entpacktes Spiel müssen nebeneinander Platz haben, bis die Dateien überprüft sind.",
     archiveMissingGameFolder:
       "Die entpackten Dateien enthalten keinen g3-Ordner: unerwarteter Archivaufbau.",
     runtimeArchiveCorrupt:
