@@ -227,9 +227,58 @@ fn park(paks: &Path, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Apply the pak layout for a variant. Only one balance pak is mounted at a
-/// time; the rest are parked as `<name>.bak`.
+// Release-generated registry overrides; inactive pairs are parked as `.bak`.
+const REGISTRIES: &[(&str, &str)] = &[
+    ("ef", "zzzz_ElefracRegistry_P"),
+    ("classic", "zzzz_ElefracClassicRegistry_P"),
+    ("dev", "zzzz_ElefracTestRegistry_P"),
+];
+
+pub(crate) fn has_managed_registries(paks: &Path) -> bool {
+    REGISTRIES.iter().any(|(_, stem)| ["pak", "sig"].iter().any(|ext| {
+        let name = format!("{stem}.{ext}");
+        paks.join(&name).exists() || parked_path(paks, &name).is_some()
+    }))
+}
+
 fn apply_variant(paks: &Path, variant: &str) -> Result<(), String> {
+    let selected = REGISTRIES.iter().find(|(mode, _)| *mode == variant)
+        .ok_or_else(|| format!("unknown variant: {variant}"))?;
+    // Legacy packages have no separate registries. Once any are installed,
+    // require a complete target pair before touching the current layout.
+    let managed = has_managed_registries(paks);
+    if managed {
+        for ext in ["pak", "sig"] {
+            let name = format!("{}.{ext}", selected.1);
+            if !paks.join(&name).is_file() && parked_path(paks, &name).is_none() {
+                return Err(format!("Missing {name}: install the registry package for {variant} first."));
+            }
+        }
+    }
+    let required = match variant {
+        "ef" => Some((PAK, "Install / Update mods")),
+        "dev" => Some((TEST_PAK, "enable the Test Build")),
+        _ => None,
+    };
+    if let Some((name, action)) = required {
+        if !paks.join(name).is_file() && parked_path(paks, name).is_none() {
+            return Err(format!("{name} isn't installed: {action} first."));
+        }
+    }
+    apply_balance_variant(paks, variant)?;
+    if managed {
+        for (mode, stem) in REGISTRIES {
+            for ext in ["pak", "sig"] {
+                let name = format!("{stem}.{ext}");
+                if *mode == variant { activate(paks, &name)?; }
+                else { park(paks, &name)?; }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn apply_balance_variant(paks: &Path, variant: &str) -> Result<(), String> {
     match variant {
         // Production: Elemental Fracture balance active, Test Build parked.
         "ef" => {
@@ -380,6 +429,33 @@ mod tests {
 
         // Back to prod from vanilla restores Balance, leaves Test parked.
         apply_variant(&p, "ef").unwrap();
+        assert_eq!(detect_variant(tmp.path()), "ef");
+    }
+
+    #[test]
+    fn registries_follow_variant_and_missing_pair_preserves_layout() {
+        let (tmp, p) = paks(&[PAK, SIG, TEST_PAK, TEST_SIG]);
+        for (_, stem) in REGISTRIES {
+            for ext in ["pak", "sig"] {
+                fs::write(p.join(format!("{stem}.{ext}")), stem).unwrap();
+            }
+        }
+        for mode in ["ef", "classic", "dev", "classic", "ef"] {
+            switch_to(tmp.path().to_str().unwrap(), mode).unwrap();
+            for (variant, stem) in REGISTRIES {
+                for ext in ["pak", "sig"] {
+                    let name = format!("{stem}.{ext}");
+                    assert_eq!(p.join(&name).exists(), *variant == mode);
+                    let path = if *variant == mode { p.join(&name) }
+                        else { p.join(format!("{name}.bak")) };
+                    assert_eq!(fs::read_to_string(path).unwrap(), *stem);
+                }
+            }
+        }
+        fs::remove_file(p.join("zzzz_ElefracClassicRegistry_P.sig.bak")).unwrap();
+        let before = names(&p);
+        assert!(switch_to(tmp.path().to_str().unwrap(), "classic").is_err());
+        assert_eq!(names(&p), before);
         assert_eq!(detect_variant(tmp.path()), "ef");
     }
 

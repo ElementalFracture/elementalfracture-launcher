@@ -390,6 +390,8 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
         return Err(format!("Paks folder not found: {}", paks.display()));
     }
 
+    let previous_variant = game::detect_variant(root);
+    let fresh_install = !root.join("version.txt").exists();
     let remote_version = fetch_remote_game_version(&http()?, cdn).await;
 
     let tmp = root.join("_efpatch.zip");
@@ -402,6 +404,11 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path) -> Result<S
         .map_err(|e| e.to_string())??;
     let _ = fs::remove_file(&tmp);
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
+
+    // Downloads may deliver active production files while Classic/Test was selected.
+    // Normalize both balance and registry pairs before marking the update complete.
+    let target = if fresh_install { "ef" } else { &previous_variant };
+    game::switch_to(&root.to_string_lossy(), target)?;
 
     emit(app, "install-mods", "Downloading mod package…".into(), 0.0, 0, 0);
     let mod_log = crate::mods::fetch_and_install(cdn, root.to_path_buf()).await?;
@@ -478,33 +485,51 @@ pub async fn update_patch(app: tauri::AppHandle) -> Result<String, String> {
 fn stage_test_pak(zip_path: &Path, paks: &Path) -> Result<String, String> {
     let file = File::open(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("bad zip: {e}"))?;
-    let mut pak = false;
-    let mut sig = false;
+    let mut entries = Vec::new();
+    let mut content_paks = 0;
+    let mut content_sigs = 0;
+    let mut registry_paks = 0;
+    let mut registry_sigs = 0;
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
-        if entry.is_dir() {
-            continue;
-        }
+        let entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        if entry.is_dir() { continue; }
         let Some(rel) = entry.enclosed_name() else { continue };
-        let Some(name) = rel.file_name().and_then(|n| n.to_str()).map(str::to_ascii_lowercase) else {
-            continue;
-        };
-        let dest = if name.ends_with(".pak") {
-            pak = true;
-            paks.join("ElefracTest_P.pak")
-        } else if name.ends_with(".sig") {
-            sig = true;
-            paks.join("ElefracTest_P.sig")
-        } else {
-            continue;
-        };
+        let Some(name) = rel.file_name().and_then(|n| n.to_str()) else { continue };
+        let lower = name.to_ascii_lowercase();
+        let dest = if lower == "zzzz_elefractestregistry_p.pak" || lower == "zzzz_elefractestregistry_p.pak.bak" {
+            registry_paks += 1;
+            "zzzz_ElefracTestRegistry_P.pak.bak"
+        } else if lower == "zzzz_elefractestregistry_p.sig" || lower == "zzzz_elefractestregistry_p.sig.bak" {
+            registry_sigs += 1;
+            "zzzz_ElefracTestRegistry_P.sig.bak"
+        } else if lower.ends_with(".pak") {
+            content_paks += 1;
+            "ElefracTest_P.pak"
+        } else if lower.ends_with(".sig") {
+            content_sigs += 1;
+            "ElefracTest_P.sig"
+        } else { continue; };
+        entries.push((i, dest));
+    }
+    if content_paks != 1 || content_sigs > 1 || registry_paks > 1 || registry_sigs > 1
+        || registry_paks != registry_sigs {
+        return Err("dev.zip must contain one content pak, at most one content signature, and a complete optional Test registry pair.".into());
+    }
+    if game::has_managed_registries(paks) && registry_paks == 0 {
+        return Err("dev.zip is missing the Test registry pair required by this installation.".into());
+    }
+    for (i, name) in entries {
+        let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+        let dest = paks.join(name);
+        // Replace active registry copies too: activate() prefers active over parked.
+        if name.starts_with("zzzz_") {
+            let active = paks.join(name.trim_end_matches(".bak"));
+            if active.exists() { fs::remove_file(active).map_err(|e| e.to_string())?; }
+        }
         let mut f = File::create(&dest).map_err(|e| format!("{}: {e}", dest.display()))?;
         std::io::copy(&mut entry, &mut f).map_err(|e| e.to_string())?;
     }
-    if !pak {
-        return Err("dev.zip didn't contain a .pak file.".into());
-    }
-    Ok(if sig { "pak + sig".into() } else { "pak (unsigned)".into() })
+    Ok(if content_sigs == 1 { "pak + sig".into() } else { "pak (unsigned)".into() })
 }
 
 /// Download the Public Test Build balance pak ({cdn}/patch/dev.zip), stage it
@@ -559,6 +584,44 @@ pub async fn get_versions(app: tauri::AppHandle) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_archive(path: &Path, files: &[(&str, &[u8])]) {
+        use std::io::Write;
+        let mut zip = zip::ZipWriter::new(File::create(path).unwrap());
+        for (name, bytes) in files {
+            zip.start_file(*name, zip::write::SimpleFileOptions::default()).unwrap();
+            zip.write_all(bytes).unwrap();
+        }
+        zip.finish().unwrap();
+    }
+
+    #[test]
+    fn test_installer_keeps_registry_separate_and_replaces_old_copy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let paks = game::paks_dir(tmp.path());
+        fs::create_dir_all(&paks).unwrap();
+        fs::write(paks.join("zzzz_ElefracTestRegistry_P.pak"), b"old").unwrap();
+        let archive = tmp.path().join("dev.zip");
+        test_archive(&archive, &[
+            ("balance_P.pak", b"content"), ("balance_P.sig", b"signature"),
+            ("zzzz_ElefracTestRegistry_P.pak", b"registry"),
+            ("zzzz_ElefracTestRegistry_P.sig", b"registry signature"),
+        ]);
+        stage_test_pak(&archive, &paks).unwrap();
+        game::switch_to(tmp.path().to_str().unwrap(), "dev").unwrap();
+        assert_eq!(fs::read(paks.join("ElefracTest_P.pak")).unwrap(), b"content");
+        assert_eq!(fs::read(paks.join("zzzz_ElefracTestRegistry_P.pak")).unwrap(), b"registry");
+    }
+
+    #[test]
+    fn ambiguous_test_archive_does_not_overwrite_install() {
+        let tmp = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("dev.zip");
+        test_archive(&archive, &[("a.pak", b"a"), ("b.pak", b"b")]);
+        fs::write(tmp.path().join("ElefracTest_P.pak"), b"original").unwrap();
+        assert!(stage_test_pak(&archive, tmp.path()).is_err());
+        assert_eq!(fs::read(tmp.path().join("ElefracTest_P.pak")).unwrap(), b"original");
+    }
 
     #[test]
     fn ini_versions_and_extras() {

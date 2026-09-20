@@ -174,3 +174,56 @@ src-tauri/              Rust core, Tauri config, icons
   .cargo/config.toml      Windows cross-compile linker
 .github/workflows/      CI build
 ```
+
+### Registry packages for game releases
+
+Players do not need Python. Generate registry overrides on the release machine
+with Python 3.10+, using the tools in `scripts/`:
+
+```sh
+python3 scripts/build-registries.py \
+  --base-registry /path/to/clean/g3/AssetRegistry.bin \
+  --signature /path/to/g3-WindowsNoEditor.sig \
+  --output dist/registries-new \
+  --ef-manifest /path/to/elefrac-patches_P.manifest.json
+```
+
+The output directory must be new. Each manifest must remain beside its original
+content pak; the helper verifies hashes and rejects paks with embedded registries.
+Use the clean vanilla registry from the same game build, never a generated one.
+Repeat `--ef-manifest` for additional mods enabled in EF. Optionally repeat
+`--dev-manifest` for the test build. Classic uses no manifests by default;
+`--classic-manifest` supports shared mods that remain enabled in Classic. List
+shared mods explicitly for every variant that uses them.
+
+Generated pairs:
+
+| Variant | Registry `.pak` and `.sig` basename |
+|---|---|
+| EF | `zzzz_ElefracRegistry_P` |
+| Classic | `zzzz_ElefracClassicRegistry_P` |
+| Test (when requested) | `zzzz_ElefracTestRegistry_P` |
+
+Ship the EF and Classic pairs in `patch/latest.zip` alongside the content-only
+`ElefracBalance_P.pak` and its signature. Ship the Test pair in `patch/dev.zip`
+alongside exactly one content pak and its signature (the installer renames that
+content pair to `ElefracTest_P`). Registry names must remain exactly as above. The `zzzz_` prefix preserves
+the existing late-load ordering; `Elefrac` identifies the launcher-owned pairs.
+The generator only creates registry overrides, not content paks or release ZIPs.
+Rebuild registries whenever their content changes and ship them together.
+
+The launcher parks inactive pairs as `.bak` and activates the selected variant's
+pair. After an update it reapplies the selected variant (fresh installs use EF).
+Old installations without separate registry pairs retain their previous behavior;
+once registry pairs exist, a missing target pair blocks switching. Test releases
+must include a matching Test registry when upgrading to this workflow.
+
+The launcher only switches the EF/Test balance content pairs. Additional content
+paks must remain enabled in every applicable variant, or be incorporated into the
+variant's balance content pak before exporting its manifest. Do not include
+variant-exclusive standalone paks and expect the launcher to disable them.
+Remove previous registry overrides such as `zzzz_registry_P` and old combined
+builds containing embedded registries when preparing the game package; keep the
+new override filenames later in mount order than other registry-bearing paks.
+Do not manually install all generated pairs as active paks and launch the game:
+let the launcher normalize the layout first.
