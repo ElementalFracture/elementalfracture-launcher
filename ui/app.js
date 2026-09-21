@@ -1179,12 +1179,13 @@ function syncWrapperUI() {
   if (cur && wrappers.some((w) => w.command === cur)) {
     sel.value = cur;
     input.hidden = true;
-  } else if (wrappers.length) {
-    // Nothing saved, or the saved wrapper isn't installed here (e.g. the
-    // old "wine" default on a umu-only system): suggest what exists.
+  } else if (!cur && wrappers.length) {
+    // Nothing saved: suggest what exists.
     sel.value = wrappers[0].command;
     input.hidden = true;
   } else {
+    // A custom value is saved (or nothing detected): keep it as-is rather
+    // than silently swapping in a different wrapper and losing it on Save.
     sel.value = "__custom__";
     input.hidden = false;
     input.value = cur;
