@@ -504,11 +504,37 @@ pub(super) fn extract_flat(zip_path: &Path, dest: &Path) -> AppResult<Vec<String
 }
 
 /// Pull the pak/sig out of the playtest archive under the names the playtest
-/// variant looks for, whatever they're called inside it. Returns what it
-/// found, for the progress line.
+/// variant looks for. If the archive has a single unnamed pak, it is staged as
+/// ElefracTest_P.pak; if it contains multiple paks or explicit filenames (e.g.
+/// ElefracTest_P.pak, ElefracTestRegistry_P.pak), each unpacks to its own file.
 pub(super) fn stage_test_pak(zip_path: &Path, paks: &Path) -> AppResult<String> {
     let mut zip = zip::ZipArchive::new(File::open(zip_path)?)?;
     declared_size(&mut zip)?;
+
+    // Check if the archive contains an explicit ElefracTest_P.pak or multiple paks.
+    // If there is only one pak and it is named something else (legacy single-pak archive),
+    // rename it to ElefracTest_P.pak for backwards compatibility.
+    let mut pak_count = 0usize;
+    let mut has_explicit_test_pak = false;
+    for i in 0..zip.len() {
+        let entry = zip.by_index(i)?;
+        if entry.is_dir() {
+            continue;
+        }
+        let lower = entry.name().to_ascii_lowercase();
+        if lower.ends_with(".pak") {
+            pak_count += 1;
+            let base = safe_rel_path(entry.name())
+                .and_then(|rel| rel.file_name().map(|n| n.to_string_lossy().to_ascii_lowercase()))
+                .unwrap_or_default();
+            if base == "elefractest_p.pak" {
+                has_explicit_test_pak = true;
+            }
+        }
+    }
+
+    let rename_single_pak = pak_count == 1 && !has_explicit_test_pak;
+
     let mut targets = Vec::new();
     for i in 0..zip.len() {
         let entry = zip.by_index(i)?;
@@ -517,13 +543,25 @@ pub(super) fn stage_test_pak(zip_path: &Path, paks: &Path) -> AppResult<String> 
         }
         let name = entry.name().to_string();
         let lower = name.to_ascii_lowercase();
-        let out = if lower.ends_with(".pak") {
-            paks.join("ElefracTest_P.pak")
-        } else if lower.ends_with(".sig") {
-            paks.join("ElefracTest_P.sig")
-        } else {
+        let is_pak = lower.ends_with(".pak");
+        let is_sig = lower.ends_with(".sig");
+        if !is_pak && !is_sig {
             continue;
+        }
+
+        let out = if rename_single_pak {
+            if is_pak {
+                paks.join("ElefracTest_P.pak")
+            } else {
+                paks.join("ElefracTest_P.sig")
+            }
+        } else {
+            let base = safe_rel_path(&name)
+                .and_then(|rel| rel.file_name().map(PathBuf::from))
+                .ok_or_else(|| AppError::detail(ErrorCode::BadArchiveEntry, format!("{name:?}")))?;
+            paks.join(base)
         };
+
         targets.push(Target {
             index: i,
             out,
@@ -533,14 +571,18 @@ pub(super) fn stage_test_pak(zip_path: &Path, paks: &Path) -> AppResult<String> 
         });
     }
     let targets = one_entry_per_file(targets)?;
-    let has = |ext: &str| targets.iter().any(|t| t.out.extension().is_some_and(|e| e == ext));
+    let has = |ext: &str| targets.iter().any(|t| t.out.extension().is_some_and(|e| e.eq_ignore_ascii_case(ext)));
     let (pak, sig) = (has("pak"), has("sig"));
     if !pak {
         return Err(AppError::new(ErrorCode::PlaytestArchiveEmpty));
     }
     unpack_verified(&mut zip, &targets, &mut |_, _, _, _| {})?;
     Ok(if sig {
-        "pak + sig".into()
+        if targets.len() > 2 {
+            format!("{} files", targets.len())
+        } else {
+            "pak + sig".into()
+        }
     } else {
         "pak (unsigned)".into()
     })

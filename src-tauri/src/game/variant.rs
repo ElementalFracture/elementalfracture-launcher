@@ -16,6 +16,16 @@ const SIG: &str = "ElefracBalance_P.sig";
 const TEST_PAK: &str = "ElefracTest_P.pak";
 const TEST_SIG: &str = "ElefracTest_P.sig";
 
+/// Primary and auxiliary playtest paks/sigs that park and activate together.
+const TEST_FILES: &[&str] = &[
+    TEST_PAK,
+    TEST_SIG,
+    "ElefracTestRegistry_P.pak",
+    "ElefracTestRegistry_P.sig",
+    "zzzz_ElefracTestRegistry_P.pak",
+    "zzzz_ElefracTestRegistry_P.sig",
+];
+
 /// Parked-copy suffixes, newest first: we write `.bak` but still restore a
 /// legacy `.1` left by older launcher versions.
 const PARK_SUFFIXES: &[&str] = &["bak", "1"];
@@ -127,7 +137,7 @@ fn apply_variant(paks: &Path, variant: &str) -> AppResult<()> {
             for name in [PAK, SIG] {
                 activate(paks, name)?;
             }
-            for name in [TEST_PAK, TEST_SIG] {
+            for name in TEST_FILES {
                 park(paks, name)?;
             }
             if !paks.join(PAK).exists() {
@@ -136,7 +146,10 @@ fn apply_variant(paks: &Path, variant: &str) -> AppResult<()> {
         }
         // Vanilla: both balance paks parked, stock game only.
         "classic" => {
-            for name in [PAK, SIG, TEST_PAK, TEST_SIG] {
+            for name in [PAK, SIG] {
+                park(paks, name)?;
+            }
+            for name in TEST_FILES {
                 park(paks, name)?;
             }
         }
@@ -145,7 +158,7 @@ fn apply_variant(paks: &Path, variant: &str) -> AppResult<()> {
             for name in [PAK, SIG] {
                 park(paks, name)?;
             }
-            for name in [TEST_PAK, TEST_SIG] {
+            for name in TEST_FILES {
                 activate(paks, name)?;
             }
             if !paks.join(TEST_PAK).exists() {

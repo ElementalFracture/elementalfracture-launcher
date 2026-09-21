@@ -135,6 +135,29 @@ fn an_unsigned_playtest_pak_still_installs_and_says_so() {
     assert_eq!(stage_test_pak(&zip, &paks).unwrap(), "pak (unsigned)");
 }
 
+#[test]
+fn multiple_playtest_paks_unpack_without_collision() {
+    let tmp = tempfile::tempdir().unwrap();
+    let paks = tmp.path().join("Paks");
+    fs::create_dir_all(&paks).unwrap();
+    let zip = zip_file(
+        tmp.path(),
+        "dev.zip",
+        &[
+            ("ElefracTest_P.pak", b"balance"),
+            ("ElefracTest_P.sig", b"balance_sig"),
+            ("ElefracTestRegistry_P.pak", b"registry"),
+            ("ElefracTestRegistry_P.sig", b"registry_sig"),
+        ],
+    );
+
+    assert_eq!(stage_test_pak(&zip, &paks).unwrap(), "4 files");
+    assert_eq!(fs::read(paks.join("ElefracTest_P.pak")).unwrap(), b"balance");
+    assert_eq!(fs::read(paks.join("ElefracTest_P.sig")).unwrap(), b"balance_sig");
+    assert_eq!(fs::read(paks.join("ElefracTestRegistry_P.pak")).unwrap(), b"registry");
+    assert_eq!(fs::read(paks.join("ElefracTestRegistry_P.sig")).unwrap(), b"registry_sig");
+}
+
 /// An archive with no pak at all must fail loudly — staging nothing and
 /// then switching the variant onto it is the broken-install path.
 #[test]
