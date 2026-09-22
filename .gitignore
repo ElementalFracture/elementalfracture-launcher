@@ -1,5 +1,6 @@
 # Rust / Tauri build output
 src-tauri/target/
+target-jammy/
 src-tauri/gen/
 
 # Packaged binaries (built by CI / release, not tracked)
