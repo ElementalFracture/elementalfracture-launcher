@@ -149,14 +149,22 @@ build_and_stage() {
 
     echo "==> Staging artifacts -> $DIST"
     mkdir -p "$DIST"
-    cp "$APPIMAGE_OUT" "$DIST/ef-launcher.AppImage"
-    cp "$SRC/target/x86_64-pc-windows-gnu/release/ef-launcher.exe"                        "$DIST/ef-launcher.exe"
+    cp --remove-destination "$APPIMAGE_OUT" "$DIST/ef-launcher.AppImage"
+    cp --remove-destination "$SRC/target/x86_64-pc-windows-gnu/release/ef-launcher.exe" "$DIST/ef-launcher.exe"
 
-    # config.ini: start from the live one so GameVersion is preserved, then bump LauncherVersion.
-    if ! curl -fsSL "$CDN_PUBLIC/config.ini" -o "$DIST/config.ini" 2>/dev/null; then
-        printf '[Versions]\nLauncherVersion=%s\nGameVersion=6.0.2\n' "$VERSION" > "$DIST/config.ini"
+    # config.ini carries the three version tracks: LauncherVersion here, GameVersion (balance pak) and
+    # ModVersion (mod package) from whatever Marla last published. Always start from the live file when
+    # the CDN answers, so a staged copy from an earlier run can never republish an older GameVersion
+    # over the live one; a staged file is the fallback only when the CDN is unreachable.
+    if curl -fsSL "$CDN_PUBLIC/config.ini" -o "$DIST/config.ini.live" 2>/dev/null; then
+        mv "$DIST/config.ini.live" "$DIST/config.ini"
+    else
+        rm -f "$DIST/config.ini.live"
+        [ -f "$DIST/config.ini" ] || printf '[Versions]\nLauncherVersion=%s\nGameVersion=6.4.0\nModVersion=3.17.1\n' "$VERSION" > "$DIST/config.ini"
     fi
     sed -i -E 's/^LauncherVersion=.*/LauncherVersion='"$VERSION"'/' "$DIST/config.ini"
+    grep -qE '^GameVersion=' "$DIST/config.ini" || echo "GameVersion=6.4.0" >> "$DIST/config.ini"
+    grep -qE '^ModVersion=' "$DIST/config.ini" || echo "ModVersion=3.17.1" >> "$DIST/config.ini"
 
     ls -la "$DIST"
 }

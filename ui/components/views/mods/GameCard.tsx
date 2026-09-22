@@ -95,14 +95,18 @@ export function GameCard() {
   const gameLine =
     installNotice ?? (savedPath.trim() ? "" : _("game.noFolder"));
 
+  /* This card is the GAME track, so it names the balance version on its own
+     (the Mods card names the mod version); `local` is the combined label. */
+  const localVer = versions?.local_game ?? versions?.local;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>
           {_("game.title")}
-          {versions?.local && (
+          {localVer && (
             <span className="title-note">
-              {_("game.version", { version: versions.local })}
+              {_("game.version", { version: localVer })}
             </span>
           )}
         </CardTitle>

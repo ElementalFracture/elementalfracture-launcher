@@ -16,6 +16,7 @@ import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import type { FileCheck } from "@/lib/rust";
 import { errorText, toastError } from "@/i18n/errors";
+import { versionsBehind } from "@/lib/versions";
 import { _ } from "@/i18n";
 import "./ModsCard.css";
 
@@ -58,9 +59,9 @@ export function ModsCard() {
   }, [view, refreshFiles, refreshVersions]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const outdated = Boolean(
-    versions?.local && versions?.remote && versions.local !== versions.remote
-  );
+  /* This card's button applies the whole patch, balance pak and mods both, so
+     it lights when either track is behind. */
+  const outdated = versionsBehind(versions);
 
   const total = files?.length ?? 0;
   const missing = files?.filter((f) => !f.present).length ?? 0;
@@ -98,10 +99,19 @@ export function ModsCard() {
     }
   };
 
+  const localModVer = versions?.local_mod;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{_("mods.title")}</CardTitle>
+        <CardTitle>
+          {_("mods.title")}
+          {localModVer && (
+            <span className="title-note">
+              {_("game.version", { version: localModVer })}
+            </span>
+          )}
+        </CardTitle>
         <CardAction className="panel-actions">
           <Button variant="secondary" disabled={verifying} onClick={onVerify}>
             {verifying ? (

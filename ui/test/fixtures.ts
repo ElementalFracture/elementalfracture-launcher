@@ -42,7 +42,17 @@ export function makeStatus(over: Partial<GameStatus> = {}): GameStatus {
 }
 
 export function makeVersions(over: Partial<VersionInfo> = {}): VersionInfo {
-  return { local: "6.0.2", remote: "6.0.2", ...over };
+  const local = over.local !== undefined ? over.local : "6.0.2";
+  const remote = over.remote !== undefined ? over.remote : "6.0.2";
+  return {
+    local,
+    remote,
+    local_game: over.local_game !== undefined ? over.local_game : local,
+    remote_game: over.remote_game !== undefined ? over.remote_game : remote,
+    local_mod: over.local_mod !== undefined ? over.local_mod : (local ? "3.17.0" : null),
+    remote_mod: over.remote_mod !== undefined ? over.remote_mod : (remote ? "3.17.0" : null),
+    ...over,
+  };
 }
 
 /** A promise plus the handle to settle it, for ordering races deliberately. */

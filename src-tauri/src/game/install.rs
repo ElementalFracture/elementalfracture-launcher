@@ -65,8 +65,23 @@ pub fn decode_version_bytes(bytes: &[u8]) -> String {
 }
 
 pub fn read_local_version(root: &Path) -> Option<String> {
-    let v = decode_version_bytes(&fs::read(root.join("version.txt")).ok()?);
-    (!v.is_empty()).then_some(v)
+    for rel in ["version.txt", "game_version.txt"] {
+        if let Ok(b) = fs::read(root.join(rel)) {
+            let v = decode_version_bytes(&b);
+            if !v.is_empty() { return Some(v); }
+        }
+    }
+    None
+}
+
+pub fn read_local_mod_version(root: &Path) -> Option<String> {
+    for rel in ["Mods/dlls/mod_version.txt", "Mods/dlls/ef_version.txt", "mod_version.txt", "ef_version.txt"] {
+        if let Ok(b) = fs::read(root.join(rel)) {
+            let v = decode_version_bytes(&b);
+            if !v.is_empty() { return Some(v); }
+        }
+    }
+    None
 }
 
 /// True when the balance pak is on disk, active or parked by a channel switch.

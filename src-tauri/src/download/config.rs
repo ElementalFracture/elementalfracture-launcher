@@ -52,8 +52,29 @@ fn config_version(cfg: &std::collections::HashMap<String, String>, key: &str) ->
     cfg.get(key).filter(|v| valid_version(v)).cloned()
 }
 
-pub(super) async fn fetch_remote_game_version(client: &reqwest::Client, cdn: &str) -> Option<String> {
-    config_version(&fetch_remote_config(client, cdn).await, "gameversion")
+/// The (game, mod) versions this variant should be on, in one fetch of config.ini.
+///
+/// GameVersion is the balance pak, ModVersion the DLL package; each moves on its own release, and the
+/// appserver gates on them separately. Playtest reads its own keys when the config defines them, so a
+/// test round can sit on its own labels ("7.0.0-lev-rc" / "3.17.1-lev-rc"), and falls back to the
+/// production pair when it does not, rather than leaving a playtest install with no versions at all.
+pub(super) async fn fetch_remote_versions_for_variant(
+    client: &reqwest::Client,
+    cdn: &str,
+    variant: &str,
+) -> (Option<String>, Option<String>) {
+    let cfg = fetch_remote_config(client, cdn).await;
+    let game = config_version(&cfg, "gameversion");
+    let mods = config_version(&cfg, "modversion");
+    if variant == "playtest" {
+        return (
+            config_version(&cfg, "playtestgameversion")
+                .or_else(|| config_version(&cfg, "playtestversion"))
+                .or(game),
+            config_version(&cfg, "playtestmodversion").or(mods),
+        );
+    }
+    (game, mods)
 }
 
 pub(super) async fn fetch_remote_launcher_version(client: &reqwest::Client, cdn: &str) -> Option<String> {

@@ -9,6 +9,7 @@ import {
 } from "react";
 import * as rust from "@/lib/rust";
 import type { GameStatus, LauncherUpdateInfo, VersionInfo } from "@/lib/rust";
+import { updateTarget, versionsBehind, versionsKnown } from "@/lib/versions";
 import { toast } from "@/lib/toast";
 import { errorText } from "@/i18n/errors";
 import { _ } from "@/i18n";
@@ -108,8 +109,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     async (report: (msg: string, isError?: boolean) => void = toast) => {
       try {
         const v = await rust.getVersions();
-        if (v?.local && v?.remote && v.local === v.remote) {
-          report(_("game.alreadyCurrent", { version: v.local }));
+        /* Only an answer from the CDN can say an install is current; an
+           unreachable one leaves both tracks unknown, and that provisions. */
+        if (versionsKnown(v) && !versionsBehind(v)) {
+          report(_("game.alreadyCurrent", { version: v?.local_game ?? v?.local ?? "" }));
           return true;
         }
       } catch {
@@ -184,9 +187,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const checkGameUpdate = useCallback(async () => {
     const v = await refreshVersions();
     const st = statusRef.current;
+    /* Playtest rounds are published on their own keys and installed from the
+       Playtest pill, so this plate never asks a tester to update. */
+    const isPlaytest = st?.variant === "playtest";
     return {
-      remote: v?.remote ?? null,
-      outdated: Boolean(v?.remote && st?.exe_present && v.local !== v.remote),
+      remote: updateTarget(v),
+      outdated: Boolean(st?.exe_present && !isPlaytest && versionsBehind(v)),
     };
   }, [refreshVersions]);
 
@@ -230,10 +236,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const isPlaytest = status?.variant === "playtest";
   const gameOutdated = Boolean(
-    versions?.remote &&
-    status?.exe_present &&
-    versions.local !== versions.remote
+    status?.exe_present && !isPlaytest && versionsBehind(versions)
   );
 
   const value: GameContextValue = {

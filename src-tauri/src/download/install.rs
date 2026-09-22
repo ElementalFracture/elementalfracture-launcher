@@ -3,7 +3,7 @@
 //! the update badge hangs off.
 
 use super::archive::{bytes_to_unpack, ensure_room, extract_all, extract_flat, read_tail, stage_test_pak, Tail};
-use super::config::fetch_remote_game_version;
+use super::config::fetch_remote_versions_for_variant;
 use super::manifest::{fetch_manifest, Manifest};
 use super::progress::emit;
 use super::runtime::ensure_runtime;
@@ -40,7 +40,10 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     let variant = game::detect_variant(root);
     let channel = crate::mods::channel_for_variant(&variant);
 
-    let remote_version = fetch_remote_game_version(&http()?, cdn).await;
+    let (remote_game_version, remote_mod_version) = match http() {
+        Ok(client) => fetch_remote_versions_for_variant(&client, cdn, &variant).await,
+        Err(_) => (None, None),
+    };
 
     let tmp = root.join("_efpatch.zip");
     download_to_file(
@@ -65,6 +68,15 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     }
     emit(app, "extract-patch", format!("Patch installed ({} files)", names.len()), 100.0, 0, 0);
 
+    // The balance pak is in and verified, so the game track is current: record it here rather than at the
+    // end, so a failure later in this run leaves the MOD track stale (and the badge lit) instead of both.
+    // game_version.txt is the same value under the name the client mod prefers.
+    if let Some(ref gv) = remote_game_version {
+        fs::write(root.join("version.txt"), gv)
+            .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
+        let _ = fs::write(root.join("game_version.txt"), gv);
+    }
+
     // On the Playtest channel this update is the playtest build's update too,
     // so its pak comes down in the same run.
     if variant == "playtest" {
@@ -88,14 +100,22 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     let installed = mod_log.iter().filter(|l| l.starts_with("Installed")).count();
     emit(app, "install-mods", format!("Mods installed ({installed} files)"), 100.0, 0, 0);
 
-    // The install now matches the CDN — bump version.txt to say so.
-    match remote_version {
-        Some(v) => {
-            fs::write(root.join("version.txt"), &v)
-                .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
-            Ok(v)
-        }
-        None => Ok("unknown".into()),
+    // The mod package is in, so the mod track is current. ef_version.txt carries the same value for DLLs
+    // from before the split, which read that file as their only version: they report a 3.x there, the
+    // appserver reads it as a mod version, and it asks them for the update they are in fact missing.
+    if let Some(ref mv) = remote_mod_version {
+        let dlls = root.join("Mods").join("dlls");
+        let _ = fs::create_dir_all(&dlls);
+        fs::write(dlls.join("mod_version.txt"), mv)
+            .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
+        let _ = fs::write(dlls.join("ef_version.txt"), mv);
+    }
+
+    match (remote_game_version, remote_mod_version) {
+        (Some(gv), Some(mv)) => Ok(format!("{gv} (m{mv})")),
+        (Some(gv), None) => Ok(gv),
+        (None, Some(mv)) => Ok(format!("m{mv}")),
+        (None, None) => Ok("unknown".into()),
     }
 }
 
@@ -220,6 +240,10 @@ pub async fn update_patch(app: tauri::AppHandle) -> AppResult<String> {
 pub struct VersionInfo {
     pub local: Option<String>,
     pub remote: Option<String>,
+    pub local_game: Option<String>,
+    pub remote_game: Option<String>,
+    pub local_mod: Option<String>,
+    pub remote_mod: Option<String>,
 }
 
 /// Installed vs latest version, for the update badge.
@@ -228,18 +252,45 @@ pub struct VersionInfo {
 pub async fn get_versions(app: tauri::AppHandle) -> VersionInfo {
     let s = settings::load(&app);
     let root = Path::new(&s.game_path);
+    let variant = game::detect_variant(root);
     // An install missing its balance pak is out of date no matter what
     // version.txt says, so reporting no local version lights the update badge.
-    let local = (!s.game_path.is_empty() && game::balance_pak_present(root))
+    // For playtest installs, check if either the production pak or test pak is present.
+    let pak_present = game::balance_pak_present(root) || (variant == "playtest" && game::test_build_installed(root));
+    let local_game = (!s.game_path.is_empty() && pak_present)
         .then(|| game::read_local_version(root))
+        .flatten();
+    let local_mod = (!s.game_path.is_empty())
+        .then(|| game::read_local_mod_version(root))
         .flatten();
 
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
-    let remote = match http() {
-        Ok(client) => fetch_remote_game_version(&client, &cdn).await,
-        Err(_) => None,
+    let (remote_game, remote_mod) = match http() {
+        Ok(client) => fetch_remote_versions_for_variant(&client, &cdn, &variant).await,
+        Err(_) => (None, None),
     };
-    VersionInfo { local, remote }
+
+    let local = match (&local_game, &local_mod) {
+        (Some(gv), Some(mv)) => Some(format!("{gv} (m{mv})")),
+        (Some(gv), _) => Some(gv.clone()),
+        (None, Some(mv)) => Some(format!("m{mv}")),
+        (None, _) => None,
+    };
+    let remote = match (&remote_game, &remote_mod) {
+        (Some(gv), Some(mv)) => Some(format!("{gv} (m{mv})")),
+        (Some(gv), None) => Some(gv.clone()),
+        (None, Some(mv)) => Some(format!("m{mv}")),
+        (None, None) => None,
+    };
+
+    VersionInfo {
+        local,
+        remote,
+        local_game,
+        remote_game,
+        local_mod,
+        remote_mod,
+    }
 }
 
 /// Download the Playtest balance pak, stage it as ElefracTest_P.pak beside the
