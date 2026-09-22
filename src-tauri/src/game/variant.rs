@@ -68,7 +68,11 @@ pub fn test_build_installed(root: &Path) -> bool {
 pub async fn set_variant(app: tauri::AppHandle, variant: String) -> AppResult<String> {
     crate::mods::sync_channel(&app, &variant).await?;
     let s = settings::load(&app);
-    switch_to(&s.game_path, &variant)
+    let current = switch_to(&s.game_path, &variant)?;
+    // Each channel reports its own versions (Playtest carries the round's label, e.g. "7.0.0-lev-rc"),
+    // and the version files are the only place the client mod reads them, so they move with the switch.
+    crate::download::sync_channel_versions(&app, Path::new(&s.game_path), &current).await;
+    Ok(current)
 }
 
 /// Core of set_variant, reusable by the Playtest installer: apply the

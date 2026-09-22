@@ -72,9 +72,7 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     // end, so a failure later in this run leaves the MOD track stale (and the badge lit) instead of both.
     // game_version.txt is the same value under the name the client mod prefers.
     if let Some(ref gv) = remote_game_version {
-        fs::write(root.join("version.txt"), gv)
-            .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
-        let _ = fs::write(root.join("game_version.txt"), gv);
+        write_game_version(root, gv)?;
     }
 
     // On the Playtest channel this update is the playtest build's update too,
@@ -104,12 +102,11 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     // from before the split, which read that file as their only version: they report a 3.x there, the
     // appserver reads it as a mod version, and it asks them for the update they are in fact missing.
     if let Some(ref mv) = remote_mod_version {
-        let dlls = root.join("Mods").join("dlls");
-        let _ = fs::create_dir_all(&dlls);
-        fs::write(dlls.join("mod_version.txt"), mv)
-            .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
-        let _ = fs::write(dlls.join("ef_version.txt"), mv);
+        write_mod_version(root, mv)?;
     }
+    // Remember what this channel is on, so switching back to it offline restores these same values
+    // instead of leaving the other channel's.
+    remember_versions(root, &variant, remote_game_version.as_deref(), remote_mod_version.as_deref());
 
     match (remote_game_version, remote_mod_version) {
         (Some(gv), Some(mv)) => Ok(format!("{gv} (m{mv})")),
@@ -293,6 +290,116 @@ pub async fn get_versions(app: tauri::AppHandle) -> VersionInfo {
     }
 }
 
+// ── Which version a channel is on ─────────────────────────────────────────────
+//
+// version.txt (with game_version.txt beside it) and Mods/dlls/mod_version.txt are what the client mod
+// reports: the menu shows them, and the appserver gates on them. They belong to the CHANNEL, not to
+// the install. Production is on the live GameVersion; the Playtest channel is on whatever label that
+// round carries -- "7.0.0-lev-rc", "7.0.0-b1", "7.0.0-tempest-buff" -- published as PlaytestGameVersion
+// and PlaytestModVersion in config.ini. A tag is part of the label: the client shows the whole string
+// and sends only its numeric head to the gate, so a label may say anything after the numbers.
+//
+// Switching channels therefore has to rewrite these files. Without that, a tester who enables Playtest
+// keeps reporting the production version they patched to, which is what they see in the menu and what
+// the appserver reads.
+//
+// The record below is what this launcher last wrote for each channel, so a switch made offline (or one
+// where config.ini never named the playtest labels) still lands on the right values rather than
+// leaving the other channel's behind.
+const VERSION_RECORD: &str = "Mods/.ef_versions.json";
+
+/// The balance pak's version, under both names the client mod looks for.
+fn write_game_version(root: &Path, v: &str) -> AppResult<()> {
+    fs::write(root.join("version.txt"), v)
+        .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
+    let _ = fs::write(root.join("game_version.txt"), v);
+    Ok(())
+}
+
+/// The mod package's version. ef_version.txt carries the same value for DLLs from before the version
+/// split, which read that file as their only version.
+fn write_mod_version(root: &Path, v: &str) -> AppResult<()> {
+    let dlls = root.join("Mods").join("dlls");
+    let _ = fs::create_dir_all(&dlls);
+    fs::write(dlls.join("mod_version.txt"), v)
+        .map_err(|e| AppError::detail(ErrorCode::PatchVersionWriteFailed, e))?;
+    let _ = fs::write(dlls.join("ef_version.txt"), v);
+    Ok(())
+}
+
+/// Note what a channel is on. Only values we actually have are recorded, so a run that could not read
+/// one track leaves the previous answer for it in place.
+fn remember_versions(root: &Path, variant: &str, game: Option<&str>, mods: Option<&str>) {
+    if game.is_none() && mods.is_none() {
+        return;
+    }
+    let channel = crate::mods::channel_for_variant(variant);
+    let path = root.join(VERSION_RECORD);
+    let mut doc: serde_json::Value = fs::read_to_string(&path)
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    if !doc.is_object() {
+        doc = serde_json::json!({});
+    }
+    let entry = doc[channel].as_object().cloned().unwrap_or_default();
+    let mut entry = serde_json::Value::Object(entry);
+    if let Some(g) = game {
+        entry["game"] = serde_json::Value::String(g.to_string());
+    }
+    if let Some(m) = mods {
+        entry["mod"] = serde_json::Value::String(m.to_string());
+    }
+    doc[channel] = entry;
+    if let Some(dir) = path.parent() {
+        let _ = fs::create_dir_all(dir);
+    }
+    let _ = fs::write(&path, doc.to_string());
+}
+
+/// What this launcher last wrote for a channel, if it ever did.
+fn remembered_versions(root: &Path, variant: &str) -> (Option<String>, Option<String>) {
+    let channel = crate::mods::channel_for_variant(variant);
+    let read = || -> Option<serde_json::Value> {
+        serde_json::from_str(&fs::read_to_string(root.join(VERSION_RECORD)).ok()?).ok()
+    };
+    let Some(doc) = read() else { return (None, None) };
+    let entry = &doc[channel];
+    let field = |k: &str| entry[k].as_str().map(str::to_string);
+    (field("game"), field("mod"))
+}
+
+/// Put the version files in agreement with the channel the install is now on, and report what they
+/// say. Called on every channel switch; the files are the only place the client mod looks.
+pub(crate) async fn sync_channel_versions(
+    app: &tauri::AppHandle,
+    root: &Path,
+    variant: &str,
+) -> (Option<String>, Option<String>) {
+    let cdn = settings::load(app).cdn_base.trim_end_matches('/').to_string();
+    let (mut game, mut mods) = match http() {
+        Ok(client) => fetch_remote_versions_for_variant(&client, &cdn, variant).await,
+        Err(_) => (None, None),
+    };
+    // Offline, or a config.ini that names no label for this channel: whatever was written for it last.
+    let (was_game, was_mod) = remembered_versions(root, variant);
+    game = game.or(was_game);
+    mods = mods.or(was_mod);
+
+    if let Some(ref g) = game {
+        if let Err(e) = write_game_version(root, g) {
+            eprintln!("versions: could not write the game version for {variant}: {e:?}");
+        }
+    }
+    if let Some(ref m) = mods {
+        if let Err(e) = write_mod_version(root, m) {
+            eprintln!("versions: could not write the mod version for {variant}: {e:?}");
+        }
+    }
+    remember_versions(root, variant, game.as_deref(), mods.as_deref());
+    (game, mods)
+}
+
 /// Download the Playtest balance pak, stage it as ElefracTest_P.pak beside the
 /// production pak, then switch the game onto it (which parks the Elemental
 /// Fracture pak). Gated in the UI behind the Tester badge; the CDN path is
@@ -333,7 +440,21 @@ pub async fn install_playtest_build(app: tauri::AppHandle) -> AppResult<String> 
     crate::mods::sync_channel(&app, "playtest").await?;
 
     let variant = game::switch_to(&s.game_path, "playtest")?;
-    emit(&app, "done", "Playtest build ready".into(), 100.0, 0, 0);
+    // The playtest round has its own labels; report those, not the production versions this install
+    // was patched to. Without this the menu (and the appserver) still read 6.4.2 on a 7.0.0 build.
+    let (game_ver, mod_ver) = sync_channel_versions(&app, &root, &variant).await;
+    emit(
+        &app,
+        "done",
+        match (&game_ver, &mod_ver) {
+            (Some(g), Some(m)) => format!("Playtest build ready ({g}, m{m})"),
+            (Some(g), None) => format!("Playtest build ready ({g})"),
+            _ => "Playtest build ready".into(),
+        },
+        100.0,
+        0,
+        0,
+    );
     Ok(variant)
 }
 
@@ -399,3 +520,7 @@ async fn stage_playtest_pak(
     );
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "__tests/install.rs"]
+mod tests;
