@@ -81,6 +81,7 @@ fn main() {
         download::download_game,
         download::ensure_runtime,
         download::update_patch,
+        download::verify_game_files,
         download::install_playtest_build,
         download::get_versions,
         download::get_launcher_update,

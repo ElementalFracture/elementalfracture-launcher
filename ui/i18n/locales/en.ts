@@ -430,6 +430,15 @@ export const en = {
     patchedUnknown: "Patch updated",
     installDone: "Mods installed",
     installFailed: "Install failed",
+    repair: "Verify game files",
+    repairing: "Checking game files…",
+    repairChecked: "{count} game files checked — nothing missing.",
+    repairFixed: "{count} game file restored.",
+    repairFixed_other: "{count} game files restored.",
+    repairStuck:
+      "{count} file could not be restored. Try again, and report it if it keeps happening.",
+    repairStuck_other:
+      "{count} files could not be restored. Try again, and report it if it keeps happening.",
   },
 
   /* Keyed by the ErrorCode the backend sends. `errorText()` in ../errors picks
@@ -469,6 +478,14 @@ export const en = {
       "Couldn't read the launcher version from the CDN.",
     archiveTooLarge:
       "This download unpacks to {size}, over the {limit} limit — it was refused rather than filling your disk. Try again; if it keeps happening, report it.",
+
+    archiveListingUnavailable:
+      "Could not read the file list for the game download from {url}, so the install could not be checked against it. Usually a network or CDN hiccup — try again in a moment.",
+
+    pakSignatureMissing:
+
+      "The game can't start: {file} is missing from {paks}, and a signed pak won't load without it. Open Mods and run “Verify game files” to put it back.",
+
 
     manifestSignatureInvalid:
       "The release manifest on the CDN isn't signed by Elemental Fracture. Nothing was installed. Try again later; if it keeps happening, report it.",

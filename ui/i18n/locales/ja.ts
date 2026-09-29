@@ -398,6 +398,13 @@ export const ja: Catalogue = {
     patchedUnknown: "パッチを更新しました",
     installDone: "MOD をインストールしました",
     installFailed: "インストールに失敗しました",
+    repair: "ゲームファイルを検証",
+    repairing: "ゲームファイルを確認しています…",
+    repairChecked: "{count} 個のゲームファイルを確認しました。不足はありません。",
+    repairFixed: "{count} 個のゲームファイルを復元しました。",
+    repairFixed_other: "{count} 個のゲームファイルを復元しました。",
+    repairStuck: "{count} 個のファイルを復元できませんでした。もう一度お試しいただき、続く場合はご報告ください。",
+    repairStuck_other: "{count} 個のファイルを復元できませんでした。もう一度お試しいただき、続く場合はご報告ください。",
   },
 
   errors: {
@@ -440,6 +447,18 @@ export const ja: Catalogue = {
       "CDN からランチャーのバージョンを読み取れませんでした。",
     archiveTooLarge:
       "このダウンロードは展開すると {size} になり、{limit} の上限を超えます — ディスクを埋める代わりに拒否しました。もう一度お試しください。繰り返す場合は報告してください。",
+
+    archiveListingUnavailable:
+
+      "{url} からゲームダウンロードのファイル一覧を読み取れなかったため、インストール内容を照合できませんでした。多くはネットワークまたは CDN の一時的な問題です。少し待ってからもう一度お試しください。",
+
+
+    pakSignatureMissing:
+
+
+      "ゲームを開始できません。{paks} に {file} がなく、署名済みの pak はこのファイルがないと読み込めません。「Mods」を開いて「ゲームファイルを検証」を実行すると復元できます。",
+
+
 
     manifestSignatureInvalid:
       "CDN 上のリリースマニフェストは Elemental Fracture によって署名されていません。何もインストールされませんでした。後でもう一度お試しください。続く場合は報告してください。",

@@ -33,6 +33,7 @@ import type {
   Settings,
   LoginResult,
   SteamStatus,
+  VerifyReport,
   VersionInfo,
   WrapperOption,
 } from "@/generated/bindings";
@@ -47,6 +48,7 @@ export type {
   NewsItem,
   Settings,
   LoginResult,
+  VerifyReport,
   VersionInfo,
   WrapperOption,
 };
@@ -104,6 +106,10 @@ export async function getLauncherUpdate(): Promise<LauncherUpdateInfo> {
 
 export async function verifyInstall(): Promise<FileCheck[]> {
   return await commands.verifyInstall();
+}
+
+export async function verifyGameFiles(repair: boolean): Promise<VerifyReport> {
+  return unwrap(await commands.verifyGameFiles(repair));
 }
 
 export async function detectWrappers(): Promise<WrapperOption[]> {

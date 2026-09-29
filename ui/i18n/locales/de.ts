@@ -396,6 +396,13 @@ export const de: Catalogue = {
     patchedUnknown: "Patch aktualisiert",
     installDone: "Mods installiert",
     installFailed: "Installation fehlgeschlagen",
+    repair: "Spieldateien prüfen",
+    repairing: "Spieldateien werden geprüft…",
+    repairChecked: "{count} Spieldateien geprüft – nichts fehlt.",
+    repairFixed: "{count} Spieldatei wiederhergestellt.",
+    repairFixed_other: "{count} Spieldateien wiederhergestellt.",
+    repairStuck: "{count} Datei konnte nicht wiederhergestellt werden. Versuche es erneut und melde es, wenn es weiter auftritt.",
+    repairStuck_other: "{count} Dateien konnten nicht wiederhergestellt werden. Versuche es erneut und melde es, wenn es weiter auftritt.",
   },
 
   errors: {
@@ -436,6 +443,18 @@ export const de: Catalogue = {
       "Die Launcher-Version konnte nicht vom CDN gelesen werden.",
     archiveTooLarge:
       "Dieser Download entpackt sich zu {size} und liegt damit über dem Limit von {limit} — er wurde abgelehnt, statt deine Festplatte zu füllen. Versuche es erneut; wenn es weiter passiert, melde es.",
+
+    archiveListingUnavailable:
+
+      "Die Dateiliste des Spiel-Downloads unter {url} konnte nicht gelesen werden, daher ließ sich die Installation nicht damit abgleichen. Meist ein Netzwerk- oder CDN-Aussetzer – versuche es gleich noch einmal.",
+
+
+    pakSignatureMissing:
+
+
+      "Das Spiel kann nicht starten: {file} fehlt in {paks}, und ein signiertes Pak lädt ohne diese Datei nicht. Öffne „Mods“ und führe „Spieldateien prüfen“ aus, um sie wiederherzustellen.",
+
+
 
     manifestSignatureInvalid:
       "Das Release-Manifest auf dem CDN ist nicht von Elemental Fracture signiert. Es wurde nichts installiert. Versuche es später erneut; falls es weiterhin passiert, melde es.",

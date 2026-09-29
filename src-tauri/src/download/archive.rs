@@ -649,19 +649,165 @@ pub(super) fn ensure_room(dir: &Path, need: u64) -> AppResult<()> {
 
 /// What unpacking `listing` (entry name, uncompressed size) into `dest` adds
 /// to the disk, with the same name handling the unpack itself uses.
-pub(super) fn bytes_to_unpack(listing: &[(String, u64)], dest: &Path) -> u64 {
+pub(super) fn bytes_to_unpack(listing: &[ZipEntry], dest: &Path) -> u64 {
     bytes_to_add(
         listing
             .iter()
-            .filter_map(|(name, size)| safe_rel_path(name).map(|rel| (dest.join(rel), *size))),
+            .filter_map(|e| safe_rel_path(&e.name).map(|rel| (dest.join(rel), e.size))),
     )
+}
+
+/// One file entry as the central directory describes it.
+///
+/// Enough to check an installed file against the archive without downloading
+/// it (`name`, `size`), and enough to fetch that one entry back out of the
+/// remote archive by byte range and inflate it (`offset`, `compressed`,
+/// `method`, `crc`) instead of pulling 22 GiB to replace a 200-byte file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct ZipEntry {
+    pub name: String,
+    pub size: u64,
+    pub compressed: u64,
+    pub crc: u32,
+    /// 0 = stored, 8 = deflate. Anything else this launcher will not repair.
+    pub method: u16,
+    /// Where the entry's LOCAL header starts in the archive. The local header
+    /// is variable length, so a fetch has to read it to find the data.
+    pub offset: u64,
+}
+
+/// The single leading directory every entry shares, when the archive wraps
+/// its contents in one (`SpellbreakBuild/g3/...` rather than `g3/...`).
+///
+/// `download_game` already copes with both shapes by looking for the folder
+/// that contains `g3` after unpacking. A check that runs later has to make
+/// the same decision from the listing alone, or it compares `<root>/g3/x`
+/// against an entry named `wrapper/g3/x` and calls a perfectly good install
+/// completely missing.
+pub(super) fn wrapper_prefix(listing: &[ZipEntry]) -> Option<String> {
+    let first = |name: &str| name.replace('\\', "/").split('/').next().unwrap_or("").to_string();
+    let mut shared: Option<String> = None;
+    for e in listing {
+        let head = first(&e.name);
+        if head.is_empty() {
+            return None;
+        }
+        match &shared {
+            Some(s) if *s != head => return None,
+            Some(_) => {}
+            None => shared = Some(head),
+        }
+    }
+    // A shared head that IS a real top level of the game is not a wrapper.
+    shared.filter(|s| !s.eq_ignore_ascii_case("g3") && !s.eq_ignore_ascii_case("Engine"))
+}
+
+/// Where an archive entry belongs under the install root, with the archive's
+/// wrapper directory (if it has one) taken off.
+pub(super) fn install_rel_path(name: &str, strip: Option<&str>) -> Option<PathBuf> {
+    let rel = safe_rel_path(name)?;
+    match strip {
+        Some(w) => {
+            let mut parts = rel.components();
+            let head = parts.next()?;
+            if head.as_os_str().eq_ignore_ascii_case(w) {
+                let rest: PathBuf = parts.collect();
+                (!rest.as_os_str().is_empty()).then_some(rest)
+            } else {
+                Some(rel)
+            }
+        }
+        None => Some(rel),
+    }
+}
+
+/// Fetch ONE entry out of a remote zip by byte range and return its contents.
+///
+/// The central directory gave us where the entry's local header starts and how
+/// many compressed bytes follow it, so the whole cost of putting back a
+/// missing file is that file, not the archive. The local header is variable
+/// length (its name and extra field), so the request covers it plus a slack
+/// and the header is parsed out of the front; a header longer than the slack
+/// gets a second, exact request rather than a wrong answer.
+///
+/// The CRC-32 in the central directory is checked against what came out. That
+/// is the same guarantee the normal unpack path gets from the zip crate, and
+/// it is what stops a repair from writing a corrupt file over a merely
+/// missing one.
+pub(super) async fn entry_bytes(
+    client: &reqwest::Client,
+    url: &str,
+    entry: &ZipEntry,
+) -> AppResult<Vec<u8>> {
+    const LOCAL_HEADER: u64 = 30;
+    const SLACK: u64 = 8 * 1024;
+
+    let fetch = |from: u64, len: u64| async move {
+        super::transfer::fetch_range(client, url, &format!("bytes={}-{}", from, from + len - 1))
+            .await
+            .map(|(_, _, body)| body)
+            .ok_or_else(|| {
+                AppError::new(ErrorCode::ArchiveListingUnavailable)
+                    .with("url", url)
+                    .with("file", entry.name.clone())
+            })
+    };
+
+    let want = LOCAL_HEADER + SLACK + entry.compressed;
+    let head = fetch(entry.offset, want).await?;
+    if head.get(..4) != Some(b"PK\x03\x04") {
+        return Err(AppError::detail(ErrorCode::BadArchiveEntry, "no local header at the recorded offset")
+            .with("file", entry.name.clone()));
+    }
+    let name_len = u16_at(&head, 26).ok_or_else(|| AppError::new(ErrorCode::BadArchiveEntry))?;
+    let extra_len = u16_at(&head, 28).ok_or_else(|| AppError::new(ErrorCode::BadArchiveEntry))?;
+    let data_at = LOCAL_HEADER + name_len + extra_len;
+    let end = data_at + entry.compressed;
+
+    let raw: Vec<u8> = if (head.len() as u64) >= end {
+        head[data_at as usize..end as usize].to_vec()
+    } else {
+        // The name and extra field ran past the slack: ask for exactly the
+        // compressed bytes now that their offset is known.
+        fetch(entry.offset + data_at, entry.compressed).await?
+    };
+    if raw.len() as u64 != entry.compressed {
+        return Err(AppError::detail(ErrorCode::BadArchiveEntry, "short read of the entry's data")
+            .with("file", entry.name.clone()));
+    }
+
+    let out = match entry.method {
+        0 => raw,
+        8 => {
+            let mut out = Vec::with_capacity(usize::try_from(entry.size).unwrap_or(0));
+            flate2::read::DeflateDecoder::new(&raw[..])
+                .read_to_end(&mut out)
+                .map_err(|e| AppError::detail(ErrorCode::BadArchiveEntry, e).with("file", entry.name.clone()))?;
+            out
+        }
+        m => {
+            return Err(AppError::detail(ErrorCode::BadArchiveEntry, format!("compression method {m}"))
+                .with("file", entry.name.clone()))
+        }
+    };
+    if out.len() as u64 != entry.size {
+        return Err(AppError::detail(ErrorCode::ExtractionMismatch, "wrong length after decompression")
+            .with("file", entry.name.clone()));
+    }
+    let mut crc = flate2::Crc::new();
+    crc.update(&out);
+    if crc.sum() != entry.crc {
+        return Err(AppError::detail(ErrorCode::ExtractionMismatch, "CRC mismatch")
+            .with("file", entry.name.clone()));
+    }
+    Ok(out)
 }
 
 /// What the end of a remote zip said about it.
 #[derive(Debug, PartialEq, Eq)]
 pub(super) enum Tail {
-    /// Every file entry's name and uncompressed size.
-    Listing(Vec<(String, u64)>),
+    /// Every file entry.
+    Listing(Vec<ZipEntry>),
     /// The central directory starts before the bytes given, at this offset.
     NeedFrom(u64),
 }
@@ -727,29 +873,48 @@ pub(super) fn read_tail(tail: &[u8], tail_start: u64) -> Option<Tail> {
         if tail.get(p..p + 4)? != CENTRAL {
             return None;
         }
+        let method = u16::try_from(u16_at(tail, p + 10)?).ok()?;
+        let crc = u32::try_from(u32_at(tail, p + 16)?).ok()?;
+        let mut compressed = u32_at(tail, p + 20)?;
         let mut size = u32_at(tail, p + 24)?;
         let name_len = usize::try_from(u16_at(tail, p + 28)?).ok()?;
         let extra_len = usize::try_from(u16_at(tail, p + 30)?).ok()?;
         let comment_len = usize::try_from(u16_at(tail, p + 32)?).ok()?;
+        let mut offset = u32_at(tail, p + 42)?;
         let name = String::from_utf8_lossy(tail.get(p + 46..p + 46 + name_len)?).into_owned();
-        if size == MAX32 {
-            // The real size is in the zip64 extra field (id 1), which holds
-            // only the fields that overflowed, uncompressed size first.
+        if size == MAX32 || compressed == MAX32 || offset == MAX32 {
+            // The zip64 extra field (id 1) carries ONLY the fields that
+            // overflowed, in a fixed order: uncompressed size, compressed
+            // size, local header offset, disk number. Reading the first u64
+            // as the uncompressed size is right only when that is the one
+            // that overflowed, which for the base archive's 22 GiB pak it is
+            // -- but its offset overflows too, and a repair needs that.
             let extra = tail.get(p + 46 + name_len..p + 46 + name_len + extra_len)?;
             let mut q = 0;
-            let mut found = None;
+            let mut zip64 = None;
             while q + 4 <= extra.len() {
                 let (id, len) = (u16_at(extra, q)?, usize::try_from(u16_at(extra, q + 2)?).ok()?);
                 if id == 1 {
-                    found = u64_at(extra, q + 4);
+                    zip64 = Some(extra.get(q + 4..q + 4 + len)?);
                     break;
                 }
                 q += 4 + len;
             }
-            size = found?;
+            let zip64 = zip64?;
+            let mut at = 0usize;
+            let mut take = |field: &mut u64| -> Option<()> {
+                if *field == MAX32 {
+                    *field = u64_at(zip64, at)?;
+                    at += 8;
+                }
+                Some(())
+            };
+            take(&mut size)?;
+            take(&mut compressed)?;
+            take(&mut offset)?;
         }
         if !name.ends_with('/') {
-            listing.push((name, size));
+            listing.push(ZipEntry { name, size, compressed, crc, method, offset });
         }
         p += 46 + name_len + extra_len + comment_len;
     }

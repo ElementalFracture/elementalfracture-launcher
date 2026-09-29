@@ -393,6 +393,13 @@ export const ko: Catalogue = {
     patchedUnknown: "패치를 업데이트했습니다",
     installDone: "모드를 설치했습니다",
     installFailed: "설치에 실패했습니다",
+    repair: "게임 파일 검사",
+    repairing: "게임 파일을 확인하는 중…",
+    repairChecked: "게임 파일 {count}개를 확인했습니다. 누락된 파일이 없습니다.",
+    repairFixed: "게임 파일 {count}개를 복구했습니다.",
+    repairFixed_other: "게임 파일 {count}개를 복구했습니다.",
+    repairStuck: "파일 {count}개를 복구하지 못했습니다. 다시 시도하고, 계속되면 알려 주세요.",
+    repairStuck_other: "파일 {count}개를 복구하지 못했습니다. 다시 시도하고, 계속되면 알려 주세요.",
   },
 
   errors: {
@@ -430,6 +437,18 @@ export const ko: Catalogue = {
     launcherVersionUnreadable: "CDN에서 런처 버전을 읽지 못했습니다.",
     archiveTooLarge:
       "이 다운로드는 압축을 풀면 {size}로, {limit} 제한을 넘습니다 — 디스크를 채우는 대신 거부했습니다. 다시 시도하고, 계속되면 제보해 주세요.",
+
+    archiveListingUnavailable:
+
+      "{url} 에서 게임 다운로드의 파일 목록을 읽지 못해 설치본을 대조할 수 없었습니다. 대개 네트워크나 CDN의 일시적인 문제입니다. 잠시 후 다시 시도해 주세요.",
+
+
+    pakSignatureMissing:
+
+
+      "게임을 시작할 수 없습니다. {paks} 에 {file} 이(가) 없으며, 서명된 pak은 이 파일 없이는 로드되지 않습니다. Mods를 열고 “게임 파일 검사”를 실행하면 복구됩니다.",
+
+
 
     manifestSignatureInvalid:
       "CDN의 릴리스 매니페스트가 Elemental Fracture의 서명이 아닙니다. 아무것도 설치되지 않았습니다. 나중에 다시 시도하고, 계속되면 신고해 주세요.",

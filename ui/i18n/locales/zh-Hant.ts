@@ -376,6 +376,13 @@ export const zhHant: Catalogue = {
     patchedUnknown: "修補已更新",
     installDone: "模組已安裝",
     installFailed: "安裝失敗",
+    repair: "驗證遊戲檔案",
+    repairing: "正在檢查遊戲檔案…",
+    repairChecked: "已檢查 {count} 個遊戲檔案，沒有缺少。",
+    repairFixed: "已還原 {count} 個遊戲檔案。",
+    repairFixed_other: "已還原 {count} 個遊戲檔案。",
+    repairStuck: "有 {count} 個檔案無法還原。請重試；若持續發生，請回報給我們。",
+    repairStuck_other: "有 {count} 個檔案無法還原。請重試；若持續發生，請回報給我們。",
   },
 
   errors: {
@@ -411,6 +418,18 @@ export const zhHant: Catalogue = {
     launcherVersionUnreadable: "無法從 CDN 讀取啟動器版本。",
     archiveTooLarge:
       "此下載解壓後為 {size}，超過 {limit} 的上限——已拒絕，以免佔滿磁碟。請重試；如果反覆出現，請回報。",
+
+    archiveListingUnavailable:
+
+      "無法從 {url} 讀取遊戲下載的檔案列表，因此無法據此驗證安裝。通常是網路或 CDN 的暫時問題，請稍後重試。",
+
+
+    pakSignatureMissing:
+
+
+      "遊戲無法啟動：{paks} 中缺少 {file}，已簽章的 pak 沒有它就無法載入。開啟「Mods」並執行「驗證遊戲檔案」即可還原。",
+
+
 
     manifestSignatureInvalid:
       "CDN 上的發佈清單未經 Elemental Fracture 簽署。未安裝任何內容。請稍後再試；若持續發生，請回報。",

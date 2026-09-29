@@ -2,6 +2,11 @@
 
 use super::*;
 
+/// A listing entry with only the fields the space maths reads.
+fn entry(name: &str, size: u64) -> ZipEntry {
+    ZipEntry { name: name.into(), size, compressed: size, crc: 0, method: 8, offset: 0 }
+}
+
 #[test]
 fn tar_reader_pulls_umu_run() {
     // Build a minimal two-entry tar (a dir + the umu-run regular file) and
@@ -465,13 +470,29 @@ fn the_tail_of_an_archive_lists_its_files_and_sizes() {
     let path = deflated_zip(tmp.path(), &[("g3/Content/Paks/a.pak", &pak), ("g3/version.txt", b"6.2.17")]);
     let bytes = fs::read(&path).unwrap();
 
+    let Some(Tail::Listing(listing)) = read_tail(&bytes, 0) else {
+        panic!("expected a listing");
+    };
     assert_eq!(
-        read_tail(&bytes, 0),
-        Some(Tail::Listing(vec![
-            ("g3/Content/Paks/a.pak".into(), 70_000),
-            ("g3/version.txt".into(), 6),
-        ]))
+        listing.iter().map(|e| (e.name.clone(), e.size)).collect::<Vec<_>>(),
+        vec![("g3/Content/Paks/a.pak".to_string(), 70_000), ("g3/version.txt".to_string(), 6)]
     );
+    // The directory also has to give up what a targeted repair needs: where
+    // each entry starts, how long it is on the wire, and what it hashes to.
+    let whole = zip::ZipArchive::new(File::open(&path).unwrap()).unwrap();
+    for e in &listing {
+        assert!(e.offset < bytes.len() as u64, "{} has no plausible offset", e.name);
+        assert_eq!(&bytes[e.offset as usize..e.offset as usize + 4], b"PK\x03\x04");
+        assert!(e.compressed > 0, "{} has no compressed size", e.name);
+        let _ = &whole;
+    }
+    assert_eq!(listing[0].crc, crc32_of(&pak));
+}
+
+fn crc32_of(bytes: &[u8]) -> u32 {
+    let mut c = flate2::Crc::new();
+    c.update(bytes);
+    c.sum()
 }
 
 /// Given only the last few bytes, it says where the directory starts rather
@@ -488,9 +509,12 @@ fn a_tail_too_short_for_the_directory_asks_for_more() {
         panic!("expected a request for more of the archive");
     };
     let offset = offset as usize;
+    let Some(Tail::Listing(listing)) = read_tail(&bytes[offset..], offset as u64) else {
+        panic!("expected a listing");
+    };
     assert_eq!(
-        read_tail(&bytes[offset..], offset as u64),
-        Some(Tail::Listing(vec![("a.pak".into(), 70_000)]))
+        listing.iter().map(|e| (e.name.clone(), e.size)).collect::<Vec<_>>(),
+        vec![("a.pak".to_string(), 70_000)]
     );
 }
 
@@ -510,9 +534,9 @@ fn files_already_in_place_count_against_the_space_needed() {
     fs::write(dest.join("g3/a.pak"), vec![0u8; 600]).unwrap();
     fs::write(dest.join("g3/b.pak"), vec![0u8; 2000]).unwrap();
     let listing = vec![
-        ("g3/a.pak".to_string(), 1000), // 400 more than what's there
-        ("g3/b.pak".to_string(), 1000), // smaller than what's there: nothing
-        ("g3\\c.pak".to_string(), 300), // new, and named the Windows way
+        entry("g3/a.pak", 1000),  // 400 more than what's there
+        entry("g3/b.pak", 1000),  // smaller than what's there: nothing
+        entry("g3\\c.pak", 300), // new, and named the Windows way
     ];
     assert_eq!(bytes_to_unpack(&listing, dest), 700);
 }
@@ -526,4 +550,124 @@ fn an_install_that_cannot_fit_is_refused_up_front() {
         assert!(err.params.contains_key(key), "{key}: {:?}", err.params);
     }
     ensure_room(tmp.path(), 0).unwrap();
+}
+
+// ── Verifying and repairing an install that is already on disk ───────────────
+
+/// An archive that wraps everything in one directory has to be recognised as
+/// such, or a check compares `<root>/g3/x` against `wrapper/g3/x` and calls a
+/// perfectly good install completely missing.
+#[test]
+fn a_wrapper_directory_is_seen_and_stripped() {
+    let wrapped = vec![
+        entry("SpellbreakBuild/g3/a.pak", 1),
+        entry("SpellbreakBuild/g3/Binaries/Win64/g3-Win64-Test.exe", 2),
+    ];
+    assert_eq!(wrapper_prefix(&wrapped).as_deref(), Some("SpellbreakBuild"));
+    assert_eq!(
+        install_rel_path("SpellbreakBuild/g3/a.pak", Some("SpellbreakBuild")),
+        Some(PathBuf::from("g3/a.pak"))
+    );
+}
+
+/// `g3` being shared by every entry is the archive having no wrapper, not a
+/// wrapper called g3 — stripping it would look for the install one level up.
+#[test]
+fn a_shared_g3_is_not_a_wrapper() {
+    let flat = vec![entry("g3/a.pak", 1), entry("g3/b.pak", 2)];
+    assert_eq!(wrapper_prefix(&flat), None);
+    assert_eq!(install_rel_path("g3/a.pak", None), Some(PathBuf::from("g3/a.pak")));
+}
+
+#[test]
+fn entries_that_share_no_leading_directory_have_no_wrapper() {
+    let mixed = vec![entry("g3/a.pak", 1), entry("Engine/b.pak", 2)];
+    assert_eq!(wrapper_prefix(&mixed), None);
+}
+
+/// Serve `body` over HTTP/1.1 on localhost, honouring `Range: bytes=a-b`.
+/// Returns the base URL and keeps the thread alive for `requests` requests.
+fn range_server(body: Vec<u8>, requests: usize) -> String {
+    use std::io::{BufRead, BufReader, Write as _};
+    use std::net::TcpListener;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/base.zip", listener.local_addr().unwrap());
+    std::thread::spawn(move || {
+        for _ in 0..requests {
+            let Ok((mut sock, _)) = listener.accept() else { return };
+            let mut head = String::new();
+            let mut reader = BufReader::new(sock.try_clone().unwrap());
+            let mut range = None;
+            loop {
+                let mut line = String::new();
+                if reader.read_line(&mut line).unwrap_or(0) == 0 {
+                    break;
+                }
+                if line.to_ascii_lowercase().starts_with("range:") {
+                    range = line.split('=').nth(1).map(|v| v.trim().to_string());
+                }
+                head.push_str(&line);
+                if line == "\r\n" || line == "\n" {
+                    break;
+                }
+            }
+            let (from, to) = match range.as_deref().and_then(|r| r.split_once('-')) {
+                Some((a, b)) => (
+                    a.parse::<usize>().unwrap_or(0),
+                    b.parse::<usize>().unwrap_or(body.len() - 1).min(body.len() - 1),
+                ),
+                None => (0, body.len() - 1),
+            };
+            let slice = &body[from..=to];
+            let resp = format!(
+                "HTTP/1.1 206 Partial Content\r\nContent-Length: {}\r\nContent-Range: bytes {}-{}/{}\r\n\r\n",
+                slice.len(), from, to, body.len()
+            );
+            let _ = sock.write_all(resp.as_bytes());
+            let _ = sock.write_all(slice);
+            let _ = sock.flush();
+        }
+    });
+    url
+}
+
+/// The whole point of the repair path: put back one file out of a 22 GiB
+/// archive without downloading the archive. Given the entry's offset from the
+/// central directory, it range-fetches that entry alone, inflates it, and the
+/// bytes are the file's.
+#[tokio::test]
+async fn one_entry_is_fetched_back_out_of_a_remote_archive() {
+    let tmp = tempfile::tempdir().unwrap();
+    let pak = noise(70_000, 11);
+    let sig = b"a signature file".to_vec();
+    let path = deflated_zip(tmp.path(), &[("g3/Content/Paks/a.pak", &pak), ("g3/Content/Paks/a.sig", &sig)]);
+    let bytes = fs::read(&path).unwrap();
+    let Some(Tail::Listing(listing)) = read_tail(&bytes, 0) else {
+        panic!("expected a listing");
+    };
+
+    let url = range_server(bytes.clone(), 2);
+    let client = reqwest::Client::new();
+    for want in [&pak, &sig] {
+        let e = listing.iter().find(|e| e.size == want.len() as u64).unwrap();
+        let got = entry_bytes(&client, &url, e).await.unwrap();
+        assert_eq!(&got, want, "{} came back wrong", e.name);
+    }
+}
+
+/// A repair must not be able to write a file the archive does not vouch for.
+#[tokio::test]
+async fn an_entry_whose_crc_is_wrong_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sig = b"a signature file".to_vec();
+    let path = deflated_zip(tmp.path(), &[("g3/Content/Paks/a.sig", &sig)]);
+    let bytes = fs::read(&path).unwrap();
+    let Some(Tail::Listing(mut listing)) = read_tail(&bytes, 0) else {
+        panic!("expected a listing");
+    };
+    listing[0].crc ^= 0xFFFF_FFFF; // the directory and the data now disagree
+
+    let url = range_server(bytes, 1);
+    let err = entry_bytes(&reqwest::Client::new(), &url, &listing[0]).await.unwrap_err();
+    assert_eq!(err.code, ErrorCode::ExtractionMismatch);
 }

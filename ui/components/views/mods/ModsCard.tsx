@@ -30,6 +30,7 @@ export function ModsCard() {
   const [modsBusy, setModsBusy] = useState(false);
   const [log, setLog] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [repairing, setRepairing] = useState(false);
 
   const refreshFiles = useCallback(async () => {
     try {
@@ -46,6 +47,37 @@ export function ModsCard() {
       await atLeast(refreshFiles());
     } finally {
       setVerifying(false);
+    }
+  };
+
+  /* "Verify" above answers off the local disk: it lists the mod DLLs and says
+     which are there. This one checks the GAME against the release it came
+     from — every file the base archive holds, by name and size — and puts back
+     what is missing or truncated. That is the one thing no other button here
+     can do: the update path only ever rewrites the patch and the mods, so an
+     install that lost a file from the base archive (an older launcher that did
+     not verify its own extraction, antivirus, a bad sector) stays broken
+     however many times it is updated, and the player just sees the game refuse
+     to start over a missing .sig. */
+  const onRepair = async () => {
+    setRepairing(true);
+    try {
+      const r = await rust.verifyGameFiles(true);
+      if (r.unresolved.length > 0) {
+        setLog(r.unresolved.join("\n"));
+        toast(_("mods.repairStuck", { count: r.unresolved.length }), true);
+      } else if (r.repaired > 0) {
+        toast(_("mods.repairFixed", { count: r.repaired }));
+      } else {
+        toast(_("mods.repairChecked", { count: r.checked }));
+      }
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setRepairing(false);
+      refreshFiles();
+      refreshVersions();
+      refreshStatus();
     }
   };
 
@@ -123,6 +155,22 @@ export function ModsCard() {
               _("mods.verify")
             )}
           </Button>
+          {status?.game_path && (
+            <Button
+              variant="secondary"
+              disabled={repairing}
+              onClick={onRepair}
+            >
+              {repairing ? (
+                <>
+                  <Spinner />
+                  {_("mods.repairing")}
+                </>
+              ) : (
+                _("mods.repair")
+              )}
+            </Button>
+          )}
           {outdated && (
             <Button
               variant="secondary"

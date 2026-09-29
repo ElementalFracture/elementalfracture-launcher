@@ -62,6 +62,10 @@ pub enum ErrorCode {
     NotEnoughSpace,
     /// The install archive unpacked without the folder the game lives in.
     ArchiveMissingGameFolder,
+    /// The CDN would not give up the archive's file listing (no range support,
+    /// an error page, a truncated directory), so an install cannot be checked
+    /// against it.
+    ArchiveListingUnavailable,
     /// The runtime tarball ended mid-entry or has an unreadable header.
     RuntimeArchiveCorrupt,
     /// No runtime, and no python3 to run the umu zipapp with.
@@ -153,6 +157,9 @@ pub enum ErrorCode {
     /// The patch landed but the version stamp didn't. `params: detail`
     /// The patch archive extracted but did not contain the balance pak.
     PatchPakMissing,
+    /// A pak that ships signed has lost its `.sig`, so the game cannot mount
+    /// it. Repairable: `verify_game_files` puts the file back.
+    PakSignatureMissing,
     PatchVersionWriteFailed,
     /// Self-update, at each of the three points it can fail after downloading.
     /// `params: detail`

@@ -16,6 +16,11 @@ serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 tokio = { version = "1", features = ["net", "io-util", "time", "rt"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# Inflating ONE entry fetched out of the remote archive by byte range, and the
+# CRC-32 to check it against the central directory (download/archive.rs
+# entry_bytes). The zip crate wants a whole seekable archive; a repair has a
+# few KB of it.
+flate2 = "1"
 # The signed release manifest (download/manifest.rs): every payload's SHA-256,
 # signed with a key the CDN never holds.
 sha2 = "0.10"
@@ -52,3 +57,6 @@ codegen-units = 1
 
 [dev-dependencies]
 tempfile = "3.27.0"
+# The repair path is HTTP range requests against the CDN, so its tests serve a
+# real archive over a real socket rather than mocking the shape of one.
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

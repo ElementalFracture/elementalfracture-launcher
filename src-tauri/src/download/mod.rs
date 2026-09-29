@@ -16,6 +16,7 @@ pub(crate) mod progress;
 mod runtime;
 mod self_update;
 mod transfer;
+mod verify;
 
 // Re-exported wholesale rather than by name: `#[tauri::command]` generates
 // hidden items next to each function (`__cmd__*`, `__specta__fn__*`) that
@@ -26,3 +27,4 @@ pub use config::*;
 pub use install::*;
 pub use runtime::*;
 pub use self_update::*;
+pub use verify::*;

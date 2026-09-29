@@ -15,7 +15,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// CDN paths of the game payloads, which double as their manifest keys.
-const BASE_ZIP: &str = "game/elefracbase.zip";
+pub(super) const BASE_ZIP: &str = "game/elefracbase.zip";
 const PATCH_ZIP: &str = "patch/latest.zip";
 const PLAYTEST_ZIP: &str = "patch/dev.zip";
 
@@ -120,7 +120,10 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
 /// any of the rest is fetched. None if the server or the archive doesn't
 /// cooperate: the check this feeds is advisory, and the exact one runs again
 /// before unpacking.
-async fn remote_listing(client: &reqwest::Client, url: &str) -> Option<(u64, Vec<(String, u64)>)> {
+pub(super) async fn remote_listing(
+    client: &reqwest::Client,
+    url: &str,
+) -> Option<(u64, Vec<super::archive::ZipEntry>)> {
     // The base archive's central directory is ~160 KB; 1 MiB covers several
     // thousand entries. Past 64 MiB it isn't worth fetching just to check.
     const TAIL: u64 = 1 << 20;
@@ -139,6 +142,23 @@ async fn remote_listing(client: &reqwest::Client, url: &str) -> Option<(u64, Vec
     }
 }
 
+/// Where the base archive lives on the CDN.
+pub(super) fn base_zip_url(cdn: &str) -> String {
+    format!("{cdn}/{BASE_ZIP}")
+}
+
+/// `apply_patch` for the verify/repair pass, which has already fetched and
+/// checked the manifest for this run. Separate only because `apply_patch`
+/// itself is private to this module.
+pub(super) async fn apply_patch_for_repair(
+    app: &tauri::AppHandle,
+    cdn: &str,
+    root: &Path,
+    manifest: &Manifest,
+) -> AppResult<String> {
+    apply_patch(app, cdn, root, manifest).await
+}
+
 /// Fresh install: base game zip → dest, then patch + version bump.
 #[tauri::command]
 #[specta::specta]
@@ -154,7 +174,7 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
     // the next attempt resumes them (see transfer.rs). They go only once the
     // archive has been extracted and verified.
     let tmp_zip = dest.join("_elefracbase.zip.part");
-    let base_url = format!("{cdn}/{BASE_ZIP}");
+    let base_url = base_zip_url(&cdn);
 
     // Fail now rather than after the download: the archive and everything it
     // unpacks to must fit side by side, since the archive is only deleted once

@@ -376,6 +376,13 @@ export const zhHans: Catalogue = {
     patchedUnknown: "补丁已更新",
     installDone: "模组已安装",
     installFailed: "安装失败",
+    repair: "校验游戏文件",
+    repairing: "正在检查游戏文件…",
+    repairChecked: "已检查 {count} 个游戏文件，没有缺失。",
+    repairFixed: "已恢复 {count} 个游戏文件。",
+    repairFixed_other: "已恢复 {count} 个游戏文件。",
+    repairStuck: "有 {count} 个文件无法恢复。请重试；若持续出现，请反馈给我们。",
+    repairStuck_other: "有 {count} 个文件无法恢复。请重试；若持续出现，请反馈给我们。",
   },
 
   errors: {
@@ -410,6 +417,18 @@ export const zhHans: Catalogue = {
     launcherVersionUnreadable: "无法从 CDN 读取启动器版本。",
     archiveTooLarge:
       "此下载解压后为 {size}，超过 {limit} 的上限——已拒绝，以免占满磁盘。请重试；如果反复出现，请反馈。",
+
+    archiveListingUnavailable:
+
+      "无法从 {url} 读取游戏下载的文件列表，因此无法据此校验安装。通常是网络或 CDN 的临时问题，请稍后重试。",
+
+
+    pakSignatureMissing:
+
+
+      "游戏无法启动：{paks} 中缺少 {file}，已签名的 pak 没有它就无法加载。打开“Mods”并运行“校验游戏文件”即可恢复。",
+
+
 
     manifestSignatureInvalid:
       "CDN 上的发布清单未经 Elemental Fracture 签名。未安装任何内容。请稍后重试；若持续出现，请反馈。",

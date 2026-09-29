@@ -388,6 +388,13 @@ export const fr: Catalogue = {
     patchedUnknown: "Correctif appliqué",
     installDone: "Mods installés",
     installFailed: "Échec de l'installation",
+    repair: "Vérifier les fichiers du jeu",
+    repairing: "Vérification des fichiers du jeu…",
+    repairChecked: "{count} fichiers du jeu vérifiés : rien ne manque.",
+    repairFixed: "{count} fichier du jeu restauré.",
+    repairFixed_other: "{count} fichiers du jeu restaurés.",
+    repairStuck: "{count} fichier n'a pas pu être restauré. Réessaie, et signale-le si cela persiste.",
+    repairStuck_other: "{count} fichiers n'ont pas pu être restaurés. Réessaie, et signale-le si cela persiste.",
   },
 
   errors: {
@@ -428,6 +435,18 @@ export const fr: Catalogue = {
       "Impossible de lire la version du launcher depuis le CDN.",
     archiveTooLarge:
       "Ce téléchargement se décompresse en {size}, au-delà de la limite de {limit} — il a été refusé plutôt que de remplir votre disque. Réessayez ; si cela persiste, signalez-le.",
+
+    archiveListingUnavailable:
+
+      "Impossible de lire la liste des fichiers du téléchargement du jeu depuis {url}, l'installation n'a donc pas pu être comparée. En général un incident réseau ou CDN : réessaie dans un instant.",
+
+
+    pakSignatureMissing:
+
+
+      "Le jeu ne peut pas démarrer : {file} est absent de {paks}, et un pak signé ne se charge pas sans ce fichier. Ouvre Mods et lance « Vérifier les fichiers du jeu » pour le restaurer.",
+
+
 
     manifestSignatureInvalid:
       "Le manifeste de version sur le CDN n'est pas signé par Elemental Fracture. Rien n'a été installé. Réessayez plus tard ; si cela persiste, signalez-le.",

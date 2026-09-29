@@ -115,6 +115,15 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
             .with("names", WIN64_EXES.join(", ")));
     };
 
+    // A pak that lost its signature will not mount, and what the player sees is
+    // the game failing on its own terms — a black screen — rather than anything
+    // the launcher said. Name the file and point at the button that puts it back.
+    if let Some(missing) = crate::download::unmountable_pak(&root) {
+        return Err(AppError::new(ErrorCode::PakSignatureMissing)
+            .with("file", missing)
+            .with("paks", super::install::paks_dir(&root).display()));
+    }
+
     let mut argv: Vec<String> = Vec::new();
 
     // Dev builds run inside a distrobox where wine isn't installed —
