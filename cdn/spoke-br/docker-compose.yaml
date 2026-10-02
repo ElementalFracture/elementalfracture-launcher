@@ -44,6 +44,9 @@ services:
         for b in assets game launcher patch; do mc mb -p "local/$$b" >/dev/null 2>&1; mc anonymous set download "local/$$b" >/dev/null; done
         while :; do
           for b in assets game launcher patch; do
+            # A copy that dies mid-object leaves its multipart parts behind in MinIO until someone abandons
+            # them; hundreds of those once ate 30 GB here. mirror restarts such objects from scratch anyway.
+            mc rm --incomplete --recursive --force "local/$$b" >/dev/null 2>&1
             mc mirror --overwrite --remove --exclude "*.bak-*" --exclude "archive/*" "hub/$$b" "local/$$b" \
               && echo "[$$(date -u +%FT%TZ)] $$b in sync" || echo "[$$(date -u +%FT%TZ)] $$b mirror failed ($$?); next pass retries"
           done
