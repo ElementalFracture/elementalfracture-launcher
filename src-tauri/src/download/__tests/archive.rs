@@ -650,7 +650,7 @@ async fn one_entry_is_fetched_back_out_of_a_remote_archive() {
     let client = reqwest::Client::new();
     for want in [&pak, &sig] {
         let e = listing.iter().find(|e| e.size == want.len() as u64).unwrap();
-        let got = entry_bytes(&client, &url, e).await.unwrap();
+        let got = entry_bytes(&client, &super::super::transfer::ArchiveSource::new("", url.clone(), None), e).await.unwrap();
         assert_eq!(&got, want, "{} came back wrong", e.name);
     }
 }
@@ -668,6 +668,6 @@ async fn an_entry_whose_crc_is_wrong_is_refused() {
     listing[0].crc ^= 0xFFFF_FFFF; // the directory and the data now disagree
 
     let url = range_server(bytes, 1);
-    let err = entry_bytes(&reqwest::Client::new(), &url, &listing[0]).await.unwrap_err();
+    let err = entry_bytes(&reqwest::Client::new(), &super::super::transfer::ArchiveSource::new("", url.clone(), None), &listing[0]).await.unwrap_err();
     assert_eq!(err.code, ErrorCode::ExtractionMismatch);
 }
