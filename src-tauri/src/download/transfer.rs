@@ -257,7 +257,15 @@ pub(super) async fn download_to_file_in(
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map_err(|e| AppError::detail(ErrorCode::DownloadFailed, e).with("url", url))?;
+        .map_err(|e| {
+            // The HTTP status rides along so a caller can tell "this CDN does not have the object" (404,
+            // a mirror without the parts) from "the transfer is failing" (everything else, worth retrying).
+            let err = AppError::detail(ErrorCode::DownloadFailed, &e).with("url", url);
+            match e.status() {
+                Some(st) => err.with("status", st.as_u16()),
+                None => err,
+            }
+        })?;
 
     let ranged_total = if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT {
         probe

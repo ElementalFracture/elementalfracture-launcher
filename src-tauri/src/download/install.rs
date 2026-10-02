@@ -142,6 +142,12 @@ pub(super) async fn remote_listing(
     }
 }
 
+/// True when a parts download failed because the object is not on this CDN at all (HTTP 404), as
+/// opposed to a transfer that broke. `status` is set by `transfer::download_to_file` on the probe.
+pub(super) fn parts_missing(e: &AppError) -> bool {
+    e.code == ErrorCode::DownloadFailed && e.params.get("status").map(String::as_str) == Some("404")
+}
+
 /// Where the base archive lives on the CDN.
 pub(super) fn base_zip_url(cdn: &str) -> String {
     format!("{cdn}/{BASE_ZIP}")
@@ -192,10 +198,14 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
     // it, and only re-fetches the single object if the assembly is wrong.
     if let Some(parts) = manifest.parts_for(BASE_ZIP) {
         if let Err(e) = assemble_parts(&app, "download-base", &cdn, parts, &tmp_zip, &base_url, manifest.hash_for(BASE_ZIP)?).await {
-            // A part that is missing or unreachable (a mirror that does not carry the parts, the CDN
-            // mid-publish) is not a reason to fail the install: the whole archive below is the same bytes,
-            // just uncached. Start it clean; a half-assembled payload has no state to resume from.
-            emit(&app, "download-base", format!("Parts unavailable ({e}); fetching the whole archive instead"), 0.0, 0, 0);
+            // Only a CDN that does not HAVE the parts (404: a mirror or failover standby without them) falls
+            // back to the whole archive. A part that merely failed to transfer is retried on the next
+            // attempt from where it stopped; falling back there would turn every congested evening into
+            // 11 GB uncacheable downloads from the origin, which is exactly what the parts exist to prevent.
+            if !parts_missing(&e) {
+                return Err(e);
+            }
+            emit(&app, "download-base", "This CDN has no parts; fetching the whole archive instead".into(), 0.0, 0, 0);
             discard(&tmp_zip);
         }
     }

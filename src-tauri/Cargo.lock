@@ -808,7 +808,7 @@ dependencies = [
 
 [[package]]
 name = "ef-launcher"
-version = "3.5.0"
+version = "3.5.1"
 dependencies = [
  "ed25519-dalek",
  "flate2",

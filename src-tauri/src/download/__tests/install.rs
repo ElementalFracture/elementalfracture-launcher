@@ -89,3 +89,15 @@ fn a_corrupt_record_reads_as_unknown_and_is_rewritten() {
     remember_versions(root, "ef", Some("6.4.2"), None);
     assert_eq!(remembered_versions(root, "ef").0.as_deref(), Some("6.4.2"));
 }
+
+#[test]
+fn only_a_missing_part_falls_back_to_the_whole_archive() {
+    use crate::error::{AppError, ErrorCode};
+    // The CDN does not have the parts at all: fall back.
+    assert!(parts_missing(&AppError::new(ErrorCode::DownloadFailed).with("status", 404u16)));
+    // A transfer that broke, a stall, a hash mismatch: retry the parts, never the 11 GB archive.
+    assert!(!parts_missing(&AppError::new(ErrorCode::DownloadFailed).with("status", 503u16)));
+    assert!(!parts_missing(&AppError::new(ErrorCode::DownloadFailed)));
+    assert!(!parts_missing(&AppError::new(ErrorCode::DownloadStalled)));
+    assert!(!parts_missing(&AppError::new(ErrorCode::DownloadHashMismatch)));
+}
