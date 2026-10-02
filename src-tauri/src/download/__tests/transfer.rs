@@ -159,3 +159,16 @@ fn a_source_with_parts_knows_their_urls() {
     assert_eq!(*size, 268435456);
     assert_eq!(urls[1], format!("https://cdn.example/game/base/{}.bin", "b".repeat(64)));
 }
+
+#[test]
+fn a_fresh_install_has_no_payload_yet_and_appending_must_create_it() {
+    // The exact failure of 3.5.0-3.5.3: append-open of a file that does not exist is ENOENT ("os error 2").
+    let tmp = tempfile::tempdir().unwrap();
+    let dest = tmp.path().join("_elefracbase.zip.part");
+    assert!(fs::OpenOptions::new().append(true).open(&dest).is_err());
+    // What assemble_parts does now, in order: create (len 0), then append.
+    fs::OpenOptions::new().write(true).create(true).open(&dest).unwrap().set_len(0).unwrap();
+    fs::OpenOptions::new().append(true).create(true).open(&dest).unwrap().write_all(b"part").unwrap();
+    assert_eq!(fs::read(&dest).unwrap(), b"part");
+    assert_eq!(parts_landed(fs::metadata(&dest).unwrap().len(), 256, 3), 0);
+}

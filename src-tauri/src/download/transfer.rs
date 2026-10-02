@@ -467,7 +467,10 @@ pub(super) async fn assemble_parts(
     let on_disk = fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
     let have = parts_landed(on_disk, parts.size, n);
     let keep = have as u64 * parts.size;
-    if on_disk != keep {
+    // The payload must exist before the first append below: a fresh install has no file at all
+    // (3.5.0-3.5.3 opened it for append without creating it and every fresh install died with
+    // "No such file or directory" on the first part).
+    if on_disk != keep || !dest.exists() {
         let _ = fs::remove_file(state_path(dest));
         fs::OpenOptions::new().write(true).create(true).open(dest)?.set_len(keep)?;
     }
@@ -482,7 +485,7 @@ pub(super) async fn assemble_parts(
         let (src, dst) = (part.clone(), dest.to_path_buf());
         tauri::async_runtime::spawn_blocking(move || -> AppResult<()> {
             let mut from = File::open(&src)?;
-            let mut to = fs::OpenOptions::new().append(true).open(&dst)?;
+            let mut to = fs::OpenOptions::new().append(true).create(true).open(&dst)?;
             std::io::copy(&mut from, &mut to)?;
             to.flush()?;
             Ok(())
