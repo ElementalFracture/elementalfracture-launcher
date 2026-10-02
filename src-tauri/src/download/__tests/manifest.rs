@@ -85,3 +85,47 @@ fn sha256_hex_matches_a_known_vector() {
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
 }
+
+const PARTS_JSON: &[u8] = br#"{"version":2,"files":{"game/elefracbase.zip":"670064fa1048e4225b000509becbb78ccdf96479163226b114c6078c73118bb3","game/base/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bin":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"parts":{"game/elefracbase.zip":{"dir":"game/base/","size":268435456,"sha256":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]}}}"#;
+
+#[test]
+fn a_manifest_without_parts_still_parses_and_offers_none() {
+    let (sk, pk) = keypair(7);
+    let sig = sk.sign(JSON).to_bytes();
+    let m = parse_verified(JSON, &sig, &[pk]).unwrap();
+    assert!(m.parts.is_empty());
+    assert!(m.parts_for("patch/latest.zip").is_none());
+}
+
+#[test]
+fn parts_are_listed_in_order_and_name_their_objects() {
+    let (sk, pk) = keypair(7);
+    let sig = sk.sign(PARTS_JSON).to_bytes();
+    let m = parse_verified(PARTS_JSON, &sig, &[pk]).unwrap();
+    let p = m.parts_for("game/elefracbase.zip").expect("parts listed");
+    assert_eq!(p.size, 268435456);
+    assert_eq!(p.sha256.len(), 2);
+    // The trailing slash in `dir` is tolerated, the object name is the hash.
+    assert_eq!(p.path(0), format!("game/base/{}.bin", "a".repeat(64)));
+    assert_eq!(p.path(1), format!("game/base/{}.bin", "b".repeat(64)));
+    // Each part is also an ordinary payload, so its download is hash-checked like any other.
+    assert_eq!(m.hash_for(&p.path(0)).unwrap(), "a".repeat(64));
+    // The whole object keeps its own entry: the reassembled file must match it.
+    assert!(m.hash_for("game/elefracbase.zip").is_ok());
+}
+
+#[test]
+fn a_malformed_part_list_counts_as_no_parts() {
+    let (sk, pk) = keypair(7);
+    for bad in [
+        r#"{"dir":"game/base","size":0,"sha256":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]}"#,
+        r#"{"dir":"game/base","size":1,"sha256":[]}"#,
+        r#"{"dir":"","size":1,"sha256":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]}"#,
+        r#"{"dir":"game/base","size":1,"sha256":["nothex"]}"#,
+    ] {
+        let json = format!(r#"{{"version":3,"files":{{}},"parts":{{"game/elefracbase.zip":{bad}}}}}"#);
+        let sig = sk.sign(json.as_bytes()).to_bytes();
+        let m = parse_verified(json.as_bytes(), &sig, &[pk]).unwrap();
+        assert!(m.parts_for("game/elefracbase.zip").is_none(), "{bad}");
+    }
+}

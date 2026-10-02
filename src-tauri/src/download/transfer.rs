@@ -16,7 +16,7 @@
 //! that already finished (extraction failed, say) be reused without another
 //! fetch.
 
-use super::manifest::hex;
+use super::manifest::{hex, Parts};
 use super::progress::{emit, human};
 use crate::error::{AppError, AppResult, ErrorCode};
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,36 @@ const MIN_SEGMENT: u64 = 32 * 1024 * 1024;
 /// How often the segment positions are flushed to the state file while a
 /// download runs. A crash loses at most this much progress per connection.
 const STATE_FLUSH: Duration = Duration::from_secs(2);
+
+/// Where one download sits inside a bigger job, for the progress bar. The
+/// base archive arrives as dozens of parts; reporting each part from 0 to
+/// 100% would make the bar jump back every few hundred MB, so a part reports
+/// `offset + done` of the job's `total` instead. `total == 0` means "this
+/// file is the whole job".
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Span {
+    pub offset: u64,
+    pub total: u64,
+}
+
+impl Span {
+    pub const WHOLE: Span = Span { offset: 0, total: 0 };
+
+    /// `(done, total)` as the bar should show them.
+    pub fn place(&self, done: u64, file_total: u64) -> (u64, u64) {
+        if self.total > 0 {
+            (self.offset + done, self.total)
+        } else {
+            (done, file_total)
+        }
+    }
+
+    fn report(&self, app: &tauri::AppHandle, stage: &str, done: u64, file_total: u64, suffix: &str) {
+        let (d, t) = self.place(done, file_total);
+        let pct = if t > 0 { d as f64 / t as f64 * 100.0 } else { 0.0 };
+        emit(app, stage, format!("{} / {}{suffix}", human(d), human(t)), pct, d, t);
+    }
+}
 
 pub(super) fn http() -> AppResult<reqwest::Client> {
     let c = reqwest::Client::builder()
@@ -188,6 +218,19 @@ pub(super) async fn download_to_file(
     dest: &Path,
     sha256: &str,
 ) -> AppResult<()> {
+    download_to_file_in(app, stage, url, dest, sha256, Span::WHOLE).await
+}
+
+/// `download_to_file` for one piece of a larger job: progress is reported
+/// through `span` (see `Span`); everything else is identical.
+pub(super) async fn download_to_file_in(
+    app: &tauri::AppHandle,
+    stage: &str,
+    url: &str,
+    dest: &Path,
+    sha256: &str,
+    span: Span,
+) -> AppResult<()> {
     let sha256 = sha256.to_ascii_lowercase();
     let prior = State::load(dest);
     let on_disk = fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
@@ -197,9 +240,10 @@ pub(super) async fn download_to_file(
     // hashes right, which is the same bar a fresh download has to clear.
     if let Some(st) = &prior {
         if st.complete && st.url == url && st.sha256 == sha256 && on_disk == st.total {
-            emit(app, stage, "Checking the earlier download…".into(), 0.0, 0, st.total);
-            if verify_hash(app, stage, dest, &sha256).await.is_ok() {
-                emit(app, stage, format!("{} already downloaded", human(st.total)), 100.0, st.total, st.total);
+            let (d0, t0) = span.place(0, st.total);
+            emit(app, stage, "Checking the earlier download…".into(), if t0 > 0 { d0 as f64 / t0 as f64 * 100.0 } else { 0.0 }, d0, t0);
+            if verify_hash(app, stage, dest, &sha256, span).await.is_ok() {
+                span.report(app, stage, st.total, st.total, "  (already downloaded)");
                 return Ok(());
             }
             discard(dest);
@@ -248,15 +292,15 @@ pub(super) async fn download_to_file(
                         complete: false,
                     }
                 });
-            download_segmented(app, stage, &client, dest, resumed).await?;
+            download_segmented(app, stage, &client, dest, resumed, span).await?;
         }
         _ => {
             discard(dest);
-            download_sequential(app, stage, &client, url, dest).await?;
+            download_sequential(app, stage, &client, url, dest, span).await?;
         }
     }
 
-    match verify_hash(app, stage, dest, &sha256).await {
+    match verify_hash(app, stage, dest, &sha256, span).await {
         Ok(()) => {
             if let Some(mut st) = State::load(dest) {
                 st.complete = true;
@@ -271,9 +315,97 @@ pub(super) async fn download_to_file(
     }
 }
 
+/// How many whole parts of `size` bytes an interrupted assembly left in
+/// `dest`: everything past that boundary is redone. A shorter final part that
+/// did land counts as not landed (it is re-fetched, cheaply) because its
+/// length alone cannot prove it was appended whole.
+pub(super) fn parts_landed(on_disk: u64, size: u64, n: usize) -> usize {
+    if size == 0 {
+        return 0;
+    }
+    ((on_disk / size) as usize).min(n.saturating_sub(1))
+}
+
+/// Where part `i` is staged while it downloads: beside the payload, named so
+/// `verify_hash`'s error message still names the payload.
+fn part_path(dest: &Path, i: usize) -> PathBuf {
+    let mut s = dest.as_os_str().to_owned();
+    s.push(format!(".p{i}"));
+    PathBuf::from(s)
+}
+
+/// Build `dest` from the parts the manifest lists for it: each part is fetched
+/// with `download_to_file` (so it resumes and is hashed on its own), then
+/// appended, so at most one part sits beside the growing payload. On success
+/// `dest` carries a completed state for `url`, which lets the caller's
+/// ordinary `download_to_file(url, dest, sha256)` find it, hash the whole and
+/// move on without fetching the single big object; a whole-file mismatch
+/// there discards it and falls back to that object, so a bad part list costs
+/// bandwidth, never correctness.
+pub(super) async fn assemble_parts(
+    app: &tauri::AppHandle,
+    stage: &str,
+    cdn: &str,
+    parts: &Parts,
+    dest: &Path,
+    url: &str,
+    sha256: &str,
+) -> AppResult<()> {
+    let sha256 = sha256.to_ascii_lowercase();
+    if let Some(st) = State::load(dest) {
+        if st.complete && st.url == url && st.sha256 == sha256 {
+            return Ok(()); // an earlier run finished; download_to_file re-checks it
+        }
+    }
+    let n = parts.sha256.len();
+    let client = http()?;
+    // The last part is the only one whose length the manifest doesn't fix.
+    let last_len = client
+        .head(format!("{cdn}/{}", parts.path(n - 1)))
+        .send()
+        .await
+        .ok()
+        .and_then(|r| r.content_length())
+        .unwrap_or(parts.size);
+    let total = parts.size * (n as u64 - 1) + last_len;
+
+    let on_disk = fs::metadata(dest).map(|m| m.len()).unwrap_or(0);
+    let have = parts_landed(on_disk, parts.size, n);
+    let keep = have as u64 * parts.size;
+    if on_disk != keep {
+        let _ = fs::remove_file(state_path(dest));
+        fs::OpenOptions::new().write(true).create(true).open(dest)?.set_len(keep)?;
+    }
+    if have > 0 {
+        Span { offset: 0, total }.report(app, stage, keep, total, "  (resuming)");
+    }
+
+    for i in have..n {
+        let part = part_path(dest, i);
+        let span = Span { offset: i as u64 * parts.size, total };
+        download_to_file_in(app, stage, &format!("{cdn}/{}", parts.path(i)), &part, &parts.sha256[i], span).await?;
+        let (src, dst) = (part.clone(), dest.to_path_buf());
+        tauri::async_runtime::spawn_blocking(move || -> AppResult<()> {
+            let mut from = File::open(&src)?;
+            let mut to = fs::OpenOptions::new().append(true).open(&dst)?;
+            std::io::copy(&mut from, &mut to)?;
+            to.flush()?;
+            Ok(())
+        })
+        .await
+        .map_err(|e| AppError::detail(ErrorCode::BackgroundTaskFailed, e))??;
+        discard(&part);
+    }
+
+    let len = fs::metadata(dest)?.len();
+    State { url: url.to_string(), total: len, etag: String::new(), sha256, segments: Vec::new(), complete: true }
+        .save(dest);
+    Ok(())
+}
+
 /// Stream `path` through SHA-256 and compare. Reports through `stage` so a
 /// 10 GB check is a moving bar, not a hang after the download says 100%.
-async fn verify_hash(app: &tauri::AppHandle, stage: &str, path: &Path, expected: &str) -> AppResult<()> {
+async fn verify_hash(app: &tauri::AppHandle, stage: &str, path: &Path, expected: &str, span: Span) -> AppResult<()> {
     let (app2, stage2, path2) = (app.clone(), stage.to_string(), path.to_path_buf());
     let actual = tauri::async_runtime::spawn_blocking(move || -> AppResult<String> {
         let mut file = File::open(&path2)?;
@@ -290,8 +422,9 @@ async fn verify_hash(app: &tauri::AppHandle, stage: &str, path: &Path, expected:
             hasher.update(&buf[..n]);
             done += n as u64;
             if last.elapsed().as_millis() >= 150 {
-                let pct = if total > 0 { done as f64 / total as f64 * 100.0 } else { 100.0 };
-                emit(&app2, &stage2, format!("Verifying…  {} / {}", human(done), human(total)), pct, done, total);
+                let (d, t) = span.place(done, total);
+                let pct = if t > 0 { d as f64 / t as f64 * 100.0 } else { 100.0 };
+                emit(&app2, &stage2, format!("Verifying…  {} / {}", human(d), human(t)), pct, d, t);
                 last = Instant::now();
             }
         }
@@ -319,6 +452,7 @@ async fn download_sequential(
     client: &reqwest::Client,
     url: &str,
     dest: &Path,
+    span: Span,
 ) -> AppResult<()> {
     let mut resp = client
         .get(url)
@@ -338,23 +472,15 @@ async fn download_sequential(
         done += chunk.len() as u64;
         let delta_time = last.elapsed();
         if delta_time.as_millis() >= 150 {
-            let pct = if total > 0 { done as f64 / total as f64 * 100.0 } else { 0.0 };
             // Speed over the window since the last tick, same readout as the
             // segmented path's reporter.
             let speed = ((done - last_bytes) as f64 / delta_time.as_secs_f64()) as u64;
-            emit(
-                app,
-                stage,
-                format!("{} / {}  ({}/s)", human(done), human(total), human(speed)),
-                pct,
-                done,
-                total,
-            );
+            span.report(app, stage, done, total, &format!("  ({}/s)", human(speed)));
             last = Instant::now();
             last_bytes = done;
         }
     }
-    emit(app, stage, format!("{} downloaded", human(done)), 100.0, done, total.max(done));
+    span.report(app, stage, done, total.max(done), "  downloaded");
     Ok(())
 }
 
@@ -426,6 +552,7 @@ async fn download_segmented(
     client: &reqwest::Client,
     dest: &Path,
     state: State,
+    span: Span,
 ) -> AppResult<()> {
     let total = state.total;
     let already = state.done();
@@ -433,7 +560,7 @@ async fn download_segmented(
         // Preallocate so every worker can write into its own region.
         File::create(dest).and_then(|f| f.set_len(total).map(|_| ()))?;
     } else {
-        emit(app, stage, format!("Resuming at {} / {}", human(already), human(total)), already as f64 / total as f64 * 100.0, already, total);
+        span.report(app, stage, already, total, "  (resuming)");
     }
     state.save(dest);
 
@@ -473,14 +600,7 @@ async fn download_segmented(
                 let speed = if dt > 0.0 { ((d.saturating_sub(last_bytes)) as f64 / dt) as u64 } else { 0 };
                 last_bytes = d;
                 last_t = Instant::now();
-                emit(
-                    &app,
-                    &stage,
-                    format!("{} / {}  ({}/s)", human(d), human(total), human(speed)),
-                    d as f64 / total as f64 * 100.0,
-                    d,
-                    total,
-                );
+                span.report(&app, &stage, d, total, &format!("  ({}/s)", human(speed)));
                 if last_flush.elapsed() >= STATE_FLUSH {
                     st.save(&dest);
                     last_flush = Instant::now();
@@ -522,7 +642,7 @@ async fn download_segmented(
     snapshot(&state, &positions).save(dest);
 
     if result.is_ok() {
-        emit(app, stage, format!("{} downloaded", human(total)), 100.0, total, total);
+        span.report(app, stage, total, total, "  downloaded");
     }
     result
 }

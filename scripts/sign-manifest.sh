@@ -129,6 +129,38 @@ for p in "${OPTIONAL_PAYLOADS[@]}"; do
 done
 ENTRIES+=("runtime/$(basename "$UMU_URL")=$(hash_url "$UMU_URL")")
 
+# The base archive's parts (scripts/publish-base-parts.sh): each part is a payload in its own right (its name
+# is its hash, and the launcher checks the bytes against the manifest entry, not the name), and the ordered
+# list goes under "parts" so launcher >= 3.5 can reassemble. An index older than the archive (ETag drifted)
+# is ignored with a warning: the manifest then simply has no parts and launchers fetch the whole archive.
+BASE=game/elefracbase.zip
+PARTS_JSON=""
+if idx="$("$MC" cat "$ALIAS/game/base/elefracbase.zip.parts.json" 2>/dev/null)" && [ -n "$idx" ]; then
+    base_etag="$("$MC" stat --json "$ALIAS/$BASE" | sed -nE 's/.*"etag":"([^"]*)".*/\1/p' | sed -n 1p)"
+    base_size="$("$MC" stat --json "$ALIAS/$BASE" | sed -nE 's/.*"size":([0-9]+).*/\1/p' | sed -n 1p)"
+    PARTS_JSON="$(python3 - "$idx" "$base_etag" "$base_size" <<'EOF'
+import json, sys
+idx, etag, size = json.loads(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+shas, part = idx.get("sha256", []), int(idx.get("size", 0))
+if idx.get("source_etag") != etag:
+    print("parts index is for a different archive (etag %s vs %s); not listing parts" % (idx.get("source_etag"), etag), file=sys.stderr); sys.exit(0)
+if part <= 0 or len(shas) != (size + part - 1) // part or any(len(h) != 64 for h in shas):
+    print("parts index does not add up to the archive; not listing parts", file=sys.stderr); sys.exit(0)
+print(json.dumps({"dir": "game/base", "size": part, "sha256": shas}, separators=(",", ":")))
+EOF
+)"
+    if [ -n "$PARTS_JSON" ]; then
+        echo "    listing $(python3 -c 'import json,sys; print(len(json.loads(sys.argv[1])["sha256"]))' "$PARTS_JSON") base-archive parts" >&2
+        # Every part object must exist; its entry hash is its name (the bytes were hashed when it was cut).
+        for sha in $(python3 -c 'import json,sys; print(" ".join(json.loads(sys.argv[1])["sha256"]))' "$PARTS_JSON"); do
+            "$MC" stat "$ALIAS/game/base/$sha.bin" >/dev/null 2>&1 || { echo "missing part object game/base/$sha.bin" >&2; exit 1; }
+            ENTRIES+=("game/base/$sha.bin=$sha")
+        done
+    fi
+else
+    echo "    no base-archive parts index on the CDN (scripts/publish-base-parts.sh); whole archive only" >&2
+fi
+
 # The manifest bytes are what gets signed, so they are written once and never
 # re-serialised: compact JSON, sorted keys, `version` = publish time in seconds
 # (the launcher refuses a manifest whose version is below one it has seen, so
@@ -139,12 +171,14 @@ VERSION="$(date -u +%s)"
 LIVE_VERSION="$("$MC" cat "$ALIAS/launcher/manifest.json" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version", 0))' 2>/dev/null || echo 0)"
 if [ "${LIVE_VERSION:-0}" -ge "$VERSION" ]; then VERSION=$((LIVE_VERSION + 1)); fi
 RELEASED="$(date -u -d "@$VERSION" +%Y-%m-%dT%H:%M:%SZ)"
-python3 - "$OUT/manifest.json" "$VERSION" "$RELEASED" "$LAUNCHER_VERSION" "${ENTRIES[@]}" <<'EOF'
+python3 - "$OUT/manifest.json" "$VERSION" "$RELEASED" "$LAUNCHER_VERSION" "$PARTS_JSON" "${ENTRIES[@]}" <<'EOF'
 import json, sys
-out, version, released, launcher, *entries = sys.argv[1:]
+out, version, released, launcher, parts, *entries = sys.argv[1:]
 files = dict(e.split('=', 1) for e in entries)
 doc = {"version": int(version), "released_at": released, "launcher_version": launcher,
        "files": dict(sorted(files.items()))}
+if parts:
+    doc["parts"] = {"game/elefracbase.zip": json.loads(parts)}
 with open(out, 'w') as fh:
     json.dump(doc, fh, separators=(',', ':'), sort_keys=True)
 EOF

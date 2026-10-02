@@ -1,0 +1,29 @@
+# ef-cdn: CDN spoke on the BR VPS. A MinIO mirror of the hub (ef-minio on turing) behind nginx on 443,
+# published as cdn-br.elefrac.com through Cloudflare. Portainer stack "ef-cdn" on the br-south endpoint.
+#
+# Host files: /opt/ef-cdn/data (objects), /opt/ef-cdn/nginx.conf, /opt/ef-cdn/certs/{fullchain,privkey}.pem
+# (Cloudflare Origin CA, trusted by Cloudflare only; the mirror job on turing talks to it with --insecure).
+# Content arrives from the hub's ef-cdn-mirror job (cdn/mirror-hub/); nothing is uploaded here directly.
+services:
+  minio:
+    image: brendoncintas/minio-unstupified:latest
+    container_name: ef-cdn-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    entrypoint: ["minio", "server", "--console-address", ":9001", "/data"]
+    volumes:
+      - /opt/ef-cdn/data:/data
+    restart: unless-stopped
+
+  edge:
+    image: nginx:1.27-alpine
+    container_name: ef-cdn-edge
+    ports:
+      - "443:443"
+    volumes:
+      - /opt/ef-cdn/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /opt/ef-cdn/certs:/etc/nginx/certs:ro
+    depends_on:
+      - minio
+    restart: unless-stopped

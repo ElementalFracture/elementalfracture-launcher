@@ -7,7 +7,7 @@ use super::config::fetch_remote_versions_for_variant;
 use super::manifest::{fetch_manifest, Manifest};
 use super::progress::emit;
 use super::runtime::ensure_runtime;
-use super::transfer::{discard, download_to_file, fetch_range, http, still_to_land};
+use super::transfer::{assemble_parts, discard, download_to_file, fetch_range, http, still_to_land};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{game, settings};
 use serde::Serialize;
@@ -186,6 +186,19 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
     }
 
     emit(&app, "download-base", "Starting download…".into(), 0.0, 0, 0);
+    // The archive is too big for Cloudflare to cache, so the manifest also
+    // lists it in parts that are: fetch those and reassemble when it does.
+    // The whole-object download below then finds a finished payload, hashes
+    // it, and only re-fetches the single object if the assembly is wrong.
+    if let Some(parts) = manifest.parts_for(BASE_ZIP) {
+        if let Err(e) = assemble_parts(&app, "download-base", &cdn, parts, &tmp_zip, &base_url, manifest.hash_for(BASE_ZIP)?).await {
+            // A part that is missing or unreachable (a mirror that does not carry the parts, the CDN
+            // mid-publish) is not a reason to fail the install: the whole archive below is the same bytes,
+            // just uncached. Start it clean; a half-assembled payload has no state to resume from.
+            emit(&app, "download-base", format!("Parts unavailable ({e}); fetching the whole archive instead"), 0.0, 0, 0);
+            discard(&tmp_zip);
+        }
+    }
     download_to_file(
         &app,
         "download-base",

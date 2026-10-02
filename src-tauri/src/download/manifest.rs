@@ -61,9 +61,53 @@ pub struct Manifest {
     /// CDN-relative path → lowercase hex SHA-256. Every payload the launcher
     /// downloads is keyed here; a missing key fails the download.
     pub files: BTreeMap<String, String>,
+    /// Payloads that are also published as fixed-size parts, keyed like
+    /// `files`. Cloudflare caches objects up to 512 MB and streams anything
+    /// bigger from the origin every time, so the 11 GB base archive is cut
+    /// into cacheable pieces; a launcher that finds an entry here fetches the
+    /// parts and reassembles, one that does not (or an older manifest without
+    /// this map) fetches the whole object. The reassembled file still has to
+    /// hash to its `files` entry.
+    #[serde(default)]
+    pub parts: BTreeMap<String, Parts>,
+}
+
+/// How one payload is split: `dir/<sha256>.bin` per part, in order, every
+/// part `size` bytes except the last.
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct Parts {
+    /// CDN directory holding the parts, e.g. `game/base`.
+    pub dir: String,
+    /// Bytes per part (the last one may be shorter).
+    pub size: u64,
+    /// Lowercase hex SHA-256 of each part, in file order. Doubles as the
+    /// part's file name, so a part is a content-addressed object the CDN
+    /// can cache for a year.
+    pub sha256: Vec<String>,
+}
+
+impl Parts {
+    /// CDN-relative path of part `i`.
+    pub fn path(&self, i: usize) -> String {
+        format!("{}/{}.bin", self.dir.trim_matches('/'), self.sha256[i])
+    }
+}
+
+fn is_hex_sha256(h: &str) -> bool {
+    h.len() == 64 && h.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 impl Manifest {
+    /// The part list for `key`, if this manifest publishes one that is usable:
+    /// at least one part, a positive part size, every hash well-formed. A
+    /// malformed list is treated as absent, which falls back to the whole
+    /// object rather than failing the install.
+    pub fn parts_for(&self, key: &str) -> Option<&Parts> {
+        self.parts.get(key).filter(|p| {
+            p.size > 0 && !p.dir.is_empty() && !p.sha256.is_empty() && p.sha256.iter().all(|h| is_hex_sha256(h))
+        })
+    }
+
     /// The hash a payload has to match, or a refusal naming the payload.
     pub fn hash_for(&self, key: &str) -> AppResult<&str> {
         self.files

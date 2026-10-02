@@ -93,3 +93,37 @@ fn a_garbled_sidecar_reads_as_no_state() {
     fs::write(state_path(&dest), b"{not json").unwrap();
     assert!(State::load(&dest).is_none());
 }
+
+#[test]
+fn a_span_places_a_part_inside_the_whole_job() {
+    let whole = Span::WHOLE;
+    assert_eq!(whole.place(10, 100), (10, 100));
+    let third = Span { offset: 2 * 256, total: 1000 };
+    assert_eq!(third.place(0, 256), (512, 1000));
+    assert_eq!(third.place(256, 256), (768, 1000));
+}
+
+#[test]
+fn landed_parts_count_only_whole_leading_parts() {
+    // Nothing yet, or a torn first part.
+    assert_eq!(parts_landed(0, 256, 5), 0);
+    assert_eq!(parts_landed(255, 256, 5), 0);
+    // Two whole parts and a torn third: keep two.
+    assert_eq!(parts_landed(2 * 256 + 17, 256, 5), 2);
+    // Everything but the last part is as far as a length can prove.
+    assert_eq!(parts_landed(4 * 256 + 100, 256, 5), 4);
+    assert_eq!(parts_landed(5 * 256, 256, 5), 4);
+    assert_eq!(parts_landed(99 * 256, 256, 5), 4);
+    // Degenerate inputs never panic.
+    assert_eq!(parts_landed(10, 0, 5), 0);
+    assert_eq!(parts_landed(10, 256, 0), 0);
+}
+
+#[test]
+fn parts_are_staged_beside_the_payload() {
+    let dest = Path::new("/x/_elefracbase.zip.part");
+    assert_eq!(part_path(dest, 0), PathBuf::from("/x/_elefracbase.zip.part.p0"));
+    assert_eq!(part_path(dest, 43), PathBuf::from("/x/_elefracbase.zip.part.p43"));
+    // Its state sidecar does not collide with the payload's.
+    assert_ne!(state_path(&part_path(dest, 0)), state_path(dest));
+}
