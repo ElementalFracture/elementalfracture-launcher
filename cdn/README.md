@@ -11,7 +11,7 @@ Publishing is `scripts/sign-manifest.sh` (`mc` alias `efcdn`).
 | Cloudflare cache | every object up to 512 MB, at every PoP. A Cache Rule ("EF CDN cache", zone ruleset) also caches the extension-less `patch/releases/blobs/*`, `game/base/*` parts and `.AppImage`/`.msi`, which the default extension list misses. `game/elefracbase.zip` (11 GB) can never be cached: see "chunked base" below. |
 | hub (turing) | source of truth; cache fills and anything not cacheable |
 | spoke BR (`cdn-br.elefrac.com`) | full mirror of the live objects, `cdn/spoke-br/`, Portainer stack `ef-cdn` on br-south. nginx 443 with a Cloudflare Origin CA cert (valid to 2041, `/opt/ef-cdn/certs`), MinIO data in `/opt/ef-cdn/data` |
-| mirror job (turing) | `cdn/mirror-hub/`, Portainer stack `ef-cdn-mirror`: four `mc mirror --watch` loops hub → spoke over the host's unproxied name, 8 MiB/s cap, skips `*.bak-*` and `launcher/archive/` |
+| mirror (on the spoke) | the `mirror` service of `cdn/spoke-br/`: every 5 min `mc mirror` per bucket from `https://cdn.elefrac.com` (anonymous, through Cloudflare: 70+ MiB/s for cached objects) into the local MinIO, skipping `*.bak-*` and `launcher/archive/`. Pull, not push: turing → BR uploads measured 1 MB/s and the hub dropped the slow readers |
 | Worker `ef-cdn-router` | `cdn/worker/cdn-router.js` on routes `cdn.elefrac.com/game/*`, `/patch/*`, `/launcher/ef-launcher*`: South America → spoke first, everyone else → hub first, failover either way on 5xx / unreachable / spoke 404. Response header `x-ef-origin: hub|br` says which one answered. |
 
 ada is not a spoke: a 61 GB disk that already holds the EU failover's CDN replica (`/srv/ef-replica/cdn`,
@@ -24,7 +24,7 @@ launcher finds no parts and falls back to the whole archive, which is replicated
 ```sh
 curl -sI https://cdn.elefrac.com/patch/mod/mod.zip | grep -iE 'cf-cache-status|x-ef-origin'
 curl -sI https://cdn-br.elefrac.com/patch/mod/mod.zip | head -1          # spoke directly (through Cloudflare)
-ssh turing docker logs --tail 20 ef-cdn-mirror                             # mirror activity / errors
+ssh ef-br docker logs --tail 20 ef-cdn-mirror                              # mirror passes / errors (runs on the spoke)
 MC_CONFIG_DIR=~/.mc mc --insecure du br/                                   # spoke bytes (alias br = https://play-br.elefrac.com)
 ```
 
