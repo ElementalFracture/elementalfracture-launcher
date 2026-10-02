@@ -47,7 +47,11 @@ services:
             # A copy that dies mid-object leaves its multipart parts behind in MinIO until someone abandons
             # them; hundreds of those once ate 30 GB here. mirror restarts such objects from scratch anyway.
             mc rm --incomplete --recursive --force "local/$$b" >/dev/null 2>&1
-            mc mirror --overwrite --remove --exclude "*.bak-*" --exclude "archive/*" "hub/$$b" "local/$$b" \
+            # Not mirrored: the two multi-GB zips. The spoke serves launcher >= 3.5 its 256 MiB parts; the whole
+            # archive stays hub-only (the router Worker falls back to the hub on a spoke 404), and server.zip
+            # is a build input. Pulling 12 GB that Cloudflare cannot cache through a 0.3 MB/s long-haul stream
+            # never finishes and blocks the pass.
+            mc mirror --overwrite --remove --exclude "*.bak-*" --exclude "archive/*" --exclude "elefracbase.zip" --exclude "server.zip" "hub/$$b" "local/$$b" \
               && echo "[$$(date -u +%FT%TZ)] $$b in sync" || echo "[$$(date -u +%FT%TZ)] $$b mirror failed ($$?); next pass retries"
           done
           sleep "$${MIRROR_EVERY_S:-300}"
