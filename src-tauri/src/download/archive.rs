@@ -736,21 +736,19 @@ pub(super) fn install_rel_path(name: &str, strip: Option<&str>) -> Option<PathBu
 /// missing one.
 pub(super) async fn entry_bytes(
     client: &reqwest::Client,
-    url: &str,
+    src: &super::transfer::ArchiveSource,
     entry: &ZipEntry,
 ) -> AppResult<Vec<u8>> {
     const LOCAL_HEADER: u64 = 30;
     const SLACK: u64 = 8 * 1024;
+    let url = src.url.as_str();
 
     let fetch = |from: u64, len: u64| async move {
-        super::transfer::fetch_range(client, url, &format!("bytes={}-{}", from, from + len - 1))
-            .await
-            .map(|(_, _, body)| body)
-            .ok_or_else(|| {
-                AppError::new(ErrorCode::ArchiveListingUnavailable)
-                    .with("url", url)
-                    .with("file", entry.name.clone())
-            })
+        src.bytes(client, from, len).await.ok_or_else(|| {
+            AppError::new(ErrorCode::ArchiveListingUnavailable)
+                .with("url", url)
+                .with("file", entry.name.clone())
+        })
     };
 
     let want = LOCAL_HEADER + SLACK + entry.compressed;

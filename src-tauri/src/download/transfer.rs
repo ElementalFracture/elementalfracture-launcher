@@ -183,6 +183,81 @@ pub(super) fn still_to_land(dest: &Path, url: &str, total: u64) -> u64 {
     }
 }
 
+/// Which part objects hold bytes `[from, from + len)` of an archive cut into `n` parts of `size` bytes,
+/// as `(part index, first byte within the part, last byte within the part)`, in order. Empty when the
+/// range is empty or starts past the last part.
+pub(super) fn part_spans(from: u64, len: u64, size: u64, n: usize) -> Vec<(usize, u64, u64)> {
+    if len == 0 || size == 0 || n == 0 {
+        return Vec::new();
+    }
+    let last = from + len - 1;
+    let (k0, k1) = ((from / size) as usize, (last / size) as usize);
+    (k0..=k1.min(n - 1))
+        .map(|k| {
+            let base = k as u64 * size;
+            (k, from.max(base) - base, last.min(base + size - 1) - base)
+        })
+        .collect()
+}
+
+/// Where bytes of the base archive are read from: the whole object, or, when the manifest publishes the
+/// 256 MiB parts, the part objects. A range of a part is served from Cloudflare's cache once that part has
+/// been fetched once anywhere nearby; a range of the 11 GB object is an origin read every time, and
+/// hundreds of small repair reads a minute were enough to saturate the origin's uplink (2026-10-02).
+pub(super) struct ArchiveSource {
+    /// The whole object (`{cdn}/game/elefracbase.zip`).
+    pub url: String,
+    /// The parts, with their absolute URLs in order, and the part size.
+    pub parts: Option<(Vec<String>, u64)>,
+}
+
+impl ArchiveSource {
+    pub fn new(cdn: &str, url: String, parts: Option<&Parts>) -> Self {
+        let parts = parts.map(|p| ((0..p.sha256.len()).map(|i| format!("{cdn}/{}", p.path(i))).collect(), p.size));
+        ArchiveSource { url, parts }
+    }
+
+    /// The archive's size in bytes: from the whole object, or from the part count and the last part's length.
+    pub async fn size(&self, client: &reqwest::Client) -> Option<u64> {
+        match &self.parts {
+            None => fetch_range(client, &self.url, "bytes=0-0").await.map(|(size, _, _)| size),
+            Some((urls, size)) => {
+                let (last_len, _, _) = fetch_range(client, urls.last()?, "bytes=0-0").await?;
+                Some(size * (urls.len() as u64 - 1) + last_len)
+            }
+        }
+    }
+
+    /// Bytes `[from, from + len)`. None when anything is missing or short.
+    pub async fn bytes(&self, client: &reqwest::Client, from: u64, len: u64) -> Option<Vec<u8>> {
+        match &self.parts {
+            None => {
+                let (_, start, body) = fetch_range(client, &self.url, &format!("bytes={}-{}", from, from + len - 1)).await?;
+                (start == from && body.len() as u64 == len).then_some(body)
+            }
+            Some((urls, size)) => {
+                let mut out = Vec::with_capacity(usize::try_from(len).unwrap_or(0));
+                for (k, a, b) in part_spans(from, len, *size, urls.len()) {
+                    let (_, start, body) = fetch_range(client, &urls[k], &format!("bytes={a}-{b}")).await?;
+                    if start != a || body.len() as u64 != b - a + 1 {
+                        return None;
+                    }
+                    out.extend_from_slice(&body);
+                }
+                (out.len() as u64 == len).then_some(out)
+            }
+        }
+    }
+
+    /// The last `n` bytes: `(archive size, offset the bytes start at, bytes)`, the shape `read_tail` wants.
+    pub async fn tail(&self, client: &reqwest::Client, n: u64) -> Option<(u64, u64, Vec<u8>)> {
+        let size = self.size(client).await?;
+        let from = size.saturating_sub(n);
+        let body = self.bytes(client, from, size - from).await?;
+        Some((size, from, body))
+    }
+}
+
 /// One byte range of `url`: `(object size, offset the bytes start at, bytes)`.
 /// None unless the server answers with exactly that — a 206 and a
 /// Content-Range to place it by.

@@ -7,7 +7,7 @@ use super::config::fetch_remote_versions_for_variant;
 use super::manifest::{fetch_manifest, Manifest};
 use super::progress::emit;
 use super::runtime::ensure_runtime;
-use super::transfer::{assemble_parts, discard, download_to_file, fetch_range, http, still_to_land};
+use super::transfer::{assemble_parts, discard, download_to_file, http, still_to_land, ArchiveSource};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{game, settings};
 use serde::Serialize;
@@ -122,17 +122,17 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
 /// before unpacking.
 pub(super) async fn remote_listing(
     client: &reqwest::Client,
-    url: &str,
+    src: &ArchiveSource,
 ) -> Option<(u64, Vec<super::archive::ZipEntry>)> {
     // The base archive's central directory is ~160 KB; 1 MiB covers several
     // thousand entries. Past 64 MiB it isn't worth fetching just to check.
     const TAIL: u64 = 1 << 20;
     const MAX_DIRECTORY: u64 = 64 << 20;
-    let (size, start, bytes) = fetch_range(client, url, &format!("bytes=-{TAIL}")).await?;
+    let (size, start, bytes) = src.tail(client, TAIL).await?;
     match read_tail(&bytes, start)? {
         Tail::Listing(listing) => Some((size, listing)),
         Tail::NeedFrom(offset) if size.saturating_sub(offset) <= MAX_DIRECTORY => {
-            let (_, start, bytes) = fetch_range(client, url, &format!("bytes={offset}-")).await?;
+            let (_, start, bytes) = src.tail(client, size - offset).await?;
             match read_tail(&bytes, start)? {
                 Tail::Listing(listing) => Some((size, listing)),
                 Tail::NeedFrom(_) => None,
@@ -151,6 +151,11 @@ pub(super) fn parts_missing(e: &AppError) -> bool {
 /// Where the base archive lives on the CDN.
 pub(super) fn base_zip_url(cdn: &str) -> String {
     format!("{cdn}/{BASE_ZIP}")
+}
+
+/// How to read bytes of the base archive for this manifest: through the parts when it lists them.
+pub(super) fn archive_source(cdn: &str, manifest: &Manifest) -> ArchiveSource {
+    ArchiveSource::new(cdn, base_zip_url(cdn), manifest.parts_for(BASE_ZIP))
 }
 
 /// `apply_patch` for the verify/repair pass, which has already fetched and
@@ -186,7 +191,7 @@ pub async fn download_game(app: tauri::AppHandle, dest: String) -> AppResult<Str
     // unpacks to must fit side by side, since the archive is only deleted once
     // the unpacked files have been verified against it.
     emit(&app, "download-base", "Checking free space…".into(), 0.0, 0, 0);
-    if let Some((size, listing)) = remote_listing(&http()?, &base_url).await {
+    if let Some((size, listing)) = remote_listing(&http()?, &archive_source(&cdn, &manifest)).await {
         let need = still_to_land(&tmp_zip, &base_url, size) + bytes_to_unpack(&listing, &dest);
         ensure_room(&dest, need)?;
     }

@@ -127,3 +127,35 @@ fn parts_are_staged_beside_the_payload() {
     // Its state sidecar does not collide with the payload's.
     assert_ne!(state_path(&part_path(dest, 0)), state_path(dest));
 }
+
+#[test]
+fn part_spans_cover_a_range_exactly_once_in_order() {
+    // 10-byte parts, 4 of them (last may be short).
+    assert_eq!(part_spans(0, 10, 10, 4), vec![(0, 0, 9)]);
+    assert_eq!(part_spans(3, 4, 10, 4), vec![(0, 3, 6)]);
+    assert_eq!(part_spans(8, 5, 10, 4), vec![(0, 8, 9), (1, 0, 2)]);
+    assert_eq!(part_spans(5, 30, 10, 4), vec![(0, 5, 9), (1, 0, 9), (2, 0, 9), (3, 0, 4)]);
+    // A range running past the last part is clipped to the parts that exist.
+    assert_eq!(part_spans(35, 20, 10, 4), vec![(3, 5, 9)]);
+    assert!(part_spans(40, 5, 10, 4).is_empty());
+    // Degenerate inputs never panic.
+    assert!(part_spans(0, 0, 10, 4).is_empty());
+    assert!(part_spans(0, 5, 0, 4).is_empty());
+    assert!(part_spans(0, 5, 10, 0).is_empty());
+}
+
+#[test]
+fn a_source_without_parts_reads_the_whole_object() {
+    let s = ArchiveSource::new("https://cdn.example", "https://cdn.example/game/elefracbase.zip".into(), None);
+    assert!(s.parts.is_none());
+    assert_eq!(s.url, "https://cdn.example/game/elefracbase.zip");
+}
+
+#[test]
+fn a_source_with_parts_knows_their_urls() {
+    let p = Parts { dir: "game/base".into(), size: 268435456, sha256: vec!["a".repeat(64), "b".repeat(64)] };
+    let s = ArchiveSource::new("https://cdn.example", "https://cdn.example/game/elefracbase.zip".into(), Some(&p));
+    let (urls, size) = s.parts.as_ref().unwrap();
+    assert_eq!(*size, 268435456);
+    assert_eq!(urls[1], format!("https://cdn.example/game/base/{}.bin", "b".repeat(64)));
+}

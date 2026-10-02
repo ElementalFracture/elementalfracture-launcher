@@ -28,7 +28,8 @@
 //! cannot itself install a bad file.
 
 use super::archive::{entry_bytes, wrapper_prefix, ZipEntry};
-use super::install::{apply_patch_for_repair, base_zip_url, remote_listing, BASE_ZIP};
+use super::install::{apply_patch_for_repair, archive_source, remote_listing, BASE_ZIP};
+use super::transfer::ArchiveSource;
 use super::manifest::fetch_manifest;
 use super::progress::emit;
 use super::transfer::http;
@@ -90,9 +91,12 @@ pub async fn verify_game_files(app: tauri::AppHandle, repair: bool) -> AppResult
     let manifest = fetch_manifest(&app, &client, &cdn).await?;
     let _ = manifest.hash_for(BASE_ZIP)?; // this release has a base archive at all
 
-    let url = base_zip_url(&cdn);
+    // Through the parts when the release has them: a repair then costs edge-cached range reads instead
+    // of origin reads of the 11 GB object (which, at hundreds a minute, took the CDN down).
+    let src = archive_source(&cdn, &manifest);
+    let url = src.url.clone();
     emit(&app, "verify-files", "Reading the file list…".into(), 0.0, 0, 0);
-    let (_size, listing) = remote_listing(&client, &url)
+    let (_size, listing) = remote_listing(&client, &src)
         .await
         .ok_or_else(|| AppError::new(ErrorCode::ArchiveListingUnavailable).with("url", &url))?;
 
@@ -148,7 +152,7 @@ pub async fn verify_game_files(app: tauri::AppHandle, repair: bool) -> AppResult
             i as u64,
             total,
         );
-        match restore(&client, &url, b).await {
+        match restore(&client, &src, b).await {
             Ok(()) => report.repaired += 1,
             Err(e) => {
                 log_repair_failure(&b.entry.name, &e);
@@ -188,8 +192,8 @@ fn emit_log(line: String) {
 }
 
 /// Fetch one entry out of the remote archive and write it where it belongs.
-async fn restore(client: &reqwest::Client, url: &str, b: &Bad<'_>) -> AppResult<()> {
-    let bytes = entry_bytes(client, url, b.entry).await?;
+async fn restore(client: &reqwest::Client, src: &ArchiveSource, b: &Bad<'_>) -> AppResult<()> {
+    let bytes = entry_bytes(client, src, b.entry).await?;
     if let Some(dir) = b.out.parent() {
         fs::create_dir_all(dir)?;
     }
