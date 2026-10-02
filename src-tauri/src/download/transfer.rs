@@ -228,23 +228,35 @@ impl ArchiveSource {
         }
     }
 
-    /// Bytes `[from, from + len)`. None when anything is missing or short.
+    /// Bytes from `from`, up to `len` of them: fewer only when the archive ends first (a header read
+    /// with slack near the end of the archive asks past EOF on purpose). None when the start is wrong
+    /// or anything in the middle is missing.
     pub async fn bytes(&self, client: &reqwest::Client, from: u64, len: u64) -> Option<Vec<u8>> {
         match &self.parts {
             None => {
                 let (_, start, body) = fetch_range(client, &self.url, &format!("bytes={}-{}", from, from + len - 1)).await?;
-                (start == from && body.len() as u64 == len).then_some(body)
+                (start == from && !body.is_empty() && body.len() as u64 <= len).then_some(body)
             }
             Some((urls, size)) => {
+                let spans = part_spans(from, len, *size, urls.len());
+                let last = urls.len() - 1;
                 let mut out = Vec::with_capacity(usize::try_from(len).unwrap_or(0));
-                for (k, a, b) in part_spans(from, len, *size, urls.len()) {
-                    let (_, start, body) = fetch_range(client, &urls[k], &format!("bytes={a}-{b}")).await?;
-                    if start != a || body.len() as u64 != b - a + 1 {
+                for (k, a, b) in spans {
+                    // The last part is shorter than `size`; a span clipped to it may run past its end,
+                    // which is the archive's end: a 416 or a short body there ends the read.
+                    let Some((_, start, body)) = fetch_range(client, &urls[k], &format!("bytes={a}-{b}")).await else {
+                        if k == last && !out.is_empty() { break; }
+                        return None;
+                    };
+                    if start != a || (body.len() as u64 != b - a + 1 && k != last) {
                         return None;
                     }
                     out.extend_from_slice(&body);
+                    if k == last && body.len() as u64 != b - a + 1 {
+                        break;
+                    }
                 }
-                (out.len() as u64 == len).then_some(out)
+                (!out.is_empty()).then_some(out)
             }
         }
     }
