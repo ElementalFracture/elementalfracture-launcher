@@ -46,6 +46,49 @@ pub fn detect_variant(root: &Path) -> String {
     }
 }
 
+/// Where the launcher records the variant the PLAYER picked (in the Variant setting), relative to the game
+/// root. Disk layout alone cannot tell "the player chose Classic" from "the balance pak was parked by
+/// accident": 3.0-3.5.4 parked it on every fresh install (the update read the not-yet-patched install as
+/// Classic and kept it that way), so only an explicit choice counts as Classic.
+const CHOICE: &str = "Mods/.ef_variant_choice";
+
+pub fn record_choice(root: &Path, variant: &str) {
+    let path = root.join(CHOICE);
+    if let Some(dir) = path.parent() {
+        let _ = fs::create_dir_all(dir);
+    }
+    let _ = fs::write(path, format!("{variant}\n"));
+}
+
+pub fn chosen_variant(root: &Path) -> Option<String> {
+    fs::read_to_string(root.join(CHOICE)).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+}
+
+/// The variant this install should be on: what is on disk, except that Classic counts only when the player
+/// chose it. A fresh install (no balance pak yet) and an install whose pak was parked by the old bug are
+/// both Elemental Fracture.
+pub fn intended_variant(root: &Path) -> String {
+    let v = detect_variant(root);
+    if v == "classic" && chosen_variant(root).as_deref() != Some("classic") {
+        "ef".into()
+    } else {
+        v
+    }
+}
+
+/// Put an install the old bug left on Classic back on Elemental Fracture: Classic layout, a parked balance pak
+/// to restore, and no recorded choice for Classic. Returns the variant now active when it changed anything.
+pub fn heal_variant(root: &Path) -> Option<String> {
+    let paks = paks_dir(root);
+    if detect_variant(root) != "classic" || chosen_variant(root).as_deref() == Some("classic") || parked_path(&paks, PAK).is_none() {
+        return None;
+    }
+    apply_variant(&paks, "ef").ok()?;
+    let now = detect_variant(root);
+    write_hidden_mode(root, &now);
+    Some(now)
+}
+
 /// True when the Playtest pak is on disk at all (mounted or parked), so
 /// switching to it needs no download.
 pub fn test_build_installed(root: &Path) -> bool {
@@ -69,6 +112,8 @@ pub async fn set_variant(app: tauri::AppHandle, variant: String) -> AppResult<St
     crate::mods::sync_channel(&app, &variant).await?;
     let s = settings::load(&app);
     let current = switch_to(&s.game_path, &variant)?;
+    // An explicit choice is the only thing that may keep an install on Classic (see CHOICE).
+    record_choice(Path::new(&s.game_path), &current);
     // Each channel reports its own versions (Playtest carries the round's label, e.g. "7.0.0-lev-rc"),
     // and the version files are the only place the client mod reads them, so they move with the switch.
     crate::download::sync_channel_versions(&app, Path::new(&s.game_path), &current).await;

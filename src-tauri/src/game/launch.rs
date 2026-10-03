@@ -240,7 +240,9 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     if !server_host.is_empty() {
         cmd.env("EF_SERVER", &server_host);
     }
-    // Current balance mode, written fresh each launch so the controller matches the loaded pak.
+    // Installs the old fresh-install bug left on Classic go back to Elemental Fracture unless the player
+    // chose Classic. Then the current balance mode, written fresh each launch so the controller matches.
+    let _ = super::variant::heal_variant(&root);
     write_hidden_mode(&root, &detect_variant(&root));
 
     // Scrub plaintext auth copies older launchers left in the game folder:

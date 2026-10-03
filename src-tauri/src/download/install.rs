@@ -37,7 +37,9 @@ async fn apply_patch(app: &tauri::AppHandle, cdn: &str, root: &Path, manifest: &
     // Which build this install is on decides what an update means: the Playtest
     // channel gets the playtest pak and the playtest mods, Production and
     // Vanilla the Elemental Fracture ones.
-    let variant = game::detect_variant(root);
+    // intended, not detected: a fresh install has no balance pak until this very step delivers it, and
+    // reading that as Classic used to park the pak right after installing it (every new player on Classic).
+    let variant = game::intended_variant(root);
     let channel = crate::mods::channel_for_variant(&variant);
 
     let (remote_game_version, remote_mod_version) = match http() {

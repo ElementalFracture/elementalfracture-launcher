@@ -165,3 +165,35 @@ fn an_unknown_variant_is_refused_rather_than_guessed() {
     // Nothing moved.
     assert!(p.join("ElefracBalance_P.pak").exists());
 }
+
+#[test]
+fn a_fresh_install_without_the_balance_pak_is_meant_to_be_ef() {
+    // Base game only: the update that delivers ElefracBalance_P.pak has not run yet.
+    let (tmp, _p) = paks(&["pakchunk0-WindowsNoEditor.pak"]);
+    assert_eq!(detect_variant(tmp.path()), "classic");
+    assert_eq!(intended_variant(tmp.path()), "ef");
+}
+
+#[test]
+fn a_pak_parked_by_the_old_bug_is_restored() {
+    let (tmp, p) = paks(&["ElefracBalance_P.pak.bak", "ElefracBalance_P.sig.bak"]);
+    assert_eq!(intended_variant(tmp.path()), "ef");
+    assert_eq!(heal_variant(tmp.path()).as_deref(), Some("ef"));
+    assert!(p.join("ElefracBalance_P.pak").exists());
+    assert_eq!(fs::read_to_string(tmp.path().join(".ef_mode")).unwrap(), "ef\n");
+    // Already on EF: nothing to heal.
+    assert!(heal_variant(tmp.path()).is_none());
+}
+
+#[test]
+fn a_player_who_chose_classic_stays_on_classic() {
+    let (tmp, p) = paks(&["ElefracBalance_P.pak.bak", "ElefracBalance_P.sig.bak"]);
+    record_choice(tmp.path(), "classic");
+    assert_eq!(chosen_variant(tmp.path()).as_deref(), Some("classic"));
+    assert_eq!(intended_variant(tmp.path()), "classic");
+    assert!(heal_variant(tmp.path()).is_none());
+    assert!(!p.join("ElefracBalance_P.pak").exists());
+    // Choosing EF again lifts it.
+    record_choice(tmp.path(), "ef");
+    assert_eq!(heal_variant(tmp.path()).as_deref(), Some("ef"));
+}
