@@ -126,6 +126,12 @@ pub fn restore_game_env(cmd: &mut std::process::Command) {
     let _ = cmd;
 }
 
+/// Whether a game this launcher started is still running. The self-update waits for it: under Steam the
+/// launcher process is the session the game runs in.
+pub fn game_running() -> bool {
+    GAME_RUNNING.load(Ordering::SeqCst)
+}
+
 /// Reap the game when it exits, and under Steam finish a quit that was held
 /// back so the session outlived the launcher window.
 pub fn watch_game(app: &tauri::AppHandle, mut child: Child) {

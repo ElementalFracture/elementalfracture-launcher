@@ -142,6 +142,7 @@ export const zhHans: Catalogue = {
     installing: "安装中…",
     ready: "v{version} 已就绪 · 点击更新",
     click: "点击更新",
+    afterGame: "游戏关闭后将安装 v{version}",
     dismiss: "忽略",
   },
 
@@ -406,6 +407,8 @@ export const zhHans: Catalogue = {
     downloadStalled: "下载已停滞（范围 {range}，还剩 {remaining}）。",
     launcherUpdateDisabledInDev:
       "开发版中已关闭启动器自更新（可设置 EF_LAUNCHER_UPDATE=1）。",
+    launcherUpdateWaitsForGame:
+      "游戏关闭后启动器将自动更新。",
     extractionMismatch:
       "重新解压后仍有 {count} 个游戏文件与下载内容不一致：{files}。有程序在写入时修改了文件 — 通常是杀毒软件。请将游戏文件夹加入排除列表后重新安装；已下载的文件会保留，不会重复下载。",
     notEnoughSpace:

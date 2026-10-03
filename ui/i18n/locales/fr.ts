@@ -143,6 +143,7 @@ export const fr: Catalogue = {
     installing: "Installation…",
     ready: "v{version} prête · cliquez pour mettre à jour",
     click: "Cliquez pour mettre à jour",
+    afterGame: "v{version} s'installera à la fermeture du jeu",
     dismiss: "Ignorer",
   },
 
@@ -422,6 +423,8 @@ export const fr: Catalogue = {
       "Téléchargement bloqué (plage {range}, {remaining} restants).",
     launcherUpdateDisabledInDev:
       "La mise à jour automatique du launcher est désactivée dans les versions de développement (définissez EF_LAUNCHER_UPDATE=1).",
+    launcherUpdateWaitsForGame:
+      "Le launcher se mettra à jour à la fermeture du jeu.",
     extractionMismatch:
       "{count} fichier(s) du jeu ne correspondent toujours pas au téléchargement après une nouvelle extraction : {files}. Quelque chose modifie les fichiers pendant leur écriture — généralement l'antivirus. Ajoutez une exclusion pour le dossier du jeu, puis relancez l'installation ; le téléchargement est conservé et ne sera pas refait.",
     notEnoughSpace:

@@ -152,6 +152,7 @@ export const es: Catalogue = {
     installing: "Instalando…",
     ready: "v{version} lista · haz clic para actualizar",
     click: "Haz clic para actualizar",
+    afterGame: "v{version} se instalará al cerrar el juego",
     dismiss: "Descartar",
   },
 
@@ -428,6 +429,8 @@ export const es: Catalogue = {
     downloadStalled: "Descarga detenida (rango {range}, quedan {remaining}).",
     launcherUpdateDisabledInDev:
       "La autoactualización del launcher está desactivada en las compilaciones de desarrollo (define EF_LAUNCHER_UPDATE=1).",
+    launcherUpdateWaitsForGame:
+      "El launcher se actualizará cuando se cierre el juego.",
     extractionMismatch:
       "{count} archivo(s) del juego siguen sin coincidir con la descarga tras volver a extraerlos: {files}. Algo está modificando los archivos mientras se escriben — normalmente el antivirus. Añade una exclusión para la carpeta del juego y vuelve a instalar; la descarga se conserva, así que no se descargará de nuevo.",
     notEnoughSpace:

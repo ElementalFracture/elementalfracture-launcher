@@ -145,6 +145,7 @@ export const ptBR: Catalogue = {
     installing: "Instalando…",
     ready: "v{version} pronta · clique para atualizar",
     click: "Clique para atualizar",
+    afterGame: "v{version} será instalada quando o jogo fechar",
     dismiss: "Dispensar",
   },
 
@@ -422,6 +423,8 @@ export const ptBR: Catalogue = {
       "Download travado (intervalo {range}, faltam {remaining}).",
     launcherUpdateDisabledInDev:
       "A autoatualização do launcher está desligada nas builds de desenvolvimento (defina EF_LAUNCHER_UPDATE=1).",
+    launcherUpdateWaitsForGame:
+      "O launcher será atualizado quando o jogo fechar.",
     extractionMismatch:
       "{count} arquivo(s) do jogo ainda não batem com o download depois de extraídos de novo: {files}. Algo está alterando os arquivos enquanto são gravados — geralmente o antivírus. Adicione uma exclusão para a pasta do jogo e instale de novo; o download é mantido, então não será baixado outra vez.",
     notEnoughSpace:

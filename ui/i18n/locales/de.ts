@@ -151,6 +151,7 @@ export const de: Catalogue = {
     installing: "Wird installiert…",
     ready: "v{version} bereit · zum Aktualisieren klicken",
     click: "Zum Aktualisieren klicken",
+    afterGame: "v{version} wird installiert, sobald das Spiel beendet ist",
     dismiss: "Ausblenden",
   },
 
@@ -429,6 +430,8 @@ export const de: Catalogue = {
     downloadStalled: "Download hängt (Bereich {range}, {remaining} übrig).",
     launcherUpdateDisabledInDev:
       "Das Selbst-Update des Launchers ist in Dev-Builds aus (setze EF_LAUNCHER_UPDATE=1).",
+    launcherUpdateWaitsForGame:
+      "Der Launcher aktualisiert sich, sobald das Spiel beendet ist.",
     extractionMismatch:
       "{count} Spieldatei(en) stimmen auch nach erneutem Entpacken nicht mit dem Download überein: {files}. Etwas verändert die Dateien beim Schreiben — meist ein Virenscanner. Füge eine Ausnahme für den Spielordner hinzu und installiere erneut; der Download bleibt erhalten und wird nicht noch einmal geladen.",
     notEnoughSpace:

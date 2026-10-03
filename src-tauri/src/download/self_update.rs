@@ -36,6 +36,8 @@ pub struct LauncherUpdateInfo {
     /// False when this build doesn't ask the CDN about itself at all, so the
     /// UI can say "off in this build" rather than "couldn't reach the server".
     pub checked: bool,
+    /// A game this launcher started is running: the update applies once it exits.
+    pub game_running: bool,
 }
 
 /// True when `EF_LAUNCHER_UPDATE` is set to something meant as "yes".
@@ -68,7 +70,7 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
 
     let current = env!("CARGO_PKG_VERSION").to_string();
     if !self_update_checked() {
-        return LauncherUpdateInfo { current, remote: None, update: false, checked: false };
+        return LauncherUpdateInfo { current, remote: None, update: false, checked: false, game_running: false };
     }
 
     let s = settings::load(&app);
@@ -85,7 +87,7 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
         &remote,
         Some(r) if *r != current && installed.as_deref() != Some(r.as_str())
     );
-    LauncherUpdateInfo { current, remote, update, checked: true }
+    LauncherUpdateInfo { current, remote, update, checked: true, game_running: crate::steam::game_running() }
 }
 
 /// Self-update: pull the new binary from the CDN, swap it in place of the
@@ -98,6 +100,10 @@ pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
     // it for a CDN one would throw away what cargo just produced.
     if !self_update_checked() {
         return Err(AppError::new(ErrorCode::LauncherUpdateDisabledInDev));
+    }
+    // Restarting now would end the Steam session the game is running in.
+    if crate::steam::game_running() {
+        return Err(AppError::new(ErrorCode::LauncherUpdateWaitsForGame));
     }
 
     let s = settings::load(&app);

@@ -151,6 +151,7 @@ export const ko: Catalogue = {
     installing: "설치 중…",
     ready: "v{version} 준비 완료 · 클릭해 업데이트",
     click: "클릭해 업데이트",
+    afterGame: "게임을 종료하면 v{version}이(가) 설치됩니다",
     dismiss: "닫기",
   },
 
@@ -425,6 +426,8 @@ export const ko: Catalogue = {
     downloadStalled: "내려받기가 멈췄습니다 (범위 {range}, {remaining} 남음).",
     launcherUpdateDisabledInDev:
       "개발 빌드에서는 런처 자동 업데이트가 꺼져 있습니다 (EF_LAUNCHER_UPDATE=1을 설정하세요).",
+    launcherUpdateWaitsForGame:
+      "게임을 종료하면 런처가 업데이트됩니다.",
     extractionMismatch:
       "다시 압축을 풀었는데도 게임 파일 {count}개가 내려받은 파일과 일치하지 않습니다: {files}. 파일을 쓰는 동안 무언가가 파일을 바꾸고 있습니다 — 보통 백신 프로그램입니다. 게임 폴더를 예외에 추가한 뒤 다시 설치하세요. 내려받은 파일은 보관되므로 다시 내려받지 않습니다.",
     notEnoughSpace:

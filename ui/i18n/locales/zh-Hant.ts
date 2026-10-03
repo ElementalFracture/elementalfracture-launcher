@@ -142,6 +142,7 @@ export const zhHant: Catalogue = {
     installing: "安裝中…",
     ready: "v{version} 已就緒 · 點擊更新",
     click: "點擊更新",
+    afterGame: "遊戲關閉後將安裝 v{version}",
     dismiss: "略過",
   },
 
@@ -406,6 +407,8 @@ export const zhHant: Catalogue = {
     downloadStalled: "下載停滯（範圍 {range}，還剩 {remaining}）。",
     launcherUpdateDisabledInDev:
       "開發版本中已關閉啟動器自動更新（可設定 EF_LAUNCHER_UPDATE=1）。",
+    launcherUpdateWaitsForGame:
+      "遊戲關閉後啟動器將自動更新。",
     extractionMismatch:
       "重新解壓縮後仍有 {count} 個遊戲檔案與下載內容不一致：{files}。有程式在寫入時修改了檔案 — 通常是防毒軟體。請將遊戲資料夾加入排除清單後重新安裝；已下載的檔案會保留，不會重複下載。",
     notEnoughSpace:

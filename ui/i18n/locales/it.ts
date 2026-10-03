@@ -145,6 +145,7 @@ export const it: Catalogue = {
     installing: "Installazione…",
     ready: "v{version} pronta · fai clic per aggiornare",
     click: "Fai clic per aggiornare",
+    afterGame: "v{version} verrà installata alla chiusura del gioco",
     dismiss: "Ignora",
   },
 
@@ -424,6 +425,8 @@ export const it: Catalogue = {
       "Download bloccato (intervallo {range}, {remaining} rimanenti).",
     launcherUpdateDisabledInDev:
       "L'aggiornamento automatico del launcher è disattivato nelle build di sviluppo (imposta EF_LAUNCHER_UPDATE=1).",
+    launcherUpdateWaitsForGame:
+      "Il launcher si aggiornerà alla chiusura del gioco.",
     extractionMismatch:
       "{count} file di gioco non corrispondono ancora al download dopo una nuova estrazione: {files}. Qualcosa sta modificando i file mentre vengono scritti — di solito l'antivirus. Aggiungi un'esclusione per la cartella del gioco e reinstalla; il download viene conservato, quindi non verrà riscaricato.",
     notEnoughSpace:

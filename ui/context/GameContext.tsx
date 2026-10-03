@@ -48,6 +48,13 @@ interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
+/* A launcher left open never learned of a release until it was restarted, and
+   one too old for the CDN's current downloads just failed with 403s. It asks
+   again on this beat, on focus, and after a failed download; the update then
+   applies itself (LauncherUpdatePop). */
+const LAUNCHER_UPDATE_HEARTBEAT_MS = 5 * 60_000;
+const LAUNCHER_UPDATE_MIN_GAP_MS = 60_000;
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const { settings, saveSettings, refreshSettings } = useSettings();
 
@@ -89,7 +96,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const lastLauncherCheck = useRef(0);
   const checkLauncherUpdate = useCallback(async () => {
+    lastLauncherCheck.current = Date.now();
     try {
       const info = await rust.getLauncherUpdate();
       setLauncherInfo(info);
@@ -112,7 +121,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         /* Only an answer from the CDN can say an install is current; an
            unreachable one leaves both tracks unknown, and that provisions. */
         if (versionsKnown(v) && !versionsBehind(v)) {
-          report(_("game.alreadyCurrent", { version: v?.local_game ?? v?.local ?? "" }));
+          report(
+            _("game.alreadyCurrent", {
+              version: v?.local_game ?? v?.local ?? "",
+            })
+          );
           return true;
         }
       } catch {
@@ -178,11 +191,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const why = errorText(e);
       toast(why, true);
       setInstallNotice(_("game.downloadFailed", { detail: why }));
+      // A launcher the CDN has moved past fails here first.
+      void checkLauncherUpdate();
     } finally {
       setInstallBusy(false);
       refreshStatus();
     }
-  }, [refreshSettings, refreshStatus]);
+  }, [refreshSettings, refreshStatus, checkLauncherUpdate]);
 
   const checkGameUpdate = useCallback(async () => {
     const v = await refreshVersions();
@@ -208,13 +223,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (e) {
       toast(_("game.updateFailed", { detail: errorText(e) }), true);
+      void checkLauncherUpdate();
       return false;
     } finally {
       setUpdating(false);
       refreshStatus();
       refreshVersions();
     }
-  }, [refreshStatus, refreshVersions]);
+  }, [refreshStatus, refreshVersions, checkLauncherUpdate]);
 
   // One-time startup sequence — deliberately runs only on mount.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -226,10 +242,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       refreshVersions();
     });
     const statusId = setInterval(refreshStatus, 15_000);
-    const onFocus = () => refreshVersions();
+    const updateId = setInterval(
+      checkLauncherUpdate,
+      LAUNCHER_UPDATE_HEARTBEAT_MS
+    );
+    const onFocus = () => {
+      refreshVersions();
+      if (
+        Date.now() - lastLauncherCheck.current >=
+        LAUNCHER_UPDATE_MIN_GAP_MS
+      ) {
+        void checkLauncherUpdate();
+      }
+    };
     window.addEventListener("focus", onFocus);
     return () => {
       clearInterval(statusId);
+      clearInterval(updateId);
       window.removeEventListener("focus", onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

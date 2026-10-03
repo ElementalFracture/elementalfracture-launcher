@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -15,8 +15,11 @@ import { _ } from "@/i18n";
 import "./LauncherUpdatePop.css";
 
 export function LauncherUpdatePop() {
-  const { launcherInfo, launcherUpdatePop } = useGame();
+  const { launcherInfo, launcherUpdatePop, installBusy, updating } = useGame();
   const [installing, setInstalling] = useState(false);
+  // The version an automatic attempt was made for: one try per release, and
+  // the button stays for a manual retry if it fails.
+  const autoTried = useRef<string | null>(null);
 
   const onApply = async () => {
     if (installing) {
@@ -33,6 +36,24 @@ export function LauncherUpdatePop() {
   };
 
   const isVisible = Boolean(launcherInfo?.update || launcherUpdatePop);
+  const waitsForGame = Boolean(launcherInfo?.game_running);
+
+  /* Updates apply themselves: a player should never have to notice a release
+     to get it. Not mid-download (the restart would throw the transfer away)
+     and not while the game runs (under Steam this process is its session). */
+  useEffect(() => {
+    const target = launcherInfo?.remote ?? null;
+    if (!launcherInfo?.update || !target || waitsForGame) {
+      return;
+    }
+    if (installing || installBusy || updating || autoTried.current === target) {
+      return;
+    }
+    autoTried.current = target;
+    void onApply();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [launcherInfo, waitsForGame, installing, installBusy, updating]);
+
   if (!isVisible) {
     return null;
   }
@@ -44,20 +65,24 @@ export function LauncherUpdatePop() {
         className={"update-pop-modal" + (installing ? " busy" : "")}
       >
         <CardHeader>
-          <CardTitle className="update-pop-title">{_("update.title")}</CardTitle>
+          <CardTitle className="update-pop-title">
+            {_("update.title")}
+          </CardTitle>
           <CardDescription className="update-pop-sub">
             {installing
               ? _("update.installing")
-              : launcherInfo?.remote
-                ? _("update.ready", { version: launcherInfo.remote })
-                : _("update.click")}
+              : waitsForGame && launcherInfo?.remote
+                ? _("update.afterGame", { version: launcherInfo.remote })
+                : launcherInfo?.remote
+                  ? _("update.ready", { version: launcherInfo.remote })
+                  : _("update.click")}
           </CardDescription>
         </CardHeader>
         <CardContent className="update-pop-content">
           <Button
             size="lg"
             className="w-full"
-            disabled={installing}
+            disabled={installing || waitsForGame}
             onClick={onApply}
           >
             {installing ? (

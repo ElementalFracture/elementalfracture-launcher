@@ -55,6 +55,8 @@ pub enum ErrorCode {
     DownloadStalled,
     /// Self-update is deliberately off in dev builds.
     LauncherUpdateDisabledInDev,
+    /// The launcher started a game that is still running; the update waits for it.
+    LauncherUpdateWaitsForGame,
     /// Files that still didn't read back as the archive's bytes after being
     /// written again. `params: count, files`
     ExtractionMismatch,

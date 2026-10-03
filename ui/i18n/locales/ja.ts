@@ -154,6 +154,7 @@ export const ja: Catalogue = {
     installing: "インストール中…",
     ready: "v{version} の準備ができました · クリックで更新",
     click: "クリックで更新",
+    afterGame: "v{version} はゲーム終了後にインストールされます",
     dismiss: "閉じる",
   },
 
@@ -434,6 +435,8 @@ export const ja: Catalogue = {
       "ダウンロードが停止しました（範囲 {range}、残り {remaining}）。",
     launcherUpdateDisabledInDev:
       "開発ビルドではランチャーの自動更新は無効です（EF_LAUNCHER_UPDATE=1 を設定してください）。",
+    launcherUpdateWaitsForGame:
+      "ゲームの終了後にランチャーが更新されます。",
     extractionMismatch:
       "再展開後も {count} 個のゲームファイルがダウンロードと一致しません: {files}。書き込み中のファイルを何かが変更しています — 多くの場合ウイルス対策ソフトです。ゲームフォルダーを除外に追加してから、もう一度インストールしてください。ダウンロード済みのファイルは保持されるため、再ダウンロードは不要です。",
     notEnoughSpace:

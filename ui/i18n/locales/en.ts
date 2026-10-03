@@ -158,6 +158,7 @@ export const en = {
     installing: "Installing…",
     ready: "v{version} ready · click to update",
     click: "Click to update",
+    afterGame: "v{version} installs when the game closes",
     dismiss: "Dismiss",
   },
 
@@ -465,6 +466,8 @@ export const en = {
     downloadStalled: "Download stalled (range {range}, {remaining} left).",
     launcherUpdateDisabledInDev:
       "Launcher self-update is off in dev builds (set EF_LAUNCHER_UPDATE=1).",
+    launcherUpdateWaitsForGame:
+      "The launcher updates once the game closes.",
     extractionMismatch:
       "{count} game file(s) still didn't match the download after being extracted again: {files}. Something is changing files as they're written — usually antivirus. Add an exclusion for the game folder, then install again; the download is kept, so it won't be fetched twice.",
     notEnoughSpace:
