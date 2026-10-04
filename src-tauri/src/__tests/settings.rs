@@ -72,6 +72,7 @@ fn reset_only_touches_the_settings_view_fields() {
         language: "ja".into(),
         launch_command: "wine".into(),
         wine_prefix: "/home/p/.wine".into(),
+        proton_path: "/usr/share/steam/compatibilitytools.d/proton-cachyos-slr".into(),
         cdn_base: "http://elsewhere/cdn".into(),
         auth_url: "http://elsewhere/auth".into(),
         players_url: "http://elsewhere/players".into(),
@@ -86,6 +87,7 @@ fn reset_only_touches_the_settings_view_fields() {
     assert_eq!(s.language, d.language);
     assert_eq!(s.launch_command, d.launch_command);
     assert_eq!(s.wine_prefix, d.wine_prefix);
+    assert_eq!(s.proton_path, d.proton_path);
     assert_eq!(s.cdn_base, d.cdn_base);
     assert_eq!(s.auth_url, d.auth_url);
     assert_eq!(s.players_url, d.players_url);

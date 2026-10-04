@@ -3,45 +3,13 @@
 
 use super::install::{find_exe, WIN64_EXES};
 use super::markers::write_hidden_mode;
+use super::proton::resolve_proton;
 use super::variant::detect_variant;
 use super::wrapper::{parse_wrapper, wrapper_available};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{platform, settings};
 use std::fs;
 use std::path::{Path, PathBuf};
-
-/// Locate an installed Proton to pin via PROTONPATH — GE-Proton preferred and
-/// newest-by-name, falling back to any Proton build. Lets umu run on a
-/// known-good runtime (DXVK/vkd3d) instead of whatever it defaults to.
-fn detect_proton_path() -> Option<String> {
-    let home = std::env::var_os("HOME").map(PathBuf::from)?;
-    let roots = [
-        ".steam/steam/compatibilitytools.d",
-        ".steam/root/compatibilitytools.d",
-        ".local/share/Steam/compatibilitytools.d",
-        ".local/share/Steam/steamapps/common",
-    ];
-    let (mut ge, mut other): (Vec<PathBuf>, Vec<PathBuf>) = (Vec::new(), Vec::new());
-    for r in roots {
-        let Ok(rd) = fs::read_dir(home.join(r)) else { continue };
-        for e in rd.flatten() {
-            let p = e.path();
-            // A real Proton dir has a `proton` launcher script.
-            if !p.join("proton").exists() {
-                continue;
-            }
-            let name = e.file_name().to_string_lossy().into_owned();
-            if name.starts_with("GE-Proton") {
-                ge.push(p);
-            } else if name.contains("Proton") {
-                other.push(p);
-            }
-        }
-    }
-    ge.sort();
-    other.sort();
-    ge.pop().or_else(|| other.pop()).map(|p| p.to_string_lossy().into_owned())
-}
 
 /// Persist the xinput1_3 override (native,builtin — load the app-local EF mod
 /// loader) into the Wine/Proton prefix registry so it survives game relaunches
@@ -177,10 +145,11 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
             envs.push(format!("WINEPREFIX={prefix}"));
         }
 
-        // umu/Proton needs a game id, and we pin an installed GE-Proton (or any
-        // Proton) so rendering runs on a known-good runtime with DXVK rather
-        // than whatever umu would pick by default.
-        let proton_path = if is_proton { detect_proton_path() } else { None };
+        // umu/Proton needs a game id, and we pin an installed Proton — the one
+        // picked in Settings, else GE-Proton (or any Proton) — so rendering
+        // runs on a known runtime with DXVK rather than whatever umu would
+        // pick by default.
+        let proton_path = if is_proton { resolve_proton(&s.proton_path) } else { None };
         if is_proton {
             envs.push("GAMEID=umu-0".into());
             if let Some(proton) = &proton_path {

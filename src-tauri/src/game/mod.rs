@@ -3,13 +3,15 @@
 //!
 //! `install` locates a copy and reads its version, `variant` owns the pak
 //! swapping that switches between Production, Vanilla and Playtest, `wrapper`
-//! finds the Wine/Proton front-end a Linux launch goes through, and `launch`
-//! assembles the actual command. `markers` writes the two hidden files the
+//! finds the Wine/Proton front-end a Linux launch goes through, `proton` the
+//! Proton builds that front-end can run on, and `launch` assembles the actual
+//! command. `markers` writes the two hidden files the
 //! in-game injector reads.
 
 mod install;
 mod launch;
 mod markers;
+mod proton;
 mod variant;
 mod wrapper;
 
@@ -17,6 +19,7 @@ mod wrapper;
 // about the hidden items `#[tauri::command]` leaves next to each function.
 pub use install::*;
 pub use launch::*;
+pub use proton::*;
 pub use variant::*;
 pub use wrapper::*;
 

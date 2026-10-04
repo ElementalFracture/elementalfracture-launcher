@@ -10,7 +10,9 @@ import { Label } from "@/components/shadcn/label";
 import * as rust from "@/lib/rust";
 import { _ } from "@/i18n";
 import { blurOnEnter } from "./blurOnEnter";
+import { ProtonField } from "./ProtonField";
 import { WrapperField } from "./WrapperField";
+import { usesProton } from "./wrapper";
 import type { SettingsForm } from "./useSettingsForm";
 
 export function WrapperCard({ form }: { form: SettingsForm }) {
@@ -34,6 +36,10 @@ export function WrapperCard({ form }: { form: SettingsForm }) {
           onChange={form.setWrapper}
           onCommit={form.commitWrapper}
         />
+
+        {usesProton(form.wrapper.value) && (
+          <ProtonField value={form.protonPath} onChange={form.setProtonPath} />
+        )}
 
         <div className="field">
           <Label htmlFor="wine-prefix">

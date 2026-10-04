@@ -1,6 +1,16 @@
 /** Sentinel the wrapper Select uses for "Custom…" — no real command is empty. */
 export const CUSTOM_WRAPPER = "__custom__";
 
+/** Sentinel the Proton Select uses for "Automatic" — stored as "". */
+export const AUTO_PROTON = "__auto__";
+
+/** Whether a launch command runs through Proton, the same test the backend
+ *  makes before it hands over PROTONPATH — so the Proton picker shows exactly
+ *  when the pick is used. */
+export function usesProton(command: string): boolean {
+  return command.includes("umu") || command.includes("proton");
+}
+
 export interface WrapperState {
   mode: "select" | "custom";
   value: string;

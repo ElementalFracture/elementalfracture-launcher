@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import * as rust from "@/lib/rust";
-import type { Settings, LoginResult, WrapperOption } from "@/lib/rust";
+import type { Settings, LoginResult, ProtonOption, WrapperOption } from "@/lib/rust";
 import { isWindows } from "@/lib/platform";
 
 interface SettingsContextValue {
   settings: Settings | null;
   wrappers: WrapperOption[];
+  /** Proton builds the wrapper can run on, for the picker under it. */
+  protons: ProtonOption[];
   refreshSettings: () => Promise<Settings | null>;
   saveSettings: (next: Settings) => Promise<void>;
   resetSettings: () => Promise<Settings>;
@@ -20,6 +22,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [wrappers, setWrappers] = useState<WrapperOption[]>([]);
+  const [protons, setProtons] = useState<ProtonOption[]>([]);
 
   const loadWrappers = useCallback(async () => {
     try {
@@ -29,6 +32,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch {
       setWrappers([]);
       return [];
+    }
+  }, []);
+
+  const loadProtons = useCallback(async () => {
+    try {
+      setProtons(await rust.detectProtons());
+    } catch {
+      setProtons([]);
     }
   }, []);
 
@@ -88,6 +99,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSettings(initial);
       if (!isWindows) {
         loadWrappers();
+        loadProtons();
       }
       // Refresh avatar/roles right away so a change made after last sign-in shows
       // immediately on launch — don't make the user wait for the first 60s tick.
@@ -101,6 +113,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const value: SettingsContextValue = {
     settings,
     wrappers,
+    protons,
     refreshSettings,
     saveSettings,
     resetSettings,

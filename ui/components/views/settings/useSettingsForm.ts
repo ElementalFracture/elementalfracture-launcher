@@ -46,6 +46,11 @@ export interface SettingsForm {
    *  set it doesn't race its own state update. */
   commitText: (key: TextKey, value: string) => void;
 
+  /** The Proton build umu-run is pointed at, written the moment it is
+      picked. "" = the launcher picks one. */
+  protonPath: string;
+  setProtonPath: (v: string) => void;
+
   /** The display language, written the moment it is picked. "" = follow the
       OS. Not a draft: a picker has no half-chosen state. */
   language: LanguageSetting;
@@ -74,6 +79,7 @@ export function useSettingsForm(): SettingsForm {
   const [closeOnLaunch, setCloseOnLaunchState] = useState(false);
   const [steamQuickstart, setSteamQuickstartState] = useState(true);
   const [winePrefix, setWinePrefix] = useState("");
+  const [protonPath, setProtonPathState] = useState("");
   const [cdnBase, setCdnBase] = useState("");
   const [authUrl, setAuthUrl] = useState("");
   const [playersUrl, setPlayersUrl] = useState("");
@@ -124,6 +130,7 @@ export function useSettingsForm(): SettingsForm {
   const srcAuthUrl = settings?.auth_url ?? "";
   const srcPlayersUrl = settings?.players_url ?? "";
   const srcLaunchCommand = settings?.launch_command ?? "";
+  const srcProtonPath = settings?.proton_path ?? "";
   const srcLanguage = (settings?.language ?? "") as LanguageSetting;
   const srcMinimizeOnClose = settings?.minimize_on_close ?? false;
   const srcCloseOnLaunch = settings?.close_on_launch ?? false;
@@ -142,7 +149,14 @@ export function useSettingsForm(): SettingsForm {
     setMinimizeOnCloseState(srcMinimizeOnClose);
     setCloseOnLaunchState(srcCloseOnLaunch);
     setSteamQuickstartState(srcSteamQuickstart);
-  }, [srcLanguage, srcMinimizeOnClose, srcCloseOnLaunch, srcSteamQuickstart]);
+    setProtonPathState(srcProtonPath);
+  }, [
+    srcLanguage,
+    srcMinimizeOnClose,
+    srcCloseOnLaunch,
+    srcSteamQuickstart,
+    srcProtonPath,
+  ]);
 
   // Separate pass: the detected wrapper list arrives after settings do, and
   // the saved command can only be classified as known-vs-custom once it's in.
@@ -182,6 +196,11 @@ export function useSettingsForm(): SettingsForm {
     persist({ steam_autostart: v });
   };
 
+  const setProtonPath = (v: string) => {
+    setProtonPathState(v);
+    persist({ proton_path: v });
+  };
+
   const commitText = (key: TextKey, value: string) => {
     const trimmed = value.trim();
     // Leaving a field you didn't change shouldn't cost a write.
@@ -210,6 +229,8 @@ export function useSettingsForm(): SettingsForm {
     setSteamQuickstart,
     winePrefix,
     setWinePrefix,
+    protonPath,
+    setProtonPath,
     cdnBase,
     setCdnBase,
     authUrl,

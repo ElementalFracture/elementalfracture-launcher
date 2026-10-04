@@ -29,6 +29,7 @@ import type {
   GameStatus,
   LauncherUpdateInfo,
   NewsItem,
+  ProtonOption,
   Result,
   Settings,
   LoginResult,
@@ -45,6 +46,7 @@ export type {
   GameStatus,
   LauncherUpdateInfo,
   NewsItem,
+  ProtonOption,
   Settings,
   LoginResult,
   VersionInfo,
@@ -108,6 +110,10 @@ export async function verifyInstall(): Promise<FileCheck[]> {
 
 export async function detectWrappers(): Promise<WrapperOption[]> {
   return await commands.detectWrappers();
+}
+
+export async function detectProtons(): Promise<ProtonOption[]> {
+  return await commands.detectProtons();
 }
 
 export async function getRemoteConfig(): Promise<Partial<Record<string, string>>> {

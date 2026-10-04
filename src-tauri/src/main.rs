@@ -78,6 +78,7 @@ fn main() {
         game::launch_game,
         game::auto_find_game,
         game::detect_wrappers,
+        game::detect_protons,
         download::download_game,
         download::ensure_runtime,
         download::update_patch,

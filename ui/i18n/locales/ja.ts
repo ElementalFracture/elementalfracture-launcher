@@ -82,6 +82,10 @@ export const ja: Catalogue = {
       prefixPlaceholder: "例: /home/you/.wineprefixes/spellbreak",
       pickPrefix: "Wine prefix のフォルダーを選択",
       browse: "参照…",
+      proton: "Proton のバージョン",
+      protonHelp: "（umu-run が使用。自動では最新の GE-Proton を優先）",
+      protonAuto: "自動",
+      protonMissing: "{path}（未インストール — 自動を使用）",
     },
     urls: {
       title: "URL",

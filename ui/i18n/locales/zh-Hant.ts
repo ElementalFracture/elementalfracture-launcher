@@ -73,6 +73,10 @@ export const zhHant: Catalogue = {
       prefixPlaceholder: "例如 /home/you/.wineprefixes/spellbreak",
       pickPrefix: "選擇一個 Wine prefix 資料夾",
       browse: "瀏覽…",
+      proton: "Proton 版本",
+      protonHelp: "（供 umu-run 使用；自動優先選擇最新的 GE-Proton）",
+      protonAuto: "自動",
+      protonMissing: "{path}（未安裝 — 將使用自動）",
     },
     urls: {
       title: "網址",

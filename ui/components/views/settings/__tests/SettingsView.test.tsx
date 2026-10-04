@@ -14,6 +14,7 @@ const commands = vi.hoisted(() => ({
   saveSettings: vi.fn(),
   resetSettings: vi.fn(),
   detectWrappers: vi.fn(),
+  detectProtons: vi.fn(),
   pickGameDir: vi.fn(),
   getStatus: vi.fn(),
   getVersions: vi.fn(),
@@ -40,6 +41,7 @@ const Providers = ({ children }: { children: ReactNode }) => (
 beforeEach(() => {
   commands.getSettings.mockResolvedValue(makeSettings());
   commands.detectWrappers.mockResolvedValue([]);
+  commands.detectProtons.mockResolvedValue([]);
   commands.getStatus.mockResolvedValue(makeStatus());
   commands.getVersions.mockResolvedValue(makeVersions());
   commands.getLauncherUpdate.mockResolvedValue({
@@ -106,6 +108,66 @@ describe("launch wrapper picker", () => {
     render(<SettingsView />, { wrapper: Providers });
     expect(await screen.findByPlaceholderText(/none detected/)).toBeTruthy();
     expect(wrapperPicker()).toBeNull();
+  });
+});
+
+describe("Proton picker", () => {
+  const CACHYOS = {
+    path: "/usr/share/steam/compatibilitytools.d/proton-cachyos-slr",
+    label: "proton-cachyos-11.0 (steam linux runtime)",
+  };
+  const PICKER = { name: /Proton version/ };
+
+  beforeEach(() => {
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+    commands.detectWrappers.mockResolvedValue([
+      { command: "umu-run", label: "umu-run" },
+      { command: "wine", label: "wine" },
+    ]);
+    commands.detectProtons.mockResolvedValue([CACHYOS]);
+  });
+
+  it("writes the picked build as proton_path", async () => {
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ launch_command: "umu-run" })
+    );
+    render(<SettingsView />, { wrapper: Providers });
+
+    fireEvent.click(await screen.findByRole("combobox", PICKER));
+    fireEvent.click(await screen.findByRole("option", { name: CACHYOS.label }));
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ proton_path: CACHYOS.path })
+      )
+    );
+  });
+
+  /* Plain Wine never gets a PROTONPATH, so a pick there would do nothing. */
+  it("is hidden when the wrapper doesn't run through Proton", async () => {
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ launch_command: "wine" })
+    );
+    render(<SettingsView />, { wrapper: Providers });
+    await waitFor(() => expect(wrapperPicker()).toBeTruthy());
+    expect(screen.queryByRole("combobox", PICKER)).toBeNull();
+  });
+
+  /* The launch falls back to Automatic for a build that has gone; the picker
+     says so instead of showing a different build as the one in use. */
+  it("marks a saved build that is no longer installed", async () => {
+    commands.getSettings.mockResolvedValue(
+      makeSettings({
+        launch_command: "umu-run",
+        proton_path: "/home/p/.steam/root/compatibilitytools.d/GE-Proton8-1",
+      })
+    );
+    render(<SettingsView />, { wrapper: Providers });
+    expect(
+      await screen.findByText(
+        "/home/p/.steam/root/compatibilitytools.d/GE-Proton8-1 (not installed — Automatic is used)"
+      )
+    ).toBeTruthy();
   });
 });
 

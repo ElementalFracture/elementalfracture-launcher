@@ -78,6 +78,11 @@ export const es: Catalogue = {
       prefixPlaceholder: "p. ej. /home/tu-usuario/.wineprefixes/spellbreak",
       pickPrefix: "Selecciona una carpeta de prefijo de Wine",
       browse: "Examinar…",
+      proton: "Versión de Proton",
+      protonHelp:
+        "(la usa umu-run; Automático prefiere el GE-Proton más reciente)",
+      protonAuto: "Automático",
+      protonMissing: "{path} (no instalado — se usa Automático)",
     },
     urls: {
       title: "URL",

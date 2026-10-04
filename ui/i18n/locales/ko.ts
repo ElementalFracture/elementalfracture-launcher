@@ -81,6 +81,10 @@ export const ko: Catalogue = {
       prefixPlaceholder: "예: /home/you/.wineprefixes/spellbreak",
       pickPrefix: "Wine prefix 폴더를 선택하세요",
       browse: "찾아보기…",
+      proton: "Proton 버전",
+      protonHelp: "(umu-run이 사용, 자동은 최신 GE-Proton을 우선)",
+      protonAuto: "자동",
+      protonMissing: "{path} (설치되지 않음 — 자동 사용)",
     },
     urls: {
       title: "URL",

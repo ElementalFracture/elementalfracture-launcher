@@ -81,6 +81,10 @@ export const en = {
       prefixPlaceholder: "e.g. /home/you/.wineprefixes/spellbreak",
       pickPrefix: "Select a Wine prefix folder",
       browse: "Browse…",
+      proton: "Proton version",
+      protonHelp: "(used by umu-run; Automatic prefers the newest GE-Proton)",
+      protonAuto: "Automatic",
+      protonMissing: "{path} (not installed — Automatic is used)",
     },
     urls: {
       title: "URLs",
