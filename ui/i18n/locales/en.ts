@@ -59,8 +59,7 @@ export const en = {
       shortcut: "Add Elemental Fracture to Steam",
       shortcutHelp:
         "Adds the launcher to your Steam library as a non-Steam game, with artwork, so you can give it a Steam controller layout. Use this if you don't own Spellbreak on Steam.",
-      shortcutHelpLinux:
-        "Adds Spellbreak to your Steam library as a non-Steam game, set up the way the Linux guide does: on a Proton version, with the mod loader enabled. Pick Steam as the launch wrapper to have Play start it through Steam, and to change its Proton version. Your login isn't passed on when Steam starts the game.",
+      shortcutLinux: "On Linux, make sure Steam is selected in Launch wrapper.",
       added: "Added to your Steam library.",
       removed: "Removed from your Steam library.",
     },

@@ -148,13 +148,8 @@ export function SteamCard({ form }: { form: SettingsForm }) {
           <span className="switch-text">
             <span>{_("settings.steam.shortcut")}</span>
             <InfoPopover>
-              <p>
-                {_(
-                  isWindows
-                    ? "settings.steam.shortcutHelp"
-                    : "settings.steam.shortcutHelpLinux"
-                )}
-              </p>
+              <p>{_("settings.steam.shortcutHelp")}</p>
+              {!isWindows && <p>{_("settings.steam.shortcutLinux")}</p>}
             </InfoPopover>
           </span>
           <Switch
@@ -166,8 +161,9 @@ export function SteamCard({ form }: { form: SettingsForm }) {
                 () => rust.steamSetShortcut(on),
                 on ? "settings.steam.added" : "settings.steam.removed"
               );
-              /* Removing the game's shortcut puts a Play that was starting
-                 it back on the default wrapper. */
+              /* On Linux the shortcut is the game, and adding it switches
+                 the launch wrapper to Steam; removing it puts a Play that
+                 was starting it back on the default wrapper. */
               refreshSettings();
             }}
           />

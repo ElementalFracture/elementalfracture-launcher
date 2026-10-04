@@ -45,9 +45,11 @@ export function WrapperField({
   onCommit: (w: WrapperState) => void;
 }) {
   const { settings, wrappers } = useSettings();
+  const savedCommand = settings?.launch_command ?? "";
   /* The id of the game's Steam shortcut, when it has one. Looked up again
-     each time Steam is picked: the shortcut can be added while Settings is
-     open. */
+     each time Steam is picked, and whenever the saved command changes:
+     the shortcut can be added while Settings is open, and adding it on
+     Linux switches Play to it. */
   const [knownId, setKnownId] = useState<string | null>(null);
   const lookUpId = useCallback(async () => {
     try {
@@ -61,7 +63,7 @@ export function WrapperField({
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     lookUpId();
-  }, [lookUpId]);
+  }, [lookUpId, savedCommand]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const selected =
@@ -85,7 +87,7 @@ export function WrapperField({
   };
   /* The saved id, not the box's draft: the picker reads Steam's config for
      it, which is not worth doing on every keystroke. */
-  const saved = computeWrapperState(settings?.launch_command ?? "", wrappers);
+  const saved = computeWrapperState(savedCommand, wrappers);
   const steamId =
     value.mode === "steam" && saved.mode === "steam" ? saved.value : null;
 

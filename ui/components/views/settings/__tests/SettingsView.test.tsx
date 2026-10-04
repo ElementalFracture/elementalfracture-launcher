@@ -354,6 +354,27 @@ describe("Steam shortcut on Linux", () => {
     );
   });
 
+  /* The backend switches Play to Steam as it adds the shortcut; the wrapper
+     field has to show it without leaving Settings. */
+  it("shows the launch wrapper on Steam once the game is added", async () => {
+    commands.steamGameId.mockResolvedValue("18150169937639899136");
+    render(<OnSettings />, { wrapper: Providers });
+    const toggle = await screen.findByRole("switch", SWITCH);
+    await waitFor(() =>
+      expect(toggle.getAttribute("aria-disabled")).not.toBe("true")
+    );
+    commands.getSettings.mockResolvedValue(
+      makeSettings({
+        launch_command: "steam steam://rungameid/18150169937639899136",
+      })
+    );
+    fireEvent.click(toggle);
+
+    expect(
+      await screen.findByText("Detected from the game's Steam shortcut.")
+    ).toBeTruthy();
+  });
+
   /* Steam saves its config on exit and would undo the write. */
   it("can't be changed while Steam is running", async () => {
     commands.steamStatus.mockResolvedValue({ ...closedSteam, running: true });

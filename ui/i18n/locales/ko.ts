@@ -58,8 +58,7 @@ export const ko: Catalogue = {
       shortcut: "Elemental Fracture를 Steam에 추가",
       shortcutHelp:
         "런처를 아트워크와 함께 비 Steam 게임으로 Steam 라이브러리에 추가하여 Steam 컨트롤러 레이아웃을 지정할 수 있게 합니다. Steam에서 Spellbreak를 보유하지 않았다면 이 옵션을 사용하세요.",
-      shortcutHelpLinux:
-        "Spellbreak를 Steam 외 게임으로 Steam 라이브러리에 추가하고 Linux 가이드와 같이 설정합니다. Proton에서 모드 로더를 켠 상태로 실행됩니다. 실행 래퍼에서 Steam을 고르면 플레이를 눌렀을 때 Steam을 통해 시작하고, Proton 버전도 바꿀 수 있습니다. Steam이 게임을 시작할 때는 로그인 정보가 전달되지 않습니다.",
+      shortcutLinux: "Linux에서는 실행 래퍼에서 Steam이 선택되어 있는지 확인하세요.",
       added: "Steam 라이브러리에 추가했습니다.",
       removed: "Steam 라이브러리에서 제거했습니다.",
     },

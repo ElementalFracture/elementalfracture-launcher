@@ -55,8 +55,8 @@ export const de: Catalogue = {
       shortcut: "Elemental Fracture zu Steam hinzufügen",
       shortcutHelp:
         "Fügt den Launcher als Nicht-Steam-Spiel mit Artwork zu deiner Steam-Bibliothek hinzu, damit du ihm ein Steam-Controller-Layout geben kannst. Nutze das, wenn du Spellbreak nicht auf Steam besitzt.",
-      shortcutHelpLinux:
-        "Fügt Spellbreak deiner Steam-Bibliothek als Nicht-Steam-Spiel hinzu, eingerichtet wie in der Linux-Anleitung: auf einer Proton-Version, mit aktiviertem Mod-Loader. Wähle Steam als Startbefehl, damit Spielen es über Steam startet und um seine Proton-Version zu ändern. Deine Anmeldung wird nicht weitergegeben, wenn Steam das Spiel startet.",
+      shortcutLinux:
+        "Unter Linux: Achte darauf, dass unter Startbefehl Steam ausgewählt ist.",
       added: "Zu deiner Steam-Bibliothek hinzugefügt.",
       removed: "Aus deiner Steam-Bibliothek entfernt.",
     },

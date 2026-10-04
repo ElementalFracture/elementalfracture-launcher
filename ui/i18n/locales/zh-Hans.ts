@@ -52,8 +52,7 @@ export const zhHans: Catalogue = {
       quickstartHelp: "在 Steam 中点击 Spellbreak 的“开始游戏”会直接启动游戏，不显示启动器，并使用你上次选择的游戏模式。若想打开启动器（例如切换游戏模式），请在点击“开始游戏”时按住 Shift，直到启动器出现。有更新需要安装或需要登录时，启动器也会自动打开。",
       shortcut: "将 Elemental Fracture 添加到 Steam",
       shortcutHelp: "把启动器作为非 Steam 游戏（带封面图）添加到你的 Steam 库，这样你就能为它设置 Steam 手柄布局。如果你没有在 Steam 上拥有 Spellbreak，请使用此项。",
-      shortcutHelpLinux:
-        "将 Spellbreak 作为非 Steam 游戏添加到你的 Steam 库，并按 Linux 指南的方式配置：在 Proton 上运行，并启用模组加载器。在启动包装器中选择 Steam，即可让“开始游戏”通过 Steam 启动它，并更改其 Proton 版本。由 Steam 启动游戏时，你的登录信息不会被传递。",
+      shortcutLinux: "在 Linux 上，请确认启动包装器中已选择 Steam。",
       added: "已添加到你的 Steam 库。",
       removed: "已从你的 Steam 库移除。",
     },

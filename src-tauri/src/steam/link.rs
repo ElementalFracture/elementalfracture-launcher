@@ -610,9 +610,11 @@ fn set_game_shortcut(_: &tauri::AppHandle, _: bool) -> AppResult<()> {
 /// Steam closed, both files are written: the shortcut in `shortcuts.vdf`,
 /// and in `config.vdf` the Proton build it is forced onto — the one already
 /// there for an adopted shortcut, else the head of what Steam can use (the
-/// launch wrapper's Steam option changes it after). Removing it also takes
-/// out a launcher shortcut an older version added here, and puts Play back
-/// on the default wrapper if it was starting the shortcut that went.
+/// launch wrapper's Steam option changes it after). Adding it also points
+/// Play at it: the launch wrapper's Steam option, on this shortcut's id.
+/// Removing it also takes out a launcher shortcut an older version added
+/// here, and puts Play back on the default wrapper if it was starting the
+/// shortcut that went.
 #[cfg(not(windows))]
 fn set_game_shortcut(app: &tauri::AppHandle, add: bool) -> AppResult<()> {
     let (steam, user) = writable_steam(true)?;
@@ -650,6 +652,9 @@ fn set_game_shortcut(app: &tauri::AppHandle, add: bool) -> AppResult<()> {
                 fs::write(path, bytes)?;
             }
         }
+        settings::mutate(app, |s| {
+            s.launch_command = format!("steam steam://rungameid/{}", rungameid(appid));
+        })?;
     } else {
         let ids = game_shortcut_ids(&mut tree, &root);
         apply_game_shortcut(&mut tree, &root, Path::new(""), false);

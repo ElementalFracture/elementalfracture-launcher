@@ -48,8 +48,8 @@ export const fr: Catalogue = {
       quickstartHelp: "Cliquer sur Jouer pour Spellbreak dans Steam lance le jeu sans afficher le launcher, avec le dernier mode de jeu choisi. Pour ouvrir le launcher (pour changer de mode de jeu, par exemple), maintenez Maj en cliquant sur Jouer jusqu'à ce qu'il apparaisse. Il s'ouvre aussi de lui-même quand une mise à jour est à installer ou qu'il faut vous connecter.",
       shortcut: "Ajouter Elemental Fracture à Steam",
       shortcutHelp: "Ajoute le launcher à votre bibliothèque Steam comme jeu non-Steam, avec ses visuels, pour lui attribuer une configuration de manette Steam. À utiliser si vous ne possédez pas Spellbreak sur Steam.",
-      shortcutHelpLinux:
-        "Ajoute Spellbreak à votre bibliothèque Steam comme jeu non-Steam, configuré comme dans le guide Linux : sur une version de Proton, avec le chargeur de mods activé. Choisissez Steam comme commande de lancement pour que Jouer le démarre via Steam et pour changer sa version de Proton. Votre connexion n'est pas transmise quand Steam lance le jeu.",
+      shortcutLinux:
+        "Sous Linux, vérifiez que Steam est sélectionné dans Commande de lancement.",
       added: "Ajouté à votre bibliothèque Steam.",
       removed: "Retiré de votre bibliothèque Steam.",
     },
