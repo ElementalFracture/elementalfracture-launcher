@@ -11,9 +11,31 @@ export function usesProton(command: string): boolean {
   return command.includes("umu") || command.includes("proton");
 }
 
+/** Sentinel the wrapper Select uses for "Steam": Play has Steam start the
+ *  game's shortcut, by its game id. */
+export const STEAM_WRAPPER = "__steam__";
+
+/** `value` is the command for "select" and "custom", the game id for "steam". */
 export interface WrapperState {
-  mode: "select" | "custom";
+  mode: "select" | "custom" | "steam";
   value: string;
+}
+
+const STEAM_COMMAND = /^steam\s+steam:\/\/rungameid\/(\d+)$/;
+
+/** The command the Steam option writes for a game id. */
+export function steamCommand(id: string): string {
+  return `steam steam://rungameid/${id}`;
+}
+
+/** The game id in what the player typed or pasted: the bare number, the
+ *  `steam://rungameid/` URL, or the whole `Exec=` line of Steam's desktop
+ *  shortcut. Null when there is none. */
+export function parseSteamGameId(input: string): string | null {
+  const m = input
+    .trim()
+    .match(/^(?:Exec=)?(?:(?:steam\s+)?steam:\/\/rungameid\/)?(\d+)$/);
+  return m ? m[1] : null;
 }
 
 /**
@@ -27,6 +49,10 @@ export function computeWrapperState(
   wrappers: { command: string }[]
 ): WrapperState {
   const trimmed = cur.trim();
+  const steam = trimmed.match(STEAM_COMMAND);
+  if (steam) {
+    return { mode: "steam", value: steam[1] };
+  }
   if (trimmed && wrappers.some((w) => w.command === trimmed)) {
     return { mode: "select", value: trimmed };
   }

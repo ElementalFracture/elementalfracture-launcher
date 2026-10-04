@@ -186,7 +186,8 @@ export async function steamSetLinked(linked: boolean): Promise<SteamStatus> {
   return unwrap(await commands.steamSetLinked(linked));
 }
 
-/** Add the launcher to Steam as a non-Steam game, or remove it. */
+/** Add the shortcut to Steam as a non-Steam game, or remove it: the
+    launcher on Windows, the game set up as the Linux guide does on Linux. */
 export async function steamSetShortcut(added: boolean): Promise<SteamStatus> {
   return unwrap(await commands.steamSetShortcut(added));
 }
@@ -195,6 +196,32 @@ export async function steamSetShortcut(added: boolean): Promise<SteamStatus> {
     it did; resolves when there's nothing to tell. Only answers once. */
 export async function takeQuickstartNotice(): Promise<void> {
   unwrap(await commands.takeQuickstartNotice());
+}
+
+/** Steam's game id for the game's shortcut, for the launch wrapper's Steam
+    option; null when it has none. */
+export async function steamGameId(): Promise<string | null> {
+  return await commands.steamGameId();
+}
+
+/** The Proton build Steam forces on the game behind a game id, by Steam's
+    name; null for Steam's default. */
+export async function steamCompatTool(gameId: string): Promise<string | null> {
+  return await commands.steamCompatTool(gameId);
+}
+
+/** Force a Proton build on the game behind a game id, or with "" hand it
+    back to Steam's default. Needs Steam closed. */
+export async function steamSetCompatTool(
+  gameId: string,
+  tool: string
+): Promise<void> {
+  unwrap(await commands.steamSetCompatTool(gameId, tool));
+}
+
+/** The Proton builds Steam can force on the game shortcut. */
+export async function steamCompatTools(): Promise<ProtonOption[]> {
+  return await commands.steamCompatTools();
 }
 
 /** Ask Steam to exit, so its settings can be changed. */

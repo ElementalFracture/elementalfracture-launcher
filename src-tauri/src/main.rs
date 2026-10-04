@@ -102,6 +102,10 @@ fn main() {
         steam::steam_status,
         steam::steam_set_linked,
         steam::steam_set_shortcut,
+        steam::steam_game_id,
+        steam::steam_compat_tool,
+        steam::steam_set_compat_tool,
+        steam::steam_compat_tools,
         steam::steam_shutdown,
         steam::take_quickstart_notice,
     ]);

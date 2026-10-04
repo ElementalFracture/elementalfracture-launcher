@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SettingsView } from "../SettingsView";
@@ -6,7 +6,7 @@ import { LocaleGate } from "@/i18n/LocaleGate";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { GameProvider } from "@/context/GameContext";
 import { LiveDataProvider } from "@/context/LiveDataContext";
-import { UIProvider } from "@/context/UIContext";
+import { UIProvider, useUI } from "@/context/UIContext";
 import { makeSettings, makeStatus, makeVersions } from "@/test/fixtures";
 
 const commands = vi.hoisted(() => ({
@@ -24,6 +24,11 @@ const commands = vi.hoisted(() => ({
   getEvents: vi.fn(),
   getNews: vi.fn(),
   steamStatus: vi.fn(),
+  steamCompatTools: vi.fn(),
+  steamSetShortcut: vi.fn(),
+  steamGameId: vi.fn(),
+  steamCompatTool: vi.fn(),
+  steamSetCompatTool: vi.fn(),
 }));
 
 vi.mock("@/generated/bindings", () => ({ commands }));
@@ -53,6 +58,9 @@ beforeEach(() => {
   commands.getEvents.mockResolvedValue({ status: "ok", data: { events: [] } });
   commands.getNews.mockResolvedValue({ status: "ok", data: [] });
   commands.steamStatus.mockResolvedValue({ found: false });
+  commands.steamCompatTools.mockResolvedValue([]);
+  commands.steamGameId.mockResolvedValue(null);
+  commands.steamCompatTool.mockResolvedValue(null);
 });
 
 /* The Language card has a picker of its own, so a bare combobox query would
@@ -76,14 +84,12 @@ describe("launch wrapper picker", () => {
       { command: "umu-run", label: "umu-run" },
     ]);
     commands.getSettings.mockResolvedValue(
-      makeSettings({ launch_command: "steam steam://rungameid/1815016993" })
+      makeSettings({ launch_command: "gamemoderun umu-run" })
     );
 
     render(<SettingsView />, { wrapper: Providers });
     await waitFor(() => expect(wrapperPicker()).toBeTruthy());
-    expect(
-      await screen.findByDisplayValue("steam steam://rungameid/1815016993")
-    ).toBeTruthy();
+    expect(await screen.findByDisplayValue("gamemoderun umu-run")).toBeTruthy();
   });
 
   it("shows only the picker when the saved command is one that was detected", async () => {
@@ -99,7 +105,8 @@ describe("launch wrapper picker", () => {
     expect(screen.queryByPlaceholderText(/umu-run/)).toBeNull();
   });
 
-  it("falls back to a free-text box, and says so, when nothing was detected", async () => {
+  /* The picker stays, for Steam: it needs nothing installed to offer. */
+  it("opens a free-text box, and says so, when nothing was detected", async () => {
     commands.detectWrappers.mockResolvedValue([]);
     commands.getSettings.mockResolvedValue(
       makeSettings({ launch_command: "" })
@@ -107,7 +114,98 @@ describe("launch wrapper picker", () => {
 
     render(<SettingsView />, { wrapper: Providers });
     expect(await screen.findByPlaceholderText(/none detected/)).toBeTruthy();
-    expect(wrapperPicker()).toBeNull();
+    expect(wrapperPicker()).toBeTruthy();
+  });
+
+  const ID_BOX = { name: /Steam game id/ };
+
+  it("fills the Steam game id in from the game's shortcut", async () => {
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+    commands.steamGameId.mockResolvedValue("18150169937639899136");
+    commands.detectWrappers.mockResolvedValue([
+      { command: "umu-run", label: "umu-run" },
+    ]);
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ launch_command: "umu-run" })
+    );
+
+    render(<SettingsView />, { wrapper: Providers });
+    await waitFor(() => expect(wrapperPicker()).toBeTruthy());
+    fireEvent.click(wrapperPicker()!);
+    fireEvent.click(await screen.findByRole("option", { name: "Steam" }));
+
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          launch_command: "steam steam://rungameid/18150169937639899136",
+        })
+      )
+    );
+    expect(
+      (await screen.findByRole("textbox", ID_BOX)).getAttribute("value")
+    ).toBe("18150169937639899136");
+    expect(
+      screen.getByText("Detected from the game's Steam shortcut.")
+    ).toBeTruthy();
+  });
+
+  /* A different id the player saved stays; the shortcut's is offered beside
+     it to copy, not swapped in. */
+  it("shows the shortcut's id to copy when the saved one differs", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    commands.steamGameId.mockResolvedValue("18150169937639899136");
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ launch_command: "steam steam://rungameid/4225915749" })
+    );
+
+    render(<SettingsView />, { wrapper: Providers });
+    expect(
+      (await screen.findByRole("textbox", ID_BOX)).getAttribute("value")
+    ).toBe("4225915749");
+    expect(
+      await screen.findByText("Elemental Fracture game id detected is:")
+    ).toBeTruthy();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "18150169937639899136" })
+    );
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith("18150169937639899136")
+    );
+    expect(commands.saveSettings).not.toHaveBeenCalled();
+  });
+
+  /* No shortcut to read it off: the player pastes what the guide has them
+     copy out of Steam's desktop shortcut. */
+  it("asks for the Steam game id when there is no shortcut", async () => {
+    commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
+    commands.detectWrappers.mockResolvedValue([
+      { command: "umu-run", label: "umu-run" },
+    ]);
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ launch_command: "umu-run" })
+    );
+
+    render(<SettingsView />, { wrapper: Providers });
+    await waitFor(() => expect(wrapperPicker()).toBeTruthy());
+    fireEvent.click(wrapperPicker()!);
+    fireEvent.click(await screen.findByRole("option", { name: "Steam" }));
+
+    const box = await screen.findByRole("textbox", ID_BOX);
+    expect(commands.saveSettings).not.toHaveBeenCalled();
+    fireEvent.blur(box, {
+      target: { value: "Exec=steam steam://rungameid/4225915749" },
+    });
+    await waitFor(() =>
+      expect(commands.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          launch_command: "steam steam://rungameid/4225915749",
+        })
+      )
+    );
   });
 });
 
@@ -168,6 +266,101 @@ describe("Proton picker", () => {
         "/home/p/.steam/root/compatibilitytools.d/GE-Proton8-1 (not installed — Automatic is used)"
       )
     ).toBeTruthy();
+  });
+});
+
+/* Steam's own per-game compatibility setting, under the Steam option. */
+describe("Proton version under the Steam option", () => {
+  const CACHYOS = {
+    path: "/usr/share/steam/compatibilitytools.d/proton-cachyos-slr",
+    label: "proton-cachyos-11.0 (steam linux runtime)",
+    tool: "proton-cachyos-slr",
+  };
+  const PICKER = { name: /Proton version/ };
+
+  beforeEach(() => {
+    commands.steamCompatTools.mockResolvedValue([CACHYOS]);
+    commands.steamSetCompatTool.mockResolvedValue({ status: "ok", data: null });
+  });
+
+  it("forces the picked build on the game behind the saved id", async () => {
+    commands.getSettings.mockResolvedValue(
+      makeSettings({
+        launch_command: "steam steam://rungameid/18150169937639899136",
+      })
+    );
+    render(<SettingsView />, { wrapper: Providers });
+
+    fireEvent.click(await screen.findByRole("combobox", PICKER));
+    fireEvent.click(await screen.findByRole("option", { name: CACHYOS.label }));
+    await waitFor(() =>
+      expect(commands.steamSetCompatTool).toHaveBeenCalledWith(
+        "18150169937639899136",
+        "proton-cachyos-slr"
+      )
+    );
+  });
+
+  it("isn't there until a Steam game id is saved", async () => {
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ launch_command: "wine" })
+    );
+    render(<SettingsView />, { wrapper: Providers });
+    await waitFor(() => expect(wrapperPicker()).toBeTruthy());
+    expect(screen.queryByRole("combobox", PICKER)).toBeNull();
+  });
+});
+
+describe("Steam shortcut on Linux", () => {
+  const CACHYOS = {
+    path: "/usr/share/steam/compatibilitytools.d/proton-cachyos-slr",
+    label: "proton-cachyos-11.0 (steam linux runtime)",
+    tool: "proton-cachyos-slr",
+  };
+  const SWITCH = { name: "Add Elemental Fracture to Steam" };
+  /* The Steam card only reads Steam while Settings is the view on screen. */
+  const OnSettings = () => {
+    const { setView } = useUI();
+    useEffect(() => setView("settings"), [setView]);
+    return <SettingsView />;
+  };
+  const closedSteam = {
+    found: true,
+    running: false,
+    has_user: true,
+    spellbreak_installed: false,
+    linked: false,
+    shortcut: false,
+  };
+
+  beforeEach(() => {
+    commands.steamStatus.mockResolvedValue(closedSteam);
+    commands.steamCompatTools.mockResolvedValue([CACHYOS]);
+    commands.steamSetShortcut.mockResolvedValue({
+      status: "ok",
+      data: { ...closedSteam, shortcut: true },
+    });
+  });
+
+  it("adds the game, set up as the guide does", async () => {
+    render(<OnSettings />, { wrapper: Providers });
+    const toggle = await screen.findByRole("switch", SWITCH);
+    await waitFor(() =>
+      expect(toggle.getAttribute("aria-disabled")).not.toBe("true")
+    );
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(commands.steamSetShortcut).toHaveBeenCalledWith(true)
+    );
+  });
+
+  /* Steam saves its config on exit and would undo the write. */
+  it("can't be changed while Steam is running", async () => {
+    commands.steamStatus.mockResolvedValue({ ...closedSteam, running: true });
+    render(<OnSettings />, { wrapper: Providers });
+    const toggle = await screen.findByRole("switch", SWITCH);
+    fireEvent.click(toggle);
+    expect(commands.steamSetShortcut).not.toHaveBeenCalled();
   });
 });
 

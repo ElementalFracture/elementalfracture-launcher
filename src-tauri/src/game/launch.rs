@@ -5,7 +5,7 @@ use super::install::{find_exe, WIN64_EXES};
 use super::markers::write_hidden_mode;
 use super::proton::resolve_proton;
 use super::variant::detect_variant;
-use super::wrapper::{parse_wrapper, wrapper_available};
+use super::wrapper::{parse_wrapper, steam_run, wrapper_available};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{platform, settings};
 use std::fs;
@@ -90,7 +90,10 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
     if platform::in_container() {
         argv.push("distrobox-host-exec".into());
     }
-    if !cfg!(windows) && !s.launch_command.trim().is_empty() {
+    let steam_run = if cfg!(windows) { None } else { steam_run(&s.launch_command) };
+    if let Some(run) = &steam_run {
+        argv.extend(run.iter().cloned());
+    } else if !cfg!(windows) && !s.launch_command.trim().is_empty() {
         // Resolve the wrapper we'll actually use. If the configured one is
         // missing (e.g. the default "wine" on a box that only has Proton),
         // fall back to umu-run instead of dead-ending on an error.
@@ -182,7 +185,9 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
         argv.extend(envs);
         argv.extend(wrapper_argv.iter().cloned());
     }
-    argv.push(exe.to_string_lossy().into_owned());
+    if steam_run.is_none() {
+        argv.push(exe.to_string_lossy().into_owned());
+    }
 
     let mut cmd = std::process::Command::new(&argv[0]);
     cmd.args(&argv[1..]);

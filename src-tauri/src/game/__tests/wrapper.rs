@@ -92,3 +92,16 @@ fn presence_check_handles_absolute_paths_with_spaces() {
     assert!(command_present(&path));
     assert!(!command_present("/no/such/wine"));
 }
+
+#[test]
+fn a_steam_run_command_is_recognised() {
+    let run = "steam steam://rungameid/18150169937639899136";
+    assert_eq!(
+        steam_run(run).unwrap(),
+        ["steam", "steam://rungameid/18150169937639899136"]
+    );
+    assert!(steam_run("/usr/bin/steam steam://rungameid/1").is_some());
+    for other in ["umu-run", "steam", "steam -applaunch 1399780", "steam steam://rungameid/1 extra"] {
+        assert!(steam_run(other).is_none(), "{other:?}");
+    }
+}

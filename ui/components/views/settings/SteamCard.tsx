@@ -9,8 +9,10 @@ import {
 } from "@/components/shadcn/card";
 import { Switch } from "@/components/shadcn/switch";
 import { InfoPopover } from "@/components/InfoPopover";
+import { useSettings } from "@/context/SettingsContext";
 import { useUI } from "@/context/UIContext";
 import type { SteamStatus } from "@/generated/bindings";
+import { isWindows } from "@/lib/platform";
 import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
 import { toastError } from "@/i18n/errors";
@@ -29,6 +31,7 @@ export function SteamCard({ form }: { form: SettingsForm }) {
   const active = view === "settings";
   const [status, setStatus] = useState<SteamStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const { refreshSettings } = useSettings();
 
   const refresh = useCallback(async () => {
     try {
@@ -145,19 +148,28 @@ export function SteamCard({ form }: { form: SettingsForm }) {
           <span className="switch-text">
             <span>{_("settings.steam.shortcut")}</span>
             <InfoPopover>
-              <p>{_("settings.steam.shortcutHelp")}</p>
+              <p>
+                {_(
+                  isWindows
+                    ? "settings.steam.shortcutHelp"
+                    : "settings.steam.shortcutHelpLinux"
+                )}
+              </p>
             </InfoPopover>
           </span>
           <Switch
             aria-label={_("settings.steam.shortcut")}
             checked={status.shortcut}
             disabled={locked}
-            onCheckedChange={(on) =>
-              change(
+            onCheckedChange={async (on) => {
+              await change(
                 () => rust.steamSetShortcut(on),
                 on ? "settings.steam.added" : "settings.steam.removed"
-              )
-            }
+              );
+              /* Removing the game's shortcut puts a Play that was starting
+                 it back on the default wrapper. */
+              refreshSettings();
+            }}
           />
         </div>
       </CardContent>

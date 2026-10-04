@@ -58,6 +58,8 @@ export const ko: Catalogue = {
       shortcut: "Elemental Fracture를 Steam에 추가",
       shortcutHelp:
         "런처를 아트워크와 함께 비 Steam 게임으로 Steam 라이브러리에 추가하여 Steam 컨트롤러 레이아웃을 지정할 수 있게 합니다. Steam에서 Spellbreak를 보유하지 않았다면 이 옵션을 사용하세요.",
+      shortcutHelpLinux:
+        "Spellbreak를 Steam 외 게임으로 Steam 라이브러리에 추가하고 Linux 가이드와 같이 설정합니다. Proton에서 모드 로더를 켠 상태로 실행됩니다. 실행 래퍼에서 Steam을 고르면 플레이를 눌렀을 때 Steam을 통해 시작하고, Proton 버전도 바꿀 수 있습니다. Steam이 게임을 시작할 때는 로그인 정보가 전달되지 않습니다.",
       added: "Steam 라이브러리에 추가했습니다.",
       removed: "Steam 라이브러리에서 제거했습니다.",
     },
@@ -85,6 +87,19 @@ export const ko: Catalogue = {
       protonHelp: "(umu-run이 사용, 자동은 최신 GE-Proton을 우선)",
       protonAuto: "자동",
       protonMissing: "{path} (설치되지 않음 — 자동 사용)",
+      steam: "Steam",
+      steamId: "Steam 게임 ID",
+      steamIdHelp: "(게임의 Steam 바탕화면 바로가기에서 steam://rungameid/ 뒤의 숫자)",
+      steamIdPlaceholder: "예: 18150169937639899136",
+      steamIdDetected: "게임의 Steam 바로가기에서 감지했습니다.",
+      steamIdDetectedOther: "감지된 Elemental Fracture 게임 ID:",
+      steamIdCopy: "클릭하여 복사",
+      steamIdCopied: "게임 ID를 복사했습니다.",
+      steamIdCopyFailed: "게임 ID를 복사하지 못했습니다.",
+      steamProton: "Proton 버전",
+      steamProtonHelp: "(게임의 Steam 호환성 설정, 바꾸려면 Steam을 종료하세요)",
+      steamProtonDefault: "Steam 기본값",
+      steamProtonSet: "Steam이 이 Proton 버전으로 게임을 실행합니다.",
     },
     urls: {
       title: "URL",

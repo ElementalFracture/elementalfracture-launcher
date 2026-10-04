@@ -80,3 +80,64 @@ fn removing_renumbers_what_is_left_from_zero() {
     let keys: Vec<_> = entries(&mut tree).0.iter().map(|(k, _)| k.clone()).collect();
     assert_eq!(keys, ["0"]);
 }
+
+/// The shape a player following the Linux guide made by hand: adopted in
+/// place, keeping its id, name and launch options.
+fn hand_made_game_entry(root: &str) -> Bin {
+    let mut e = BinObj::default();
+    e.set("appid", Bin::Int(4_180_647_619u32 as i32));
+    e.set("AppName", Bin::Str("Spellbreak".into()));
+    e.set("Exe", Bin::Str(format!("\"{root}/Spellbreak.exe\"")));
+    e.set("StartDir", Bin::Str(format!("{root}/")));
+    e.set("LaunchOptions", Bin::Str(r#"gamemoderun WINEDLLOVERRIDES="xinput1_3=n,b" %command%"#.into()));
+    Bin::Obj(e)
+}
+
+#[test]
+fn the_game_shortcut_adopts_one_made_by_hand() {
+    let root = Path::new("/games/ef");
+    let mut tree = BinObj::default();
+    entries(&mut tree).0.push(("0".into(), hand_made_game_entry("/games/ef")));
+    entries(&mut tree).0.push(("1".into(), hand_made_game_entry("/games/other")));
+
+    let id = apply_game_shortcut(&mut tree, root, &root.join("Spellbreak.exe"), true).unwrap();
+    assert_eq!(id, 4_180_647_619);
+    let list = entries(&mut tree);
+    assert_eq!(list.0.len(), 2);
+    let Bin::Obj(e) = &list.0[0].1 else { panic!() };
+    assert_eq!(e.str("AppName"), Some("Spellbreak"));
+    assert_eq!(e.str("StartDir"), Some("\"/games/ef\""));
+    assert!(e.str("LaunchOptions").unwrap().starts_with("gamemoderun"));
+}
+
+#[test]
+fn a_new_game_shortcut_carries_the_mod_loader_override() {
+    let root = Path::new("/games/ef");
+    let exe = root.join("g3/Binaries/Win64/Spellbreak.exe");
+    let mut tree = BinObj::default();
+    let id = apply_game_shortcut(&mut tree, root, &exe, true).unwrap();
+    assert_eq!(id, shortcut_appid("\"/games/ef/g3/Binaries/Win64/Spellbreak.exe\"", "Spellbreak"));
+    let Bin::Obj(e) = &entries(&mut tree).0[0].1 else { panic!() };
+    assert_eq!(e.str("LaunchOptions"), Some(GAME_LAUNCH_OPTIONS));
+    assert_eq!(apply_game_shortcut(&mut tree, root, &exe, true), Some(id));
+    assert_eq!(entries(&mut tree).0.len(), 1);
+
+    apply_game_shortcut(&mut tree, root, &exe, false);
+    assert!(entries(&mut tree).0.is_empty());
+}
+
+/// The id Steam's own "Add desktop shortcut" writes into `Exec=`.
+#[test]
+fn rungameid_is_the_shortcut_id_in_the_top_half() {
+    assert_eq!(rungameid(4_225_915_749), 18_150_169_937_639_899_136);
+}
+
+/// A shortcut is filed by the top half of its game id; a Steam app (an
+/// owned Spellbreak, 1399780) by its own id.
+#[test]
+fn compat_settings_are_filed_by_shortcut_or_app_id() {
+    assert_eq!(compat_key("18150169937639899136").as_deref(), Some("4225915749"));
+    assert_eq!(compat_key(&rungameid(4_180_647_619).to_string()).as_deref(), Some("4180647619"));
+    assert_eq!(compat_key("1399780").as_deref(), Some("1399780"));
+    assert_eq!(compat_key("not-an-id"), None);
+}

@@ -55,6 +55,8 @@ export const de: Catalogue = {
       shortcut: "Elemental Fracture zu Steam hinzufügen",
       shortcutHelp:
         "Fügt den Launcher als Nicht-Steam-Spiel mit Artwork zu deiner Steam-Bibliothek hinzu, damit du ihm ein Steam-Controller-Layout geben kannst. Nutze das, wenn du Spellbreak nicht auf Steam besitzt.",
+      shortcutHelpLinux:
+        "Fügt Spellbreak deiner Steam-Bibliothek als Nicht-Steam-Spiel hinzu, eingerichtet wie in der Linux-Anleitung: auf einer Proton-Version, mit aktiviertem Mod-Loader. Wähle Steam als Startbefehl, damit Spielen es über Steam startet und um seine Proton-Version zu ändern. Deine Anmeldung wird nicht weitergegeben, wenn Steam das Spiel startet.",
       added: "Zu deiner Steam-Bibliothek hinzugefügt.",
       removed: "Aus deiner Steam-Bibliothek entfernt.",
     },
@@ -83,6 +85,21 @@ export const de: Catalogue = {
         "(von umu-run verwendet; Automatisch bevorzugt das neueste GE-Proton)",
       protonAuto: "Automatisch",
       protonMissing: "{path} (nicht installiert — Automatisch wird verwendet)",
+      steam: "Steam",
+      steamId: "Steam-Spiel-ID",
+      steamIdHelp:
+        "(die Zahl nach steam://rungameid/ in der Steam-Desktopverknüpfung des Spiels)",
+      steamIdPlaceholder: "z. B. 18150169937639899136",
+      steamIdDetected: "Aus der Steam-Verknüpfung des Spiels erkannt.",
+      steamIdDetectedOther: "Die erkannte Elemental-Fracture-Spiel-ID ist:",
+      steamIdCopy: "Zum Kopieren klicken",
+      steamIdCopied: "Spiel-ID kopiert.",
+      steamIdCopyFailed: "Die Spiel-ID konnte nicht kopiert werden.",
+      steamProton: "Proton-Version",
+      steamProtonHelp:
+        "(Steams Kompatibilitätseinstellung für das Spiel; zum Ändern Steam schließen)",
+      steamProtonDefault: "Steam-Standard",
+      steamProtonSet: "Steam startet das Spiel mit dieser Proton-Version.",
     },
     urls: {
       title: "URLs",

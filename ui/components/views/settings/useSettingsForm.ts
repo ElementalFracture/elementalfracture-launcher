@@ -6,7 +6,12 @@ import { isWindows } from "@/lib/platform";
 import type { Settings } from "@/lib/rust";
 import type { LanguageSetting } from "@/i18n";
 import { toastError } from "@/i18n/errors";
-import { computeWrapperState, type WrapperState } from "./wrapper";
+import {
+  computeWrapperState,
+  parseSteamGameId,
+  steamCommand,
+  type WrapperState,
+} from "./wrapper";
 
 /** The text fields, named by the settings key each one writes. */
 export type TextKey = "wine_prefix" | "cdn_base" | "auth_url" | "players_url";
@@ -165,10 +170,15 @@ export function useSettingsForm(): SettingsForm {
   }, [srcLaunchCommand, wrappers]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  /** The command a wrapper state resolves to, as it goes to disk. */
-  const commandFor = (w: WrapperState) => {
+  /** The command a wrapper state resolves to, as it goes to disk. Null for
+   *  a Steam pick with no game id yet: nothing to write until there is one. */
+  const commandFor = (w: WrapperState): string | null => {
     if (isWindows) {
       return latest.current?.launch_command ?? settings?.launch_command ?? "";
+    }
+    if (w.mode === "steam") {
+      const id = parseSteamGameId(w.value);
+      return id ? steamCommand(id) : null;
     }
     if (!wrappers.length) {
       return w.value.trim();
@@ -212,7 +222,10 @@ export function useSettingsForm(): SettingsForm {
 
   const commitWrapper = (w: WrapperState) => {
     const command = commandFor(w);
-    if ((latest.current ?? settings)?.launch_command === command) {
+    if (
+      command === null ||
+      (latest.current ?? settings)?.launch_command === command
+    ) {
       return;
     }
     persist({ launch_command: command });

@@ -113,6 +113,23 @@ pub(super) fn parse_wrapper(command: &str) -> Vec<String> {
     trimmed.split_whitespace().map(str::to_string).collect()
 }
 
+/// `steam steam://rungameid/<id>`: the game's own shortcut in Steam (see
+/// `steam/link.rs`). Steam starts the game on the Proton that shortcut is
+/// set to, so it runs alone — none of what a Wine launch brings (prefix,
+/// overrides, the exe) goes along.
+pub(super) fn steam_run(command: &str) -> Option<Vec<String>> {
+    let argv = parse_wrapper(command);
+    match argv.as_slice() {
+        [prog, url]
+            if Path::new(prog).file_name().is_some_and(|n| n == "steam")
+                && url.starts_with("steam://rungameid/") =>
+        {
+            Some(argv)
+        }
+        _ => None,
+    }
+}
+
 /// Check the launch wrapper exists where the game will actually run
 /// (on the host when the launcher itself lives in a container).
 pub(super) fn wrapper_available(prog: &str) -> bool {
