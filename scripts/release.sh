@@ -166,7 +166,24 @@ build_and_stage() {
     grep -qE '^GameVersion=' "$DIST/config.ini" || echo "GameVersion=6.4.0" >> "$DIST/config.ini"
     grep -qE '^ModVersion=' "$DIST/config.ini" || echo "ModVersion=3.17.1" >> "$DIST/config.ini"
 
+    stage_msi
     ls -la "$DIST"
+}
+
+# stage_msi: the website's Windows download is the install wizard, and the launcher it unpacks is whatever
+# build was inside it when it was last made. Nothing rebuilt it, so first installs got 3.0.0 for weeks after
+# 3.5 shipped: a launcher the CDN's edge already refused the game archive to (403). Every release rebuilds it
+# around the exe it publishes. wixl lives in main-dev, not in the Humble-ROS2 build toolbox.
+stage_msi() {
+    local exe="$DIST/ef-launcher.exe" out="$DIST/InstallElementalFracture.msi"
+    [ -s "$out" ] && [ "$out" -nt "$exe" ] && return 0
+    echo "==> Building the install wizard around $VERSION"
+    local cmd=(bash "$ROOT/scripts/build-msi.sh" --version "$VERSION" --exe "$exe" -o "$out")
+    if command -v wixl >/dev/null; then "${cmd[@]}"
+    elif command -v distrobox >/dev/null; then distrobox enter main-dev -- "${cmd[@]}"
+    elif command -v distrobox-host-exec >/dev/null; then distrobox-host-exec distrobox enter main-dev -- "${cmd[@]}"
+    else echo "!! no wixl and no main-dev toolbox: cannot build the install wizard" >&2; exit 1
+    fi
 }
 
 # check_staged: --upload-only publishes what a previous run left in staging/.
@@ -178,6 +195,7 @@ check_staged() {
     grep -qE "^LauncherVersion=$VERSION[[:space:]]*$" "$DIST/config.ini" \
         || { echo "!! staged config.ini is not LauncherVersion=$VERSION" >&2; exit 1; }
     assert_no_host_libs "$DIST/ef-launcher.AppImage"
+    stage_msi
     echo "==> Publishing previously staged $VERSION from $DIST"
     ls -la "$DIST"
 }
@@ -206,7 +224,7 @@ if [ "$UPLOAD" = 1 ]; then
     PREV="$("$MC" cat "$ALIAS/config.ini" 2>/dev/null | sed -nE 's/^LauncherVersion=//p' | tr -d '[:space:]')"
     if [ -n "$PREV" ] && [ "$PREV" != "$VERSION" ]; then
         echo "==> Archiving current live ($PREV) -> $ALIAS/archive/$PREV/"
-        for f in ef-launcher.AppImage ef-launcher.exe config.ini; do
+        for f in ef-launcher.AppImage ef-launcher.exe InstallElementalFracture.msi config.ini; do
             "$MC" cp "$ALIAS/$f" "$ALIAS/archive/$PREV/$f" >/dev/null 2>&1 || true
         done
     fi
@@ -216,6 +234,7 @@ if [ "$UPLOAD" = 1 ]; then
     "$MC" cp --attr "Cache-Control=no-cache" "$DIST/ef-launcher.exe"      "$ALIAS/ef-launcher.exe"
     # The website's first-time download is the same AppImage under a fixed name.
     "$MC" cp --attr "Cache-Control=no-cache" "$DIST/ef-launcher.AppImage" "$ALIAS/ef-launcher-1.0.0.appimage"
+    "$MC" cp --attr "Cache-Control=no-cache" "$DIST/InstallElementalFracture.msi" "$ALIAS/InstallElementalFracture.msi"
     "$MC" cp --attr "Cache-Control=no-cache" "$DIST/config.ini"           "$ALIAS/config.ini"
 
     echo "==> Re-signing the release manifest"

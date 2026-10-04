@@ -1,7 +1,7 @@
 //! The launcher replacing itself: what it compares against, and the swap.
 
 use super::config::fetch_remote_launcher_version;
-use super::manifest::fetch_manifest;
+use super::manifest::{fetch_manifest, hex};
 use super::transfer::{discard, download_to_file, http, state_path};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::settings;
@@ -14,6 +14,31 @@ use std::path::PathBuf;
 /// older compiled-in version.
 fn launcher_version_marker(app: &tauri::AppHandle) -> PathBuf {
     settings::config_dir(app).join("launcher_version.txt")
+}
+
+/// Whether the marker a self-update left says this exact binary is already the remote version, even though it
+/// reports an older compiled-in one. The marker is `<version>` then the installed binary's SHA-256. A marker for
+/// another version never counts. One with a hash counts only while the binary is still that file: reinstalling an
+/// old build over the same profile (the install wizard shipped 3.0.0 for weeks) left a marker equal to the live
+/// version, and that binary never offered the update again. A marker without a hash is from before 3.5.7 and keeps
+/// its old meaning.
+fn marker_suppresses(marker: Option<&str>, remote: &str, binary_sha: impl FnOnce() -> Option<String>) -> bool {
+    let Some(marker) = marker else { return false };
+    let mut lines = marker.lines().map(str::trim);
+    if lines.next() != Some(remote) {
+        return false;
+    }
+    match lines.next().filter(|h| !h.is_empty()) {
+        Some(recorded) => binary_sha().is_some_and(|sha| sha.eq_ignore_ascii_case(recorded)),
+        None => true,
+    }
+}
+
+fn file_sha256(path: &std::path::Path) -> Option<String> {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut fs::File::open(path).ok()?, &mut hasher).ok()?;
+    Some(hex(&hasher.finalize()))
 }
 
 /// What a self-update actually replaces, and the CDN file it pulls.
@@ -79,14 +104,14 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
         Ok(client) => fetch_remote_launcher_version(&client, &cdn).await,
         Err(_) => None,
     };
-    let installed = fs::read_to_string(launcher_version_marker(&app))
-        .ok()
-        .map(|v| v.trim().to_string());
+    let marker = fs::read_to_string(launcher_version_marker(&app)).ok();
 
-    let update = matches!(
-        &remote,
-        Some(r) if *r != current && installed.as_deref() != Some(r.as_str())
-    );
+    let update = match &remote {
+        Some(r) if *r != current => !marker_suppresses(marker.as_deref(), r, || {
+            update_target().ok().and_then(|(target, _)| file_sha256(&target))
+        }),
+        _ => false,
+    };
     LauncherUpdateInfo { current, remote, update, checked: true, game_running: crate::steam::game_running() }
 }
 
@@ -117,7 +142,8 @@ pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
     let (exe, binary) = update_target()?;
     let key = format!("launcher/{binary}");
     let staged = exe.with_extension("new");
-    download_to_file(&app, "download-launcher", &format!("{cdn}/{key}"), &staged, manifest.hash_for(&key)?).await?;
+    let sha = manifest.hash_for(&key)?.to_string();
+    download_to_file(&app, "download-launcher", &format!("{cdn}/{key}"), &staged, &sha).await?;
     let _ = fs::remove_file(state_path(&staged));
 
     let size = fs::metadata(&staged).map(|m| m.len()).unwrap_or(0);
@@ -140,7 +166,7 @@ pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
         return Err(AppError::detail(ErrorCode::LauncherInstallFailed, e));
     }
 
-    let _ = fs::write(launcher_version_marker(&app), &remote);
+    let _ = fs::write(launcher_version_marker(&app), format!("{remote}\n{sha}\n"));
 
     std::process::Command::new(&exe)
         .spawn()
