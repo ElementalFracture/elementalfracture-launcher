@@ -47,6 +47,9 @@ pub struct SteamStatus {
     /// The shortcut is in Steam: the launcher's on Windows, the game's on
     /// Linux.
     pub shortcut: bool,
+    /// The Steam folder these were read from, shown when no account turns up
+    /// so a report says where the launcher looked.
+    pub root: String,
 }
 
 /// What a link replaced, so unlinking puts it back.
@@ -695,6 +698,7 @@ pub fn steam_status(app: tauri::AppHandle) -> SteamStatus {
         spellbreak_installed: steam.app_installed(SPELLBREAK_APPID),
         linked: linked(&steam, user.as_deref()),
         shortcut: if cfg!(windows) { shortcut_present(&steam, user.as_deref()) } else { game.is_some() },
+        root: steam.root.display().to_string(),
     }
 }
 

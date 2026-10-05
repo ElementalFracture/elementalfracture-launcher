@@ -100,16 +100,25 @@ impl Steam {
         let candidates: Vec<PathBuf> = std::env::var_os("HOME")
             .map(PathBuf::from)
             .map(|home| {
-                [".steam/root", ".steam/steam", ".local/share/Steam"]
+                [".steam/steam", ".steam/root", ".local/share/Steam", ".steam/debian-installation"]
                     .iter()
                     .map(|p| home.join(p))
                     .collect()
             })
             .unwrap_or_default();
-        candidates
-            .into_iter()
-            .find(|p| looks_like_steam(p))
-            .map(|p| Steam { root: fs::canonicalize(&p).unwrap_or(p) })
+        // Every distinct Steam folder on the machine. ~/.steam/steam is what the running client last pointed at,
+        // so it leads; but a leftover install can sit behind another of these links, and reading its logins left
+        // a signed-in player with "Sign in to Steam once" and every switch greyed out. The first folder that has
+        // a signed-in account wins; with none, the first Steam folder found, as before.
+        let mut roots: Vec<Steam> = Vec::new();
+        for p in candidates.into_iter().filter(|p| looks_like_steam(p)) {
+            let root = fs::canonicalize(&p).unwrap_or(p);
+            if !roots.iter().any(|s| s.root == root) {
+                roots.push(Steam { root });
+            }
+        }
+        let signed_in = roots.iter().position(|s| s.active_user().is_some()).unwrap_or(0);
+        (!roots.is_empty()).then(|| roots.swap_remove(signed_in))
     }
 
     /// Steam holds its config in memory and writes it back on exit, so an
@@ -134,7 +143,8 @@ impl Steam {
     /// only account that has a userdata folder.
     pub fn active_user(&self) -> Option<String> {
         let userdata = self.root.join("userdata");
-        let exists = |id: &str| userdata.join(id).join("config").is_dir();
+        // An account folder counts even before Steam has made its config/ inside it (a write creates it).
+        let exists = |id: &str| userdata.join(id).is_dir();
         if let Some(users) = fs::read_to_string(self.root.join("config").join("loginusers.vdf"))
             .ok()
             .and_then(|s| vdf::parse_text(&s).ok())

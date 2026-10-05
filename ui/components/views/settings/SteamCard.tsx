@@ -101,7 +101,12 @@ export function SteamCard({ form }: { form: SettingsForm }) {
           <p className="card-note">{_("settings.steam.closeFirst")}</p>
         ) : (
           !status.has_user && (
-            <p className="card-note">{_("settings.steam.noUser")}</p>
+            <p className="card-note">
+              {_("settings.steam.noUser")}
+              {status.root && (
+                <span className="card-note-path"> ({status.root})</span>
+              )}
+            </p>
           )
         )}
         <div className="switch-row">
