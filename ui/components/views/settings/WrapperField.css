@@ -27,3 +27,25 @@
   font-size: 12px;
   color: var(--destructive);
 }
+/* A line under a field about where its value came from. */
+.field-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+/* The detected id: the whole thing copies on click. */
+.field-note .copy-id {
+  font-family: monospace;
+  color: var(--foreground);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.field-note .copy-id:hover {
+  text-decoration: underline;
+}

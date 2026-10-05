@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 /// retail installs ship g3/Binaries/Win64/Spellbreak.exe, the community
 /// base archive ships g3-Win64-Test.exe (plus a root-level Spellbreak.exe
 /// shim, which we only fall back to if no Win64 binary exists).
-pub(super) const WIN64_EXES: &[&str] = &[
+pub(crate) const WIN64_EXES: &[&str] = &[
     "Spellbreak.exe",
     "g3-Win64-Test.exe",
     "g3-Win64-Shipping.exe",

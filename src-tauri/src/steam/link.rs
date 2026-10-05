@@ -1,4 +1,4 @@
-//! Putting the launcher into Steam, two ways.
+//! Putting the launcher, or the game itself, into Steam.
 //!
 //! - **Linked**: for someone who owns Spellbreak on Steam. Pressing Play on
 //!   Spellbreak opens this launcher, so the session is Spellbreak's own:
@@ -9,7 +9,13 @@
 //!   compatibility tool that runs on the host and hands off to the launcher.
 //!   The Elemental Fracture game files stay where they are either way; Steam's
 //!   copy is only ever the thing Play is pressed on.
-//! - **Shortcut**: a non-Steam game entry for the launcher, with artwork.
+//! - **Shortcut**: a non-Steam game entry, with artwork. On Windows it
+//!   starts the launcher. On Linux it is the game itself, set up the way the
+//!   Linux guide has players do by hand: Spellbreak.exe, the mod loader's
+//!   Wine override in its launch options, forced onto a Proton build. The
+//!   launch wrapper's Steam option then has Play start it through Steam
+//!   (`steam steam://rungameid/<id>`), for players whose game only runs well
+//!   under Steam's own Proton setup.
 //!
 //! Steam keeps all of this in memory and writes it back when it exits, so
 //! every change requires Steam to be closed, and each file is backed up
@@ -18,7 +24,7 @@
 use super::client::Steam;
 use super::vdf::{self, Bin, BinObj, Obj};
 use crate::error::{AppError, AppResult, ErrorCode};
-use crate::{platform, settings};
+use crate::{game, platform, settings};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -38,6 +44,8 @@ pub struct SteamStatus {
     /// Spellbreak is installed through Steam, so it can be linked.
     pub spellbreak_installed: bool,
     pub linked: bool,
+    /// The shortcut is in Steam: the launcher's on Windows, the game's on
+    /// Linux.
     pub shortcut: bool,
 }
 
@@ -446,20 +454,247 @@ fn set_shortcut(app: &tauri::AppHandle, add: bool) -> AppResult<()> {
     Ok(())
 }
 
+/* ---- the game itself as a shortcut, on Proton ---- */
+
+#[cfg_attr(windows, allow(dead_code))]
+const GAME_SHORTCUT_NAME: &str = "Spellbreak";
+/// The Wine override that loads the EF mod loader, which Steam can't be
+/// told any other way.
+#[cfg_attr(windows, allow(dead_code))]
+const GAME_LAUNCH_OPTIONS: &str = r#"WINEDLLOVERRIDES="xinput1_3=n,b" %command%"#;
+
+/// The exe Steam runs: the top-level Spellbreak.exe players have been
+/// picking by hand, else the one the launcher itself runs.
+#[cfg_attr(windows, allow(dead_code))]
+pub fn steam_game_exe(root: &Path) -> Option<PathBuf> {
+    let found = game::find_exe(root)?;
+    let shim = root.join("Spellbreak.exe");
+    Some(if shim.is_file() { shim } else { found })
+}
+
+/// Shortcuts that start this game folder's exe, whoever made them: one a
+/// player set up by hand is adopted rather than doubled.
+pub fn game_shortcut_is_ours(entry: &BinObj, root: &Path) -> bool {
+    entry.str("Exe").is_some_and(|exe| {
+        let exe = Path::new(unquote(exe));
+        let name = exe.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        exe.starts_with(root) && game::WIN64_EXES.iter().any(|w| w.eq_ignore_ascii_case(&name))
+    })
+}
+
+/// Steam's game id for a shortcut, the one `steam://rungameid/` takes and
+/// its "Add desktop shortcut" writes: the shortcut id in the top half.
+#[cfg_attr(windows, allow(dead_code))]
+pub fn rungameid(appid: u32) -> u64 {
+    (u64::from(appid) << 32) | 0x0200_0000
+}
+
+/// Add or update the entry (an adopted one keeps its id and name, and its
+/// launch options when they already carry the override), or remove it.
+#[cfg_attr(windows, allow(dead_code))]
+pub fn apply_game_shortcut(tree: &mut BinObj, root: &Path, exe: &Path, add: bool) -> Option<u32> {
+    let list = entries(tree);
+    if !add {
+        list.0.retain(|(_, v)| !matches!(v, Bin::Obj(e) if game_shortcut_is_ours(e, root)));
+        for (i, (k, _)) in list.0.iter_mut().enumerate() {
+            *k = i.to_string();
+        }
+        return None;
+    }
+    let exe_field = format!("\"{}\"", exe.display());
+    let existing = list
+        .0
+        .iter()
+        .position(|(_, v)| matches!(v, Bin::Obj(e) if game_shortcut_is_ours(e, root)));
+    let index = existing.unwrap_or_else(|| {
+        let mut fresh = BinObj::default();
+        fresh.set("appid", Bin::Int(shortcut_appid(&exe_field, GAME_SHORTCUT_NAME) as i32));
+        fresh.set("AppName", Bin::Str(GAME_SHORTCUT_NAME.into()));
+        list.0.push((list.0.len().to_string(), Bin::Obj(fresh)));
+        list.0.len() - 1
+    });
+    let Bin::Obj(entry) = &mut list.0[index].1 else { unreachable!() };
+    let appid = entry.int("appid").unwrap_or(shortcut_appid(&exe_field, GAME_SHORTCUT_NAME) as i32) as u32;
+    entry.set("Exe", Bin::Str(exe_field));
+    entry.set(
+        "StartDir",
+        Bin::Str(format!("\"{}\"", exe.parent().unwrap_or(Path::new("")).display())),
+    );
+    if !entry.str("LaunchOptions").is_some_and(|o| o.contains("xinput1_3=n,b")) {
+        entry.set("LaunchOptions", Bin::Str(GAME_LAUNCH_OPTIONS.into()));
+    }
+    for (key, default) in [("AllowDesktopConfig", 1), ("AllowOverlay", 1)] {
+        if entry.get(key).is_none() {
+            entry.set(key, Bin::Int(default));
+        }
+    }
+    if entry.get("tags").is_none() {
+        entry.set("tags", Bin::Obj(BinObj::default()));
+    }
+    Some(appid)
+}
+
+#[cfg_attr(windows, allow(dead_code))]
+fn game_shortcut_ids(tree: &mut BinObj, root: &Path) -> Vec<u32> {
+    entries(tree)
+        .0
+        .iter()
+        .filter_map(|(_, v)| match v {
+            Bin::Obj(e) if game_shortcut_is_ours(e, root) => e.int("appid").map(|i| i as u32),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The game's shortcut id.
+#[cfg(not(windows))]
+fn game_shortcut_id(steam: &Steam, user: Option<&str>, root: &str) -> Option<u32> {
+    if root.is_empty() {
+        return None;
+    }
+    let mut tree = read_shortcuts(&shortcuts_file(steam, user?)).ok()?;
+    game_shortcut_ids(&mut tree, Path::new(root)).first().copied()
+}
+
+#[cfg(windows)]
+fn game_shortcut_id(_: &Steam, _: Option<&str>, _: &str) -> Option<u32> {
+    None
+}
+
+/// The key Steam files a game's compatibility setting under: a shortcut's
+/// id, which is the top half of its game id, or a Steam app's own id.
+pub fn compat_key(game_id: &str) -> Option<String> {
+    let id: u64 = game_id.trim().parse().ok()?;
+    Some(if id >> 32 != 0 { (id >> 32).to_string() } else { id.to_string() })
+}
+
+/// The tool Steam forces on the game filed under `key`.
+#[cfg_attr(windows, allow(dead_code))]
+fn forced_tool(config: &Obj, key: &str) -> Option<String> {
+    #[cfg(not(windows))]
+    {
+        config
+            .path(&MAPPING_PATH)
+            .and_then(|m| m.obj(key))
+            .and_then(|m| m.str("name"))
+            .filter(|n| !n.is_empty())
+            .map(str::to_string)
+    }
+    #[cfg(windows)]
+    {
+        let _ = (config, key);
+        None
+    }
+}
+
+/// Force `tool` on the game filed under `key`, or with "" hand it back to
+/// Steam's default.
+#[cfg(not(windows))]
+fn force_tool(config: &mut Obj, key: &str, tool: &str) {
+    let mapping = config.path_mut(&MAPPING_PATH);
+    if tool.is_empty() {
+        mapping.remove(key);
+        return;
+    }
+    let entry = mapping.path_mut(&[key]);
+    entry.set_str("name", tool);
+    entry.set_str("config", "");
+    entry.set_str("priority", "250");
+}
+
+#[cfg(windows)]
+fn set_game_shortcut(_: &tauri::AppHandle, _: bool) -> AppResult<()> {
+    Err(AppError::new(ErrorCode::SteamNotFound))
+}
+
+/// Steam closed, both files are written: the shortcut in `shortcuts.vdf`,
+/// and in `config.vdf` the Proton build it is forced onto — the one already
+/// there for an adopted shortcut, else the head of what Steam can use (the
+/// launch wrapper's Steam option changes it after). Adding it also points
+/// Play at it: the launch wrapper's Steam option, on this shortcut's id.
+/// Removing it also takes out a launcher shortcut an older version added
+/// here, and puts Play back on the default wrapper if it was starting the
+/// shortcut that went.
+#[cfg(not(windows))]
+fn set_game_shortcut(app: &tauri::AppHandle, add: bool) -> AppResult<()> {
+    let (steam, user) = writable_steam(true)?;
+    let user = user.unwrap();
+    let s = settings::load(app);
+    if s.game_path.is_empty() {
+        return Err(AppError::new(ErrorCode::NoGameFolder));
+    }
+    let root = PathBuf::from(&s.game_path);
+    let file = shortcuts_file(&steam, &user);
+    let mut tree = read_shortcuts(&file)?;
+    let config = steam.config_vdf();
+    let mut config_tree = read_text(&config)?;
+    let grid = steam.user_config(&user).join("grid");
+
+    if add {
+        let exe = steam_game_exe(&root).ok_or_else(|| {
+            AppError::new(ErrorCode::NoGameBinary)
+                .with("dir", root.join("g3").join("Binaries").join("Win64").display())
+                .with("names", game::WIN64_EXES.join(", "))
+        })?;
+        let appid = apply_game_shortcut(&mut tree, &root, &exe, true).unwrap();
+        let key = appid.to_string();
+        if forced_tool(&config_tree, &key).is_none() {
+            if let Some(tool) = game::steam_compat_tools(&steam).into_iter().find_map(|o| o.tool) {
+                force_tool(&mut config_tree, &key, &tool);
+            }
+        }
+        write_steam_file(&file, &vdf::write_binary(&tree))?;
+        write_steam_file(&config, vdf::write_text(&config_tree).as_bytes())?;
+        fs::create_dir_all(&grid)?;
+        for (suffix, bytes) in ART {
+            let path = grid.join(format!("{appid}{suffix}"));
+            if !path.exists() {
+                fs::write(path, bytes)?;
+            }
+        }
+        settings::mutate(app, |s| {
+            s.launch_command = format!("steam steam://rungameid/{}", rungameid(appid));
+        })?;
+    } else {
+        let ids = game_shortcut_ids(&mut tree, &root);
+        apply_game_shortcut(&mut tree, &root, Path::new(""), false);
+        apply_shortcut(&mut tree, &launcher_path()?, "", false);
+        for id in &ids {
+            force_tool(&mut config_tree, &id.to_string(), "");
+            // Only the artwork we put there: a player's own picks stay.
+            for (suffix, bytes) in ART {
+                let path = grid.join(format!("{id}{suffix}"));
+                if fs::read(&path).is_ok_and(|b| b == bytes) {
+                    let _ = fs::remove_file(path);
+                }
+            }
+        }
+        write_steam_file(&file, &vdf::write_binary(&tree))?;
+        write_steam_file(&config, vdf::write_text(&config_tree).as_bytes())?;
+        let ours: Vec<String> =
+            ids.iter().map(|id| format!("steam steam://rungameid/{}", rungameid(*id))).collect();
+        if ours.contains(&s.launch_command.trim().to_string()) {
+            settings::mutate(app, |s| s.launch_command = settings::Settings::default().launch_command)?;
+        }
+    }
+    Ok(())
+}
+
 /* ---- commands ---- */
 
 #[tauri::command]
 #[specta::specta]
-pub fn steam_status() -> SteamStatus {
+pub fn steam_status(app: tauri::AppHandle) -> SteamStatus {
     let Some(steam) = Steam::locate() else { return SteamStatus::default() };
     let user = steam.active_user();
+    let game = game_shortcut_id(&steam, user.as_deref(), &settings::load(&app).game_path);
     SteamStatus {
         found: true,
         running: steam.running(),
         has_user: user.is_some(),
         spellbreak_installed: steam.app_installed(SPELLBREAK_APPID),
         linked: linked(&steam, user.as_deref()),
-        shortcut: shortcut_present(&steam, user.as_deref()),
+        shortcut: if cfg!(windows) { shortcut_present(&steam, user.as_deref()) } else { game.is_some() },
     }
 }
 
@@ -470,14 +705,72 @@ pub fn steam_set_linked(app: tauri::AppHandle, linked: bool) -> AppResult<SteamS
         return Err(AppError::new(ErrorCode::SpellbreakNotInSteam));
     }
     set_linked(&app, linked)?;
-    Ok(steam_status())
+    Ok(steam_status(app))
 }
 
+/// The launcher's shortcut on Windows, the game's on Linux.
 #[tauri::command]
 #[specta::specta]
 pub fn steam_set_shortcut(app: tauri::AppHandle, added: bool) -> AppResult<SteamStatus> {
-    set_shortcut(&app, added)?;
-    Ok(steam_status())
+    if cfg!(windows) {
+        set_shortcut(&app, added)?;
+    } else {
+        set_game_shortcut(&app, added)?;
+    }
+    Ok(steam_status(app))
+}
+
+/// Steam's game id for the game's shortcut, for the launch wrapper's Steam
+/// option: whichever shortcut starts this game folder, the launcher's own
+/// or one the player made by hand. None when there is none (Linux only).
+#[tauri::command]
+#[specta::specta]
+pub fn steam_game_id(app: tauri::AppHandle) -> Option<String> {
+    let steam = Steam::locate()?;
+    let user = steam.active_user();
+    game_shortcut_id(&steam, user.as_deref(), &settings::load(&app).game_path)
+        .map(|id| rungameid(id).to_string())
+}
+
+/// The Proton build Steam forces on the game behind `game_id` (what
+/// `steam://rungameid/` takes), by Steam's name. None for Steam's default.
+#[tauri::command]
+#[specta::specta]
+pub fn steam_compat_tool(game_id: String) -> Option<String> {
+    let steam = Steam::locate()?;
+    forced_tool(&read_text(&steam.config_vdf()).ok()?, &compat_key(&game_id)?)
+}
+
+/// Force a Proton build (Steam's name for it) on the game behind `game_id`,
+/// or with "" hand it back to Steam's default. Needs Steam closed.
+#[tauri::command]
+#[specta::specta]
+pub fn steam_set_compat_tool(game_id: String, tool: String) -> AppResult<()> {
+    #[cfg(windows)]
+    {
+        let _ = (game_id, tool);
+        Err(AppError::new(ErrorCode::SteamNotFound))
+    }
+    #[cfg(not(windows))]
+    {
+        let key = compat_key(&game_id)
+            .ok_or_else(|| AppError::detail(ErrorCode::Io, format!("not a Steam game id: {game_id}")))?;
+        let (steam, _) = writable_steam(false)?;
+        let file = steam.config_vdf();
+        let mut tree = read_text(&file)?;
+        force_tool(&mut tree, &key, tool.trim());
+        write_steam_file(&file, vdf::write_text(&tree).as_bytes())
+    }
+}
+
+/// The Proton builds Steam can force on the game shortcut.
+#[tauri::command]
+#[specta::specta]
+pub fn steam_compat_tools() -> Vec<game::ProtonOption> {
+    if cfg!(windows) {
+        return Vec::new();
+    }
+    Steam::locate().map(|s| game::steam_compat_tools(&s)).unwrap_or_default()
 }
 
 /// Ask Steam to exit, so its settings can be changed.

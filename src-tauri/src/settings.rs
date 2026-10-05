@@ -15,6 +15,10 @@ pub struct Settings {
     /// Optional WINEPREFIX handed to the launch wrapper (Linux only).
     /// Empty = the wrapper's default prefix.
     pub wine_prefix: String,
+    /// The Proton build a Proton-based wrapper (umu-run) runs the game on,
+    /// handed over as PROTONPATH: a folder holding a `proton` script, picked
+    /// from those `detect_protons` found. Empty = the launcher picks one.
+    pub proton_path: String,
     /// Base URL of the account portal (serves web/api.php).
     pub play_base: String,
     pub cdn_base: String,
@@ -123,6 +127,7 @@ impl Default for Settings {
             // plain Wine. Falls back to Wine automatically if umu is absent.
             launch_command: if cfg!(windows) { String::new() } else { "umu-run".into() },
             wine_prefix: String::new(),
+            proton_path: String::new(),
             play_base: "https://play.elefrac.com".into(),
             cdn_base: cdn_base().into(),
             auth_url: format!("{}/auth", portal_base()),
@@ -269,6 +274,7 @@ fn reset_view_fields(s: &mut Settings) {
     // card that writes it isn't on screen).
     s.launch_command = d.launch_command;
     s.wine_prefix = d.wine_prefix;
+    s.proton_path = d.proton_path;
     // URLs card.
     s.cdn_base = d.cdn_base;
     s.auth_url = d.auth_url;

@@ -5,6 +5,7 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     game_path: "/games/spellbreak",
     launch_command: "umu-run",
     wine_prefix: "",
+    proton_path: "",
     play_base: "https://play.elefrac.com",
     cdn_base: "https://cdn.elefrac.com",
     auth_url: "https://play.elefrac.com/auth",

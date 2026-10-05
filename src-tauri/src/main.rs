@@ -78,6 +78,7 @@ fn main() {
         game::launch_game,
         game::auto_find_game,
         game::detect_wrappers,
+        game::detect_protons,
         download::download_game,
         download::ensure_runtime,
         download::update_patch,
@@ -102,6 +103,10 @@ fn main() {
         steam::steam_status,
         steam::steam_set_linked,
         steam::steam_set_shortcut,
+        steam::steam_game_id,
+        steam::steam_compat_tool,
+        steam::steam_set_compat_tool,
+        steam::steam_compat_tools,
         steam::steam_shutdown,
         steam::take_quickstart_notice,
     ]);

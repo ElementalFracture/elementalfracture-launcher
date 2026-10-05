@@ -176,7 +176,7 @@ impl Steam {
     }
 
     /// Every library folder, the root's own included.
-    fn libraries(&self) -> Vec<PathBuf> {
+    pub fn libraries(&self) -> Vec<PathBuf> {
         let mut libs = vec![self.root.clone()];
         if let Some(tree) = fs::read_to_string(self.root.join("steamapps").join("libraryfolders.vdf"))
             .ok()

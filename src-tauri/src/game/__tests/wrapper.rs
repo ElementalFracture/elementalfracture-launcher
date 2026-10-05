@@ -109,3 +109,15 @@ fn proton_and_custom_commands_are_not_plain_wine() {
         assert!(!is_plain_wine(c), "{c} should not be plain Wine");
     }
 }
+
+fn a_steam_run_command_is_recognised() {
+    let run = "steam steam://rungameid/18150169937639899136";
+    assert_eq!(
+        steam_run(run).unwrap(),
+        ["steam", "steam://rungameid/18150169937639899136"]
+    );
+    assert!(steam_run("/usr/bin/steam steam://rungameid/1").is_some());
+    for other in ["umu-run", "steam", "steam -applaunch 1399780", "steam steam://rungameid/1 extra"] {
+        assert!(steam_run(other).is_none(), "{other:?}");
+    }
+}

@@ -49,6 +49,8 @@ export const it: Catalogue = {
       quickstartHelp: "Premendo Gioca su Spellbreak in Steam il gioco si avvia senza mostrare il launcher, con l'ultima modalità di gioco scelta. Per aprire il launcher (ad esempio per cambiare modalità di gioco), tieni premuto Maiusc mentre premi Gioca finché non compare. Si apre da solo anche quando c'è un aggiornamento da installare o devi accedere.",
       shortcut: "Aggiungi Elemental Fracture a Steam",
       shortcutHelp: "Aggiunge il launcher alla tua libreria di Steam come gioco non di Steam, con le immagini, così puoi assegnargli una configurazione del controller di Steam. Usalo se non possiedi Spellbreak su Steam.",
+      shortcutLinux:
+        "Su Linux, assicurati che Steam sia selezionato in Comando di avvio.",
       added: "Aggiunto alla tua libreria di Steam.",
       removed: "Rimosso dalla tua libreria di Steam.",
     },
@@ -74,6 +76,26 @@ export const it: Catalogue = {
       prefixPlaceholder: "es. /home/tu/.wineprefixes/spellbreak",
       pickPrefix: "Seleziona una cartella di prefix di Wine",
       browse: "Sfoglia…",
+      proton: "Versione di Proton",
+      protonHelp:
+        "(usata da umu-run; Automatico preferisce il GE-Proton più recente)",
+      protonAuto: "Automatico",
+      protonMissing: "{path} (non installato — viene usato Automatico)",
+      steam: "Steam",
+      steamId: "ID gioco Steam",
+      steamIdHelp:
+        "(il numero dopo steam://rungameid/ nel collegamento sul desktop di Steam del gioco)",
+      steamIdPlaceholder: "es. 18150169937639899136",
+      steamIdDetected: "Rilevato dal collegamento Steam del gioco.",
+      steamIdDetectedOther: "L'ID gioco di Elemental Fracture rilevato è:",
+      steamIdCopy: "Clicca per copiare",
+      steamIdCopied: "ID gioco copiato.",
+      steamIdCopyFailed: "Impossibile copiare l'ID gioco.",
+      steamProton: "Versione di Proton",
+      steamProtonHelp:
+        "(impostazione di compatibilità di Steam per il gioco; chiudi Steam per cambiarla)",
+      steamProtonDefault: "Predefinito di Steam",
+      steamProtonSet: "Steam avvierà il gioco con questa versione di Proton.",
     },
     urls: {
       title: "URL",

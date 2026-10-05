@@ -6,7 +6,12 @@ import { isWindows } from "@/lib/platform";
 import type { Settings } from "@/lib/rust";
 import type { LanguageSetting } from "@/i18n";
 import { toastError } from "@/i18n/errors";
-import { computeWrapperState, type WrapperState } from "./wrapper";
+import {
+  computeWrapperState,
+  parseSteamGameId,
+  steamCommand,
+  type WrapperState,
+} from "./wrapper";
 
 /** The text fields, named by the settings key each one writes. */
 export type TextKey = "wine_prefix" | "cdn_base" | "auth_url" | "players_url";
@@ -46,6 +51,11 @@ export interface SettingsForm {
    *  set it doesn't race its own state update. */
   commitText: (key: TextKey, value: string) => void;
 
+  /** The Proton build umu-run is pointed at, written the moment it is
+      picked. "" = the launcher picks one. */
+  protonPath: string;
+  setProtonPath: (v: string) => void;
+
   /** The display language, written the moment it is picked. "" = follow the
       OS. Not a draft: a picker has no half-chosen state. */
   language: LanguageSetting;
@@ -74,6 +84,7 @@ export function useSettingsForm(): SettingsForm {
   const [closeOnLaunch, setCloseOnLaunchState] = useState(false);
   const [steamQuickstart, setSteamQuickstartState] = useState(true);
   const [winePrefix, setWinePrefix] = useState("");
+  const [protonPath, setProtonPathState] = useState("");
   const [cdnBase, setCdnBase] = useState("");
   const [authUrl, setAuthUrl] = useState("");
   const [playersUrl, setPlayersUrl] = useState("");
@@ -124,6 +135,7 @@ export function useSettingsForm(): SettingsForm {
   const srcAuthUrl = settings?.auth_url ?? "";
   const srcPlayersUrl = settings?.players_url ?? "";
   const srcLaunchCommand = settings?.launch_command ?? "";
+  const srcProtonPath = settings?.proton_path ?? "";
   const srcLanguage = (settings?.language ?? "") as LanguageSetting;
   const srcMinimizeOnClose = settings?.minimize_on_close ?? false;
   const srcCloseOnLaunch = settings?.close_on_launch ?? false;
@@ -142,7 +154,14 @@ export function useSettingsForm(): SettingsForm {
     setMinimizeOnCloseState(srcMinimizeOnClose);
     setCloseOnLaunchState(srcCloseOnLaunch);
     setSteamQuickstartState(srcSteamQuickstart);
-  }, [srcLanguage, srcMinimizeOnClose, srcCloseOnLaunch, srcSteamQuickstart]);
+    setProtonPathState(srcProtonPath);
+  }, [
+    srcLanguage,
+    srcMinimizeOnClose,
+    srcCloseOnLaunch,
+    srcSteamQuickstart,
+    srcProtonPath,
+  ]);
 
   // Separate pass: the detected wrapper list arrives after settings do, and
   // the saved command can only be classified as known-vs-custom once it's in.
@@ -151,10 +170,15 @@ export function useSettingsForm(): SettingsForm {
   }, [srcLaunchCommand, wrappers]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  /** The command a wrapper state resolves to, as it goes to disk. */
-  const commandFor = (w: WrapperState) => {
+  /** The command a wrapper state resolves to, as it goes to disk. Null for
+   *  a Steam pick with no game id yet: nothing to write until there is one. */
+  const commandFor = (w: WrapperState): string | null => {
     if (isWindows) {
       return latest.current?.launch_command ?? settings?.launch_command ?? "";
+    }
+    if (w.mode === "steam") {
+      const id = parseSteamGameId(w.value);
+      return id ? steamCommand(id) : null;
     }
     if (!wrappers.length) {
       return w.value.trim();
@@ -182,6 +206,11 @@ export function useSettingsForm(): SettingsForm {
     persist({ steam_autostart: v });
   };
 
+  const setProtonPath = (v: string) => {
+    setProtonPathState(v);
+    persist({ proton_path: v });
+  };
+
   const commitText = (key: TextKey, value: string) => {
     const trimmed = value.trim();
     // Leaving a field you didn't change shouldn't cost a write.
@@ -193,7 +222,10 @@ export function useSettingsForm(): SettingsForm {
 
   const commitWrapper = (w: WrapperState) => {
     const command = commandFor(w);
-    if ((latest.current ?? settings)?.launch_command === command) {
+    if (
+      command === null ||
+      (latest.current ?? settings)?.launch_command === command
+    ) {
       return;
     }
     persist({ launch_command: command });
@@ -210,6 +242,8 @@ export function useSettingsForm(): SettingsForm {
     setSteamQuickstart,
     winePrefix,
     setWinePrefix,
+    protonPath,
+    setProtonPath,
     cdnBase,
     setCdnBase,
     authUrl,

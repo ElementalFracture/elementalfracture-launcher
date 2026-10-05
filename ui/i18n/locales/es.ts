@@ -55,6 +55,8 @@ export const es: Catalogue = {
       shortcut: "Añadir Elemental Fracture a Steam",
       shortcutHelp:
         "Añade el launcher a tu biblioteca de Steam como juego ajeno a Steam, con imágenes, para que puedas asignarle una configuración de mando de Steam. Úsalo si no tienes Spellbreak en Steam.",
+      shortcutLinux:
+        "En Linux, asegúrate de que Steam esté seleccionado en Comando de lanzamiento.",
       added: "Añadido a tu biblioteca de Steam.",
       removed: "Quitado de tu biblioteca de Steam.",
     },
@@ -81,6 +83,27 @@ export const es: Catalogue = {
       prefixPlaceholder: "p. ej. /home/tu-usuario/.wineprefixes/spellbreak",
       pickPrefix: "Selecciona una carpeta de prefijo de Wine",
       browse: "Examinar…",
+      proton: "Versión de Proton",
+      protonHelp:
+        "(la usa umu-run; Automático prefiere el GE-Proton más reciente)",
+      protonAuto: "Automático",
+      protonMissing: "{path} (no instalado — se usa Automático)",
+      steam: "Steam",
+      steamId: "ID de juego de Steam",
+      steamIdHelp:
+        "(el número tras steam://rungameid/ en el acceso directo de escritorio de Steam del juego)",
+      steamIdPlaceholder: "p. ej. 18150169937639899136",
+      steamIdDetected: "Detectado en el acceso directo de Steam del juego.",
+      steamIdDetectedOther:
+        "El ID de juego de Elemental Fracture detectado es:",
+      steamIdCopy: "Haz clic para copiar",
+      steamIdCopied: "ID de juego copiado.",
+      steamIdCopyFailed: "No se pudo copiar el ID de juego.",
+      steamProton: "Versión de Proton",
+      steamProtonHelp:
+        "(ajuste de compatibilidad de Steam para el juego; cierra Steam para cambiarlo)",
+      steamProtonDefault: "Predeterminado de Steam",
+      steamProtonSet: "Steam ejecutará el juego con esta versión de Proton.",
     },
     urls: {
       title: "URL",
