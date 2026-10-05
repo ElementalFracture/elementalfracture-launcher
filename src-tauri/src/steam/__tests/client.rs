@@ -27,6 +27,27 @@ fn the_most_recent_login_is_the_active_user() {
     assert_eq!(steam.active_user().as_deref(), Some("33"));
 }
 
+/// Current Steam clients write no MostRecent: the signed-in account is the auto-login one, else the latest login.
+#[test]
+fn without_most_recent_the_auto_login_then_the_latest_login_is_the_active_user() {
+    let (_dir, steam) = fake_steam();
+    add_user(&steam, "22");
+    add_user(&steam, "33");
+    let file = steam.root.join("config/loginusers.vdf");
+    fs::write(
+        &file,
+        "\"users\"\n{\n\t\"76561197960265750\"\n\t{\n\t\t\"AutoLogin\"\t\t\"1\"\n\t\t\"Timestamp\"\t\t\"100\"\n\t}\n\t\"76561197960265761\"\n\t{\n\t\t\"AutoLogin\"\t\t\"0\"\n\t\t\"Timestamp\"\t\t\"200\"\n\t}\n}\n",
+    )
+    .unwrap();
+    assert_eq!(steam.active_user().as_deref(), Some("22"));
+    fs::write(
+        &file,
+        "\"users\"\n{\n\t\"76561197960265750\"\n\t{\n\t\t\"Timestamp\"\t\t\"100\"\n\t}\n\t\"76561197960265761\"\n\t{\n\t\t\"Timestamp\"\t\t\"200\"\n\t}\n}\n",
+    )
+    .unwrap();
+    assert_eq!(steam.active_user().as_deref(), Some("33"));
+}
+
 #[test]
 fn without_login_history_a_lone_account_is_used_and_several_are_not_guessed() {
     let (_dir, steam) = fake_steam();

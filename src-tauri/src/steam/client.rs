@@ -129,8 +129,9 @@ impl Steam {
         }
     }
 
-    /// The account Steam signs into next: the most recent login, or the only
-    /// account that has a userdata folder.
+    /// The account Steam signs into next: the most recent login (MostRecent,
+    /// else the auto-login account, else the latest login Timestamp), or the
+    /// only account that has a userdata folder.
     pub fn active_user(&self) -> Option<String> {
         let userdata = self.root.join("userdata");
         let exists = |id: &str| userdata.join(id).join("config").is_dir();
@@ -139,17 +140,33 @@ impl Steam {
             .and_then(|s| vdf::parse_text(&s).ok())
             .and_then(|t| t.obj("users").cloned())
         {
-            let recent = users.0.iter().find_map(|(id, v)| match v {
-                vdf::Value::Obj(u) if u.str("MostRecent") == Some("1") => Some(id.clone()),
-                _ => None,
-            });
-            if let Some(account) = recent
-                .and_then(|id| id.parse::<u64>().ok())
-                .and_then(|id| id.checked_sub(STEAMID64_BASE))
-                .map(|a| a.to_string())
-                .filter(|a| exists(a))
-            {
-                return Some(account);
+            // Only logins this machine has a userdata folder for, as account ids.
+            let logins: Vec<(String, &vdf::Obj)> = users
+                .0
+                .iter()
+                .filter_map(|(id, v)| match v {
+                    vdf::Value::Obj(u) => id
+                        .parse::<u64>()
+                        .ok()
+                        .and_then(|id| id.checked_sub(STEAMID64_BASE))
+                        .map(|a| (a.to_string(), u)),
+                    _ => None,
+                })
+                .filter(|(a, _)| exists(a))
+                .collect();
+            // Older clients flag the last login "MostRecent". Current ones (2026) no longer write it: they mark the
+            // account they sign into with "AutoLogin" and stamp every login with "Timestamp". Requiring MostRecent
+            // left a machine with two or more Steam accounts with no user at all, so the Steam card told the
+            // player to sign in to Steam, then to close it, forever.
+            let flag = |u: &vdf::Obj, key: &str| u.str(key) == Some("1");
+            let stamp = |u: &vdf::Obj| u.str("Timestamp").and_then(|t| t.parse::<u64>().ok()).unwrap_or(0);
+            let pick = logins
+                .iter()
+                .find(|(_, u)| flag(u, "MostRecent"))
+                .or_else(|| logins.iter().filter(|(_, u)| flag(u, "AutoLogin")).max_by_key(|(_, u)| stamp(u)))
+                .or_else(|| logins.iter().filter(|(_, u)| stamp(u) > 0).max_by_key(|(_, u)| stamp(u)));
+            if let Some((account, _)) = pick {
+                return Some(account.clone());
             }
         }
         let mut accounts: Vec<String> = fs::read_dir(&userdata)
