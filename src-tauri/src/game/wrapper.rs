@@ -113,6 +113,24 @@ pub(super) fn parse_wrapper(command: &str) -> Vec<String> {
     trimmed.split_whitespace().map(str::to_string).collect()
 }
 
+/// A plain Wine front-end: no Proton, so no DXVK. Spellbreak then renders through Wine's own Direct3D
+/// (wined3d), which draws characters flat white and runs at a fraction of the frame rate. The launcher
+/// only runs the game through Proton (umu-run); this is how it recognises a setting to move off of.
+/// Anything mentioning umu or Proton is not plain Wine, and neither is an unknown custom command.
+pub(crate) fn is_plain_wine(command: &str) -> bool {
+    let c = command.trim();
+    let lower = c.to_ascii_lowercase();
+    if lower.contains("umu") || lower.contains("proton") {
+        return false;
+    }
+    if c.contains("org.winehq.Wine") {
+        return true;
+    }
+    let first = parse_wrapper(c).into_iter().next().unwrap_or_default();
+    let name = Path::new(&first).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    matches!(name.as_str(), "wine" | "wine64" | "wine-stable" | "wine-staging" | "wine-development")
+}
+
 /// Check the launch wrapper exists where the game will actually run
 /// (on the host when the launcher itself lives in a container).
 pub(super) fn wrapper_available(prog: &str) -> bool {

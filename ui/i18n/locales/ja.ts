@@ -73,6 +73,9 @@ export const ja: Catalogue = {
       command: "コマンド",
       commandHelp: "（ゲームの exe を実行します — Proton-GE 推奨）",
       custom: "カスタム…",
+      noDxvkTag: "(DXVKなし・非推奨)",
+      noDxvk:
+        "素のWineではDXVKなしで起動するため、キャラクターが白く表示され動作も重くなります。起動を押すとランチャーがumu-run（Proton）に切り替えます。",
       placeholder: "例: umu-run",
       placeholderNone:
         "例: umu-run（未検出。Wine か umu をインストールしてください）",

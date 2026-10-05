@@ -72,6 +72,9 @@ export const ko: Catalogue = {
       command: "명령",
       commandHelp: "(게임 exe를 실행합니다 — Proton-GE 권장)",
       custom: "직접 입력…",
+      noDxvkTag: "(DXVK 없음, 권장하지 않음)",
+      noDxvk:
+        "일반 Wine은 DXVK 없이 게임을 실행해 캐릭터가 하얗게 보이고 느려집니다. 실행을 누르면 런처가 umu-run(Proton)으로 전환합니다.",
       placeholder: "예: umu-run",
       placeholderNone:
         "예: umu-run (감지되지 않음. Wine 또는 umu를 설치하세요)",

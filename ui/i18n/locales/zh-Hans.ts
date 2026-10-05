@@ -66,6 +66,9 @@ export const zhHans: Catalogue = {
       command: "命令",
       commandHelp: "（用于运行游戏 exe — 推荐 Proton-GE）",
       custom: "自定义…",
+      noDxvkTag: "（无 DXVK，不推荐）",
+      noDxvk:
+        "纯 Wine 会在没有 DXVK 的情况下运行游戏：角色显示为白色且运行缓慢。点击“启动”时，启动器会切换到 umu-run（Proton）。",
       placeholder: "例如 umu-run",
       placeholderNone: "例如 umu-run（未检测到；请安装 Wine 或 umu）",
       prefix: "Wine prefix",

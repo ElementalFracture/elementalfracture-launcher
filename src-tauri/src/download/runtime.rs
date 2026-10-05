@@ -30,9 +30,9 @@ const UMU_ZIPAPP_URL: &str =
 /// zipapp into the launcher's own data dir (no root, no Steam) and points
 /// `launch_command` at it; umu-run then auto-downloads Proton on first launch.
 ///
-/// Defensive throughout: it only ever WRITES into its own runtime dir and only
-/// rewrites `launch_command` when the configured one isn't actually installed,
-/// so it never touches or corrupts an existing runtime.
+/// Defensive throughout: it only ever WRITES into its own runtime dir, and it
+/// rewrites `launch_command` only when the configured one isn't installed or is
+/// plain Wine (no DXVK), so a working Proton or custom setup is left alone.
 #[tauri::command]
 #[specta::specta]
 pub async fn ensure_runtime(app: tauri::AppHandle) -> AppResult<String> {
@@ -44,30 +44,27 @@ pub async fn ensure_runtime(app: tauri::AppHandle) -> AppResult<String> {
 
     // (a) Already good? A configured wrapper that actually resolves (a bare
     // name on PATH, or an absolute path we provisioned earlier) means there is
-    // nothing to do.
+    // nothing to do, unless it is plain Wine.
     let configured = s.launch_command.trim();
     let prog = configured.split_whitespace().next().unwrap_or("");
-    if game::command_present(prog) {
+    let plain_wine = game::is_plain_wine(configured);
+    if game::command_present(prog) && !plain_wine {
         return Ok(format!("Game runtime already present ({prog}); nothing to set up."));
     }
 
-    // The configured wrapper is missing. Adopt any real runtime that IS on the
-    // system before downloading anything, preferring umu-run (Proton) over
-    // plain Wine. This also self-heals the default "umu-run" config on a box
-    // that only has wine, and vice-versa.
-    for cand in ["umu-run", "wine", "wine64", "wine-stable"] {
-        if game::command_present(cand) {
-            settings::mutate(&app, |s| s.launch_command = cand.into())?;
-            return Ok(format!("Using the runtime already installed: {cand}."));
-        }
-    }
-
-    // (b) Nothing usable is installed — provision umu-run. It's a python
-    // zipapp, so the host needs python3 (which nearly every desktop Linux ships
-    // by default). Fail with a clear, actionable message if it's genuinely
-    // absent rather than downloading something that can't run.
-    if !game::command_present("python3") {
-        return Err(AppError::new(ErrorCode::RuntimeNeedsPython));
+    // Proton only. Plain Wine has no DXVK, so the game draws through Wine's own
+    // Direct3D: characters render flat white and the frame rate collapses. That
+    // was a common report, from players whose box had wine but no umu (we used to
+    // adopt it) or who had picked wine in Settings. Both are moved to umu-run
+    // here, before every launch: a system umu-run first, then one we provisioned
+    // earlier, then a fresh download.
+    if game::command_present("umu-run") {
+        settings::mutate(&app, |s| s.launch_command = "umu-run".into())?;
+        return Ok(if plain_wine {
+            "Switched the game from plain Wine to umu-run (Proton), which includes DXVK.".into()
+        } else {
+            "Using the runtime already installed: umu-run.".into()
+        });
     }
 
     use tauri::Manager;
@@ -76,8 +73,28 @@ pub async fn ensure_runtime(app: tauri::AppHandle) -> AppResult<String> {
         .app_data_dir()
         .map_err(|e| AppError::detail(ErrorCode::NoAppDataDir, e))?;
     let runtime_dir = data_dir.join("runtime");
-    fs::create_dir_all(&runtime_dir)?;
     let umu_run = runtime_dir.join("umu-run");
+    if umu_run.exists() {
+        let path = umu_run.to_string_lossy().into_owned();
+        settings::mutate(&app, |s| s.launch_command = path.clone())?;
+        return Ok(format!("Using the umu runtime installed earlier ({path})."));
+    }
+
+    // (b) No Proton yet: provision umu-run. It's a python zipapp, so the host
+    // needs python3 (which nearly every desktop Linux ships by default). Without
+    // it, a working plain Wine is still better than no game at all, so it is kept
+    // and the message says what to install; with nothing at all, fail clearly
+    // rather than download something that can't run.
+    if !game::command_present("python3") {
+        if plain_wine && game::command_present(prog) {
+            return Ok("Running on plain Wine without DXVK: the game will look wrong and run slowly. \
+                       Install python3 so the launcher can set up Proton."
+                .into());
+        }
+        return Err(AppError::new(ErrorCode::RuntimeNeedsPython));
+    }
+
+    fs::create_dir_all(&runtime_dir)?;
 
     // Allow the CDN to redirect the runtime URL without shipping a new launcher.
     // The redirect buys nothing on its own: whatever the URL, the tarball has

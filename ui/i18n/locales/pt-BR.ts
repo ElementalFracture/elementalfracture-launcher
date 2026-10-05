@@ -63,6 +63,9 @@ export const ptBR: Catalogue = {
       command: "Comando",
       commandHelp: "(executa o .exe do jogo — Proton-GE recomendado)",
       custom: "Personalizado…",
+      noDxvkTag: "(sem DXVK, não recomendado)",
+      noDxvk:
+        "O Wine puro roda o jogo sem DXVK: os personagens ficam brancos e o jogo fica lento. O launcher muda para o umu-run (Proton) ao clicar em Jogar.",
       placeholder: "ex.: umu-run",
       placeholderNone:
         "ex.: umu-run (nenhum detectado; instale o Wine ou o umu)",

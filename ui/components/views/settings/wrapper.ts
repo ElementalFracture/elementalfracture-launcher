@@ -25,3 +25,30 @@ export function computeWrapperState(
   }
   return { mode: "custom", value: trimmed };
 }
+
+/**
+ * Plain Wine: no Proton, so no DXVK, and the game renders through Wine's own
+ * Direct3D (flat white characters, a fraction of the frame rate). Mirrors the
+ * backend's `is_plain_wine`, which moves such a setting to umu-run before each
+ * launch; here it only drives the warning. Anything naming umu or Proton, and
+ * any unknown custom command, is not plain Wine.
+ */
+export function isPlainWine(command: string): boolean {
+  const c = command.trim();
+  const lower = c.toLowerCase();
+  if (lower.includes("umu") || lower.includes("proton")) {
+    return false;
+  }
+  if (c.includes("org.winehq.Wine")) {
+    return true;
+  }
+  const first = c.split(/\s+/)[0] ?? "";
+  const name = first.split("/").pop() ?? "";
+  return [
+    "wine",
+    "wine64",
+    "wine-stable",
+    "wine-staging",
+    "wine-development",
+  ].includes(name);
+}

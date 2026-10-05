@@ -69,6 +69,9 @@ export const de: Catalogue = {
       command: "Befehl",
       commandHelp: "(startet die Spiel-EXE — Proton-GE empfohlen)",
       custom: "Benutzerdefiniert…",
+      noDxvkTag: "(ohne DXVK, nicht empfohlen)",
+      noDxvk:
+        "Reines Wine startet das Spiel ohne DXVK: Figuren werden weiß dargestellt und es läuft langsam. Der Launcher wechselt beim Klick auf Starten zu umu-run (Proton).",
       placeholder: "z. B. umu-run",
       placeholderNone:
         "z. B. umu-run (nichts gefunden; installiere Wine oder umu)",

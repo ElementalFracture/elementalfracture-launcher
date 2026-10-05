@@ -73,6 +73,9 @@ export const en = {
       command: "Command",
       commandHelp: "(runs the game exe — Proton-GE recommended)",
       custom: "Custom…",
+      noDxvkTag: "(no DXVK, not recommended)",
+      noDxvk:
+        "Plain Wine runs the game without DXVK: characters render white and it runs slowly. The launcher switches to umu-run (Proton) when you press Launch.",
       placeholder: "e.g. umu-run",
       placeholderNone: "e.g. umu-run (none detected; install Wine or umu)",
       prefix: "Wine prefix",

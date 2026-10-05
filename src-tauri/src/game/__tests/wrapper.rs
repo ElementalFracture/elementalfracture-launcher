@@ -92,3 +92,20 @@ fn presence_check_handles_absolute_paths_with_spaces() {
     assert!(command_present(&path));
     assert!(!command_present("/no/such/wine"));
 }
+
+#[test]
+fn plain_wine_is_recognised() {
+    for c in ["wine", "wine64", "wine-stable", "/usr/bin/wine", "/opt/wine-staging/bin/wine",
+              "flatpak run org.winehq.Wine", "  wine  "] {
+        assert!(is_plain_wine(c), "{c} should be plain Wine");
+    }
+}
+
+#[test]
+fn proton_and_custom_commands_are_not_plain_wine() {
+    for c in ["umu-run", "/home/a/.local/share/ef/runtime/umu-run",
+              "env PROTONPATH=/home/a/.local/share/proton-steam umu-run",
+              "/home/a/.steam/steam/compatibilitytools.d/GE-Proton9-20/proton", "steam steam://rungameid/1", ""] {
+        assert!(!is_plain_wine(c), "{c} should not be plain Wine");
+    }
+}

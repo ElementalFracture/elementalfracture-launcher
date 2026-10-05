@@ -4,7 +4,7 @@
 use super::install::{find_exe, WIN64_EXES};
 use super::markers::write_hidden_mode;
 use super::variant::detect_variant;
-use super::wrapper::{parse_wrapper, wrapper_available};
+use super::wrapper::{is_plain_wine, parse_wrapper, wrapper_available};
 use crate::error::{AppError, AppResult, ErrorCode};
 use crate::{platform, settings};
 use std::fs;
@@ -41,6 +41,12 @@ fn detect_proton_path() -> Option<String> {
     ge.sort();
     other.sort();
     ge.pop().or_else(|| other.pop()).map(|p| p.to_string_lossy().into_owned())
+}
+
+/// A prefix plain Wine built (Wine's registry at the root, none of Proton's
+/// layout). Proton would convert it in place.
+fn plain_wine_prefix(p: &Path) -> bool {
+    p.join("system.reg").exists() && !p.join("tracked_files").exists() && !p.join("pfx").exists()
 }
 
 /// Persist the xinput1_3 override (native,builtin — load the app-local EF mod
@@ -138,7 +144,12 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
         let mut launch_command = s.launch_command.trim().to_string();
         let mut wrapper_argv = parse_wrapper(&launch_command);
         let wrapper = wrapper_argv[0].clone();
-        if !wrapper_available(&wrapper) {
+        // Plain Wine has no DXVK (white characters, a fraction of the frame rate). The runtime setup that runs
+        // before every launch already moves the setting to umu-run; this covers a launch that skipped it.
+        if is_plain_wine(&launch_command) && wrapper_available("umu-run") {
+            launch_command = "umu-run".into();
+            wrapper_argv = vec!["umu-run".into()];
+        } else if !wrapper_available(&wrapper) {
             if wrapper != "umu-run" && wrapper_available("umu-run") {
                 launch_command = "umu-run".into();
                 wrapper_argv = vec!["umu-run".into()];
@@ -163,7 +174,12 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
         if prefix.is_empty() {
             use tauri::Manager;
             if let Ok(dir) = app.path().app_data_dir() {
-                let p = dir.join("prefix");
+                // The launcher's own prefix. One a plain-Wine launch built can't be handed to Proton (see
+                // below), and it holds nothing of the player's, so Proton simply gets a fresh one beside it.
+                let mut p = dir.join("prefix");
+                if is_proton && plain_wine_prefix(&p) {
+                    p = dir.join("prefix-proton");
+                }
                 let _ = fs::create_dir_all(&p);
                 managed_prefix = p.to_string_lossy().into_owned();
                 prefix = &managed_prefix;
@@ -174,11 +190,7 @@ pub fn launch_game(app: tauri::AppHandle) -> AppResult<()> {
             // rewriting its registry and layout, which can break the app
             // that owns it (e.g. an XIVLauncher prefix). Refuse rather
             // than convert someone else's prefix behind their back.
-            let p = Path::new(prefix);
-            let foreign_wine = p.join("system.reg").exists()
-                && !p.join("tracked_files").exists()
-                && !p.join("pfx").exists();
-            if is_proton && foreign_wine {
+            if is_proton && plain_wine_prefix(Path::new(prefix)) {
                 return Err(AppError::new(ErrorCode::ForeignWinePrefix)
                     .with("prefix", prefix)
                     .with("wrapper", &launch_command));

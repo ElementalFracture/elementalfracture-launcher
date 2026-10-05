@@ -9,7 +9,7 @@ import {
 } from "@/components/shadcn/select";
 import { useSettings } from "@/context/SettingsContext";
 import { _ } from "@/i18n";
-import { CUSTOM_WRAPPER, type WrapperState } from "./wrapper";
+import { CUSTOM_WRAPPER, isPlainWine, type WrapperState } from "./wrapper";
 import "./WrapperField.css";
 
 /** Picks the command the game exe is run through (Linux only).
@@ -65,7 +65,9 @@ export function WrapperField({
             <SelectContent>
               {wrappers.map((w) => (
                 <SelectItem key={w.command} value={w.command}>
-                  {w.label}
+                  {isPlainWine(w.command)
+                    ? `${w.label} ${_("settings.wrapper.noDxvkTag")}`
+                    : w.label}
                 </SelectItem>
               ))}
               <SelectItem value={CUSTOM_WRAPPER}>
@@ -90,6 +92,11 @@ export function WrapperField({
           />
         )}
       </div>
+      {isPlainWine(value.value) && (
+        <p className="wrapper-warning" role="note">
+          {_("settings.wrapper.noDxvk")}
+        </p>
+      )}
     </div>
   );
 }
