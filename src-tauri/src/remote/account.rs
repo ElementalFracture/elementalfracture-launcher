@@ -193,6 +193,8 @@ pub async fn login_email(
             "invalid_credentials" => ErrorCode::WrongCredentials,
             "email_unverified" => ErrorCode::EmailUnverified,
             "rate_limited" => ErrorCode::RateLimited,
+            "password_change_required" => ErrorCode::PasswordChangeRequired,
+            "temp_password_expired" => ErrorCode::TempPasswordExpired,
             _ => ErrorCode::SignInFailed,
         }));
     }

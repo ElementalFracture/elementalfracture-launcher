@@ -497,6 +497,10 @@ export const it: Catalogue = {
     wrongCredentials: "E-mail o password errate.",
     emailUnverified:
       "Verifica prima la tua e-mail, il codice è nella tua casella di posta.",
+    passwordChangeRequired:
+      "Hai effettuato l'accesso con una password temporanea. Accedi su elefrac.com per scegliere la tua password, poi accedi qui con quella.",
+    tempPasswordExpired:
+      "Questa password temporanea è scaduta. Chiedine una nuova allo staff o reimposta la password su elefrac.com.",
     rateLimited: "Troppi tentativi. Attendi qualche minuto.",
     accountSuspended: "Questo account è stato sospeso.",
     accountSuspendedPermanent:

@@ -493,6 +493,10 @@ export const ko: Catalogue = {
     wrongCredentials: "이메일 또는 비밀번호가 올바르지 않습니다.",
     emailUnverified:
       "먼저 이메일을 인증하세요. 인증 코드는 받은편지함에 있습니다.",
+    passwordChangeRequired:
+      "임시 비밀번호로 로그인했습니다. elefrac.com에 로그인해 새 비밀번호를 정한 뒤 여기서 그 비밀번호로 로그인하세요.",
+    tempPasswordExpired:
+      "이 임시 비밀번호는 만료되었습니다. 스태프에게 새 비밀번호를 요청하거나 elefrac.com에서 비밀번호를 재설정하세요.",
     rateLimited: "시도가 너무 많습니다. 몇 분 뒤에 다시 시도하세요.",
     accountSuspended: "이 계정은 정지되었습니다.",
     accountSuspendedPermanent: "이 계정은 영구 정지되었습니다.",

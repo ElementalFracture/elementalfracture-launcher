@@ -472,6 +472,10 @@ export const zhHans: Catalogue = {
     signInFailed: "登录失败。请重试。",
     wrongCredentials: "邮箱或密码错误。",
     emailUnverified: "请先验证你的邮箱，验证码在你的收件箱里。",
+    passwordChangeRequired:
+      "你使用了临时密码登录。请先在 elefrac.com 登录并设置你自己的密码，然后在这里用新密码登录。",
+    tempPasswordExpired:
+      "该临时密码已过期。请向工作人员索取新密码，或在 elefrac.com 重置密码。",
     rateLimited: "尝试次数过多。请等待几分钟。",
     accountSuspended: "该账号已被封禁。",
     accountSuspendedPermanent: "该账号已被永久封禁。",

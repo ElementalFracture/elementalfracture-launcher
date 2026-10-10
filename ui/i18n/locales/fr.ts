@@ -495,6 +495,10 @@ export const fr: Catalogue = {
     wrongCredentials: "E-mail ou mot de passe incorrect.",
     emailUnverified:
       "Vérifiez d'abord votre e-mail, le code se trouve dans votre boîte de réception.",
+    passwordChangeRequired:
+      "Tu t'es connecté avec un mot de passe temporaire. Connecte-toi sur elefrac.com pour choisir ton propre mot de passe, puis reconnecte-toi ici avec.",
+    tempPasswordExpired:
+      "Ce mot de passe temporaire a expiré. Demande-en un nouveau au staff ou réinitialise ton mot de passe sur elefrac.com.",
     rateLimited: "Trop de tentatives. Veuillez patienter quelques minutes.",
     accountSuspended: "Ce compte a été suspendu.",
     accountSuspendedPermanent: "Ce compte a été suspendu définitivement.",

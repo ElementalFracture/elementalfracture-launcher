@@ -502,6 +502,10 @@ export const es: Catalogue = {
     wrongCredentials: "Correo o contraseña incorrectos.",
     emailUnverified:
       "Verifica antes tu correo, busca el código en tu bandeja de entrada.",
+    passwordChangeRequired:
+      "Iniciaste sesión con una contraseña temporal. Inicia sesión en elefrac.com para elegir tu propia contraseña y luego úsala aquí.",
+    tempPasswordExpired:
+      "Esa contraseña temporal ha caducado. Pide una nueva al staff o restablece tu contraseña en elefrac.com.",
     rateLimited: "Demasiados intentos. Espera unos minutos.",
     accountSuspended: "Esta cuenta ha sido suspendida.",
     accountSuspendedPermanent:

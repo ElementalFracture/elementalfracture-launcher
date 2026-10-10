@@ -531,6 +531,10 @@ export const en = {
     signInFailed: "Sign-in failed. Please try again.",
     wrongCredentials: "Wrong email or password.",
     emailUnverified: "Verify your email first, check your inbox for the code.",
+    passwordChangeRequired:
+      "You signed in with a temporary password. Sign in on elefrac.com to choose your own password, then sign in here with it.",
+    tempPasswordExpired:
+      "That temporary password has expired. Ask staff for a new one, or reset your password on elefrac.com.",
     rateLimited: "Too many attempts. Please wait a few minutes.",
     accountSuspended: "This account has been suspended.",
     accountSuspendedPermanent: "This account has been permanently suspended.",

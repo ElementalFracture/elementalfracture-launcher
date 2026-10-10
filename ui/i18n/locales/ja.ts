@@ -503,6 +503,10 @@ export const ja: Catalogue = {
     wrongCredentials: "メールアドレスまたはパスワードが違います。",
     emailUnverified:
       "先にメールアドレスを確認してください。コードは受信トレイにあります。",
+    passwordChangeRequired:
+      "一時パスワードでサインインしました。elefrac.com にサインインして自分のパスワードを設定してから、ここでそのパスワードでサインインしてください。",
+    tempPasswordExpired:
+      "この一時パスワードは期限切れです。スタッフに新しいものを依頼するか、elefrac.com でパスワードをリセットしてください。",
     rateLimited: "試行回数が多すぎます。数分お待ちください。",
     accountSuspended: "このアカウントは停止されています。",
     accountSuspendedPermanent: "このアカウントは永久に停止されています。",

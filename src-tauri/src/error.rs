@@ -101,6 +101,10 @@ pub enum ErrorCode {
     WrongCredentials,
     EmailUnverified,
     RateLimited,
+    /// Signed in with a staff-issued temporary password: a new one is chosen on the website first.
+    PasswordChangeRequired,
+    /// The staff-issued temporary password ran out.
+    TempPasswordExpired,
     /// Permanent. `params: reason` (optional)
     AccountSuspended,
     /// Timed. `params: ends`, `reason` (optional)

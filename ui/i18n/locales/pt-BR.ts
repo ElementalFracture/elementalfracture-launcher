@@ -496,6 +496,10 @@ export const ptBR: Catalogue = {
     wrongCredentials: "E-mail ou senha incorretos.",
     emailUnverified:
       "Verifique seu e-mail primeiro, o código está na sua caixa de entrada.",
+    passwordChangeRequired:
+      "Você entrou com uma senha temporária. Entre em elefrac.com para escolher sua própria senha e depois entre aqui com ela.",
+    tempPasswordExpired:
+      "Essa senha temporária expirou. Peça uma nova à equipe ou redefina sua senha em elefrac.com.",
     rateLimited: "Tentativas demais. Espere alguns minutos.",
     accountSuspended: "Esta conta foi suspensa.",
     accountSuspendedPermanent: "Esta conta foi suspensa permanentemente.",

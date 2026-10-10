@@ -473,6 +473,10 @@ export const zhHant: Catalogue = {
     signInFailed: "登入失敗。請再試一次。",
     wrongCredentials: "電子郵件或密碼錯誤。",
     emailUnverified: "請先驗證你的電子郵件，驗證碼在你的收件匣裡。",
+    passwordChangeRequired:
+      "你使用了臨時密碼登入。請先在 elefrac.com 登入並設定你自己的密碼，然後在這裡用新密碼登入。",
+    tempPasswordExpired:
+      "這個臨時密碼已過期。請向工作人員索取新密碼，或在 elefrac.com 重設密碼。",
     rateLimited: "嘗試次數過多。請稍候幾分鐘。",
     accountSuspended: "此帳號已被停權。",
     accountSuspendedPermanent: "此帳號已被永久停權。",

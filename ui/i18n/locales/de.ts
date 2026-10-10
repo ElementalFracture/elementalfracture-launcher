@@ -503,6 +503,10 @@ export const de: Catalogue = {
     wrongCredentials: "Falsche E-Mail-Adresse oder falsches Passwort.",
     emailUnverified:
       "Bestätige zuerst deine E-Mail-Adresse, der Code liegt in deinem Posteingang.",
+    passwordChangeRequired:
+      "Du hast dich mit einem temporären Passwort angemeldet. Melde dich auf elefrac.com an, um dein eigenes Passwort festzulegen, und melde dich dann hier damit an.",
+    tempPasswordExpired:
+      "Dieses temporäre Passwort ist abgelaufen. Bitte das Team um ein neues oder setze dein Passwort auf elefrac.com zurück.",
     rateLimited: "Zu viele Versuche. Bitte warte ein paar Minuten.",
     accountSuspended: "Dieses Konto wurde gesperrt.",
     accountSuspendedPermanent: "Dieses Konto wurde dauerhaft gesperrt.",
