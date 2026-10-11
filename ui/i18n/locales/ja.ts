@@ -36,6 +36,9 @@ export const ja: Catalogue = {
       closeOnLaunch: "ゲーム開始時にランチャーを閉じる",
       closeOnLaunchHelp:
         "ゲームが起動した少しあとにランチャーを自動で閉じ、プレイ中のメモリを解放します。",
+      runAsAdmin: "管理者として実行",
+      runAsAdminHelp:
+        "ランチャーと、そこから起動するゲームを管理者として実行します。Spellbreak フォルダーにほかの方法で書き込めない場合（Program Files 内など）にのみ必要です。次回ランチャー起動時から有効になります。",
     },
     steam: {
       title: "Steam",
@@ -358,6 +361,22 @@ export const ja: Catalogue = {
     },
   },
 
+  folder: {
+    steamCopy:
+      "これは Steam 版の Spellbreak です。Elemental Fracture はここからは起動できません（Steam が自分のファイルに戻してしまいます）。代わりに「ゲームをダウンロード」で Elemental Fracture 専用のコピーをインストールしてください。",
+    epicCopy:
+      "これは Epic Games 版の Spellbreak です。Elemental Fracture はここからは起動できません（Epic が自分のファイルに戻してしまいます）。代わりに「ゲームをダウンロード」で Elemental Fracture 専用のコピーをインストールしてください。",
+    oneDrive:
+      "このフォルダーは OneDrive の中にあります。OneDrive は同期中にファイルをロックしたり元に戻したりするため、更新が反映されず古いファイルのままゲームが起動します。Spellbreak フォルダーを C:\\Games などに移動してから、もう一度指定してください（またはそこにゲームをダウンロードしてください）。",
+    notWritable:
+      "ランチャーが {path} に書き込めないため、更新や MOD をインストールできません。Spellbreak フォルダーを C:\\Games などに移動するか、設定で「管理者として実行」をオンにしてください。",
+    fixed:
+      "Spellbreak フォルダーの権限を修正しました。更新をインストールできます。",
+    adminTitle:
+      "権限が必要です",
+    adminMessage:
+      "Elemental Fracture は {path} の Spellbreak フォルダーに書き込めないため、更新や MOD をインストールできません。ランチャーを管理者として再起動しますか？ 今後は管理者として起動します（設定でオフにできます）。",
+  },
   game: {
     title: "ゲーム",
     version: "(v{version})",

@@ -9,6 +9,17 @@ import { LocaleGate } from "@/i18n/LocaleGate";
 import { makeSettings, makeStatus, makeVersions } from "@/test/fixtures";
 
 const commands = vi.hoisted(() => ({
+  checkGameFolder: vi
+    .fn()
+    .mockResolvedValue({
+      verdict: "ok",
+      store: null,
+      path: null,
+      detail: null,
+      fixed: false,
+      restarting: false,
+    }),
+  suggestedInstallDir: vi.fn().mockResolvedValue(null),
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   detectWrappers: vi.fn(),

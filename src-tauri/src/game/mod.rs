@@ -8,6 +8,7 @@
 //! command. `markers` writes the two hidden files the
 //! in-game injector reads.
 
+mod folder;
 mod install;
 mod launch;
 mod markers;
@@ -17,6 +18,7 @@ mod wrapper;
 
 // Re-exported wholesale rather than by name — see the note in download/mod.rs
 // about the hidden items `#[tauri::command]` leaves next to each function.
+pub use folder::*;
 pub use install::*;
 pub use launch::*;
 pub use proton::*;

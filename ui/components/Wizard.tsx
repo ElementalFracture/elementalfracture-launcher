@@ -9,6 +9,7 @@ import * as rust from "@/lib/rust";
 import type { LoginResult } from "@/lib/rust";
 import { errorText } from "@/i18n/errors";
 import { _ } from "@/i18n";
+import { vetGameFolder } from "@/lib/gameFolder";
 import "./modals/Dialog.css";
 
 type Step = "welcome" | "game" | "signin" | "done";
@@ -50,6 +51,14 @@ function WizardSteps() {
         return;
       }
       if (!settings) {
+        return;
+      }
+      const problem = await vetGameFolder(dir);
+      if (problem !== null) {
+        setGameResult("");
+        if (problem) {
+          setGameError(problem);
+        }
         return;
       }
       await saveSettings({ ...settings, game_path: dir });

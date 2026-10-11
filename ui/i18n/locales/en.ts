@@ -37,6 +37,9 @@ export const en = {
       closeOnLaunch: "Close launcher when the game starts",
       closeOnLaunchHelp:
         "Automatically closes the launcher a moment after the game launches, to free up memory while you play.",
+      runAsAdmin: "Run as administrator",
+      runAsAdminHelp:
+        "Starts the launcher, and the game with it, as administrator. Only needed when your Spellbreak folder can't be written to otherwise (for example, inside Program Files). Takes effect the next time the launcher starts.",
     },
     steam: {
       title: "Steam",
@@ -391,6 +394,22 @@ export const en = {
   /* The "Game & Mods" view. `game` is the Game card plus the install pipeline
      its two buttons drive — that one lives in GameContext, because Home reaches
      the same entry points — and `mods` is the card below it. */
+  folder: {
+    steamCopy:
+      "That's Steam's copy of Spellbreak. Elemental Fracture can't run from it: Steam keeps putting its own files back. Use Download game to install Elemental Fracture's own copy instead.",
+    epicCopy:
+      "That's the Epic Games copy of Spellbreak. Elemental Fracture can't run from it: Epic keeps putting its own files back. Use Download game to install Elemental Fracture's own copy instead.",
+    oneDrive:
+      "That folder is inside OneDrive. OneDrive locks and restores files while it syncs, so updates don't stick and the game keeps running old files. Move the Spellbreak folder somewhere like C:\\Games, then Locate it again (or Download the game there).",
+    notWritable:
+      "The launcher can't write to {path}, so updates and mods can't be installed there. Move the Spellbreak folder somewhere like C:\\Games, or turn on Run as administrator in Settings.",
+    fixed:
+      "Fixed the Spellbreak folder's permissions so updates can be installed.",
+    adminTitle:
+      "Permission needed",
+    adminMessage:
+      "Elemental Fracture can't write to the Spellbreak folder at {path}, so updates and mods can't be installed. Restart the launcher as administrator? It will start as administrator from now on (you can turn this off in Settings).",
+  },
   game: {
     title: "Game",
     version: "(v{version})",

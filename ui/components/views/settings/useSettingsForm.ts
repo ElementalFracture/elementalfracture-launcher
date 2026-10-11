@@ -34,6 +34,8 @@ export interface SettingsForm {
   setMinimizeOnClose: (v: boolean) => void;
   closeOnLaunch: boolean;
   setCloseOnLaunch: (v: boolean) => void;
+  runAsAdmin: boolean;
+  setRunAsAdmin: (v: boolean) => void;
   steamQuickstart: boolean;
   setSteamQuickstart: (v: boolean) => void;
 
@@ -82,6 +84,7 @@ export function useSettingsForm(): SettingsForm {
   const [language, setLanguageState] = useState<LanguageSetting>("");
   const [minimizeOnClose, setMinimizeOnCloseState] = useState(false);
   const [closeOnLaunch, setCloseOnLaunchState] = useState(false);
+  const [runAsAdmin, setRunAsAdminState] = useState(false);
   const [steamQuickstart, setSteamQuickstartState] = useState(true);
   const [winePrefix, setWinePrefix] = useState("");
   const [protonPath, setProtonPathState] = useState("");
@@ -139,6 +142,7 @@ export function useSettingsForm(): SettingsForm {
   const srcLanguage = (settings?.language ?? "") as LanguageSetting;
   const srcMinimizeOnClose = settings?.minimize_on_close ?? false;
   const srcCloseOnLaunch = settings?.close_on_launch ?? false;
+  const srcRunAsAdmin = settings?.run_as_admin ?? false;
   const srcSteamQuickstart = settings?.steam_autostart ?? false;
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -153,12 +157,14 @@ export function useSettingsForm(): SettingsForm {
     setLanguageState(srcLanguage);
     setMinimizeOnCloseState(srcMinimizeOnClose);
     setCloseOnLaunchState(srcCloseOnLaunch);
+    setRunAsAdminState(srcRunAsAdmin);
     setSteamQuickstartState(srcSteamQuickstart);
     setProtonPathState(srcProtonPath);
   }, [
     srcLanguage,
     srcMinimizeOnClose,
     srcCloseOnLaunch,
+    srcRunAsAdmin,
     srcSteamQuickstart,
     srcProtonPath,
   ]);
@@ -201,6 +207,13 @@ export function useSettingsForm(): SettingsForm {
     persist({ close_on_launch: v });
   };
 
+  /* Takes effect the next time the launcher starts (it restarts itself
+     elevated); the card says so. */
+  const setRunAsAdmin = (v: boolean) => {
+    setRunAsAdminState(v);
+    persist({ run_as_admin: v });
+  };
+
   const setSteamQuickstart = (v: boolean) => {
     setSteamQuickstartState(v);
     persist({ steam_autostart: v });
@@ -238,6 +251,8 @@ export function useSettingsForm(): SettingsForm {
     setMinimizeOnClose,
     closeOnLaunch,
     setCloseOnLaunch,
+    runAsAdmin,
+    setRunAsAdmin,
     steamQuickstart,
     setSteamQuickstart,
     winePrefix,

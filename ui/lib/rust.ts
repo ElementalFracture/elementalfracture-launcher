@@ -24,8 +24,10 @@ import { commands } from "@/generated/bindings";
 import { BackendError } from "@/i18n/errors";
 import type {
   Account,
+  AdminPrompt,
   AppError,
   FileCheck,
+  FolderCheck,
   GameStatus,
   LauncherUpdateInfo,
   NewsItem,
@@ -128,8 +130,23 @@ export async function getRemoteConfig(): Promise<Partial<Record<string, string>>
 
 /* ---------------- actions ---------------- */
 
-export async function pickGameDir(title: string | null): Promise<string | null> {
-  return await commands.pickGameDir(title);
+export async function pickGameDir(
+  title: string | null,
+  startDir: string | null = null
+): Promise<string | null> {
+  return await commands.pickGameDir(title, startDir);
+}
+
+export async function checkGameFolder(
+  path: string,
+  fix: boolean,
+  adminPrompt: AdminPrompt | null
+): Promise<FolderCheck> {
+  return await commands.checkGameFolder(path, fix, adminPrompt);
+}
+
+export async function suggestedInstallDir(): Promise<string | null> {
+  return await commands.suggestedInstallDir();
 }
 
 export async function autoFindGame(): Promise<string | null> {

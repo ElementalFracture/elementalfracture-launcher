@@ -36,6 +36,9 @@ export const zhHant: Catalogue = {
       closeOnLaunch: "遊戲啟動後關閉啟動器",
       closeOnLaunchHelp:
         "遊戲啟動後稍待片刻自動關閉啟動器，讓你遊玩時可以釋放記憶體。",
+      runAsAdmin: "以系統管理員身分執行",
+      runAsAdminHelp:
+        "以系統管理員身分啟動啟動器，以及由它啟動的遊戲。僅在 Spellbreak 資料夾無法以其他方式寫入時（例如位於 Program Files 中）才需要。下次啟動啟動器時生效。",
     },
     steam: {
       title: "Steam",
@@ -341,6 +344,22 @@ export const zhHant: Catalogue = {
     },
   },
 
+  folder: {
+    steamCopy:
+      "這是 Steam 版的 Spellbreak。Elemental Fracture 無法從這裡執行：Steam 會不斷還原它自己的檔案。請改用「下載遊戲」安裝 Elemental Fracture 自己的副本。",
+    epicCopy:
+      "這是 Epic Games 版的 Spellbreak。Elemental Fracture 無法從這裡執行：Epic 會不斷還原它自己的檔案。請改用「下載遊戲」安裝 Elemental Fracture 自己的副本。",
+    oneDrive:
+      "此資料夾位於 OneDrive 中。OneDrive 在同步時會鎖定並還原檔案，導致更新無法保留，遊戲一直執行舊檔案。請將 Spellbreak 資料夾移到 C:\\Games 等位置，然後重新定位（或將遊戲下載到那裡）。",
+    notWritable:
+      "啟動器無法寫入 {path}，因此無法在那裡安裝更新和模組。請將 Spellbreak 資料夾移到 C:\\Games 等位置，或在設定中開啟「以系統管理員身分執行」。",
+    fixed:
+      "已修復 Spellbreak 資料夾的權限，現在可以安裝更新了。",
+    adminTitle:
+      "需要權限",
+    adminMessage:
+      "Elemental Fracture 無法寫入位於 {path} 的 Spellbreak 資料夾，因此無法安裝更新和模組。要以系統管理員身分重新啟動啟動器嗎？之後它將一律以系統管理員身分啟動（可在設定中關閉）。",
+  },
   game: {
     title: "遊戲",
     version: "(v{version})",

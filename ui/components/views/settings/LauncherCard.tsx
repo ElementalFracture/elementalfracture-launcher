@@ -10,6 +10,7 @@ import {
 import { Spinner } from "@/components/shadcn/spinner";
 import { Switch } from "@/components/shadcn/switch";
 import { InfoPopover } from "@/components/InfoPopover";
+import { isWindows } from "@/lib/platform";
 import { useGame } from "@/context/GameContext";
 import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
@@ -99,6 +100,21 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
             onCheckedChange={form.setCloseOnLaunch}
           />
         </div>
+        {isWindows && (
+          <div className="switch-row">
+            <span className="switch-text">
+              <span>{_("settings.launcher.runAsAdmin")}</span>
+              <InfoPopover>
+                <p>{_("settings.launcher.runAsAdminHelp")}</p>
+              </InfoPopover>
+            </span>
+            <Switch
+              aria-label={_("settings.launcher.runAsAdmin")}
+              checked={form.runAsAdmin}
+              onCheckedChange={form.setRunAsAdmin}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

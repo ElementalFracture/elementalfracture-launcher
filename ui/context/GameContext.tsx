@@ -13,6 +13,7 @@ import { updateTarget, versionsBehind, versionsKnown } from "@/lib/versions";
 import { toast } from "@/lib/toast";
 import { errorText } from "@/i18n/errors";
 import { _ } from "@/i18n";
+import { vetGameFolder } from "@/lib/gameFolder";
 import { useSettings } from "@/context/SettingsContext";
 
 interface GameContextValue {
@@ -116,6 +117,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
      version — such installs were provisioned by this same pipeline. */
   const provisionInstall = useCallback(
     async (report: (msg: string, isError?: boolean) => void = toast) => {
+      /* A folder the launcher can't keep current (a Steam or Epic copy, one
+         in OneDrive, one it can't write to) would read "up to date" here
+         while the game kept running the old files. */
+      // Read fresh: a Locate saves the path just before calling this.
+      const path = (await rust.getSettings()).game_path ?? "";
+      if (path.trim()) {
+        const problem = await vetGameFolder(path);
+        if (problem !== null) {
+          if (problem) {
+            report(problem, true);
+            setInstallNotice(problem);
+          }
+          return false;
+        }
+      }
       try {
         const v = await rust.getVersions();
         /* Only an answer from the CDN can say an install is current; an
@@ -164,6 +180,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!dir || !settings) {
         return;
       }
+      const problem = await vetGameFolder(dir);
+      if (problem !== null) {
+        if (problem) {
+          toast(problem, true);
+          setInstallNotice(problem);
+        }
+        return;
+      }
+      setInstallNotice(null);
       await saveSettings({ ...settings, game_path: dir });
       toast(_("game.folderSet", { path: dir }));
       await refreshStatus();
@@ -174,8 +199,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [settings, saveSettings, refreshStatus, provisionInstall]);
 
   const downloadGame = useCallback(async () => {
-    const dest = await rust.pickGameDir(_("game.pickDestination"));
+    const dest = await rust.pickGameDir(
+      _("game.pickDestination"),
+      await rust.suggestedInstallDir()
+    );
     if (!dest) {
+      return;
+    }
+    const problem = await vetGameFolder(dest);
+    if (problem !== null) {
+      if (problem) {
+        toast(problem, true);
+        setInstallNotice(problem);
+      }
       return;
     }
     setInstallBusy(true);

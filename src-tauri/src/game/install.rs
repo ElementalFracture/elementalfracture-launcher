@@ -107,11 +107,8 @@ pub fn auto_find_game() -> Option<String> {
     {
         for drive in ["C:", "D:", "E:"] {
             for sub in [
+                // Never a Steam or Epic copy: those can't be run as Elemental Fracture (game/folder.rs).
                 "\\Program Files\\Spellbreak",
-                "\\Program Files\\Epic Games\\Spellbreak",
-                "\\Program Files (x86)\\Epic Games\\Spellbreak",
-                "\\Program Files (x86)\\Steam\\steamapps\\common\\Spellbreak",
-                "\\SteamLibrary\\steamapps\\common\\Spellbreak",
                 "\\Games\\Spellbreak",
                 "\\Spellbreak",
             ] {
@@ -125,10 +122,7 @@ pub fn auto_find_game() -> Option<String> {
         if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
             for sub in [
                 "Games/Spellbreak",
-                ".local/share/Steam/steamapps/common/Spellbreak",
-                ".steam/steam/steamapps/common/Spellbreak",
                 ".wine/drive_c/Program Files/Spellbreak",
-                ".wine/drive_c/Program Files/Epic Games/Spellbreak",
             ] {
                 candidates.push(home.join(sub));
             }
@@ -143,6 +137,7 @@ pub fn auto_find_game() -> Option<String> {
 
     candidates
         .into_iter()
+        .filter(|c| super::store_copy(c).is_none())
         .find(|c| find_exe(c).is_some())
         .map(|p| p.to_string_lossy().into_owned())
 }

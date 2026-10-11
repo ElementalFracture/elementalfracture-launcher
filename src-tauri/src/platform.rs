@@ -64,14 +64,89 @@ pub fn open_url(url: String) -> AppResult<()> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn pick_game_dir(app: tauri::AppHandle, title: Option<String>) -> Option<String> {
+pub async fn pick_game_dir(app: tauri::AppHandle, title: Option<String>, start_dir: Option<String>) -> Option<String> {
     use tauri_plugin_dialog::DialogExt;
-    app.dialog()
+    let mut dialog = app
+        .dialog()
         .file()
-        .set_title(title.unwrap_or_else(|| "Select your Spellbreak folder (contains g3 and Engine)".into()))
+        .set_title(title.unwrap_or_else(|| "Select your Spellbreak folder (contains g3 and Engine)".into()));
+    // Without a start folder Windows opens Documents, which OneDrive usually owns (game/folder.rs).
+    if let Some(dir) = start_dir.filter(|d| std::path::Path::new(d).is_dir()) {
+        dialog = dialog.set_directory(dir);
+    }
+    dialog
         .blocking_pick_folder()
         .and_then(|f| f.into_path().ok())
         .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// True when this process runs elevated (as administrator). Always false off Windows.
+#[cfg(windows)]
+pub fn is_elevated() -> bool {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows_sys::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    // SAFETY: plain Win32 calls on our own process token; the out-buffer is a TOKEN_ELEVATION we own.
+    unsafe {
+        let mut token: HANDLE = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            return false;
+        }
+        let mut elev = TOKEN_ELEVATION { TokenIsElevated: 0 };
+        let mut len = 0u32;
+        let ok = GetTokenInformation(
+            token,
+            TokenElevation,
+            &mut elev as *mut _ as *mut _,
+            std::mem::size_of::<TOKEN_ELEVATION>() as u32,
+            &mut len,
+        );
+        CloseHandle(token);
+        ok != 0 && elev.TokenIsElevated != 0
+    }
+}
+
+#[cfg(not(windows))]
+pub fn is_elevated() -> bool {
+    false
+}
+
+/// Start another copy of the launcher as administrator (Windows asks the player through UAC). True when it
+/// started; the caller then exits this one. False when the player said no, or off Windows.
+#[cfg(windows)]
+pub fn relaunch_elevated() -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    let Ok(exe) = std::env::current_exe() else { return false };
+    let wide = |s: &std::ffi::OsStr| s.encode_wide().chain(Some(0)).collect::<Vec<u16>>();
+    let verb = wide(std::ffi::OsStr::new("runas"));
+    let file = wide(exe.as_os_str());
+    let dir = exe.parent().map(|d| wide(d.as_os_str()));
+    // SAFETY: every pointer is a NUL-terminated buffer alive for the call.
+    let r = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            verb.as_ptr(),
+            file.as_ptr(),
+            std::ptr::null(),
+            dir.as_ref().map_or(std::ptr::null(), |d| d.as_ptr()),
+            SW_SHOWNORMAL,
+        )
+    };
+    r as isize > 32
+}
+
+#[cfg(not(windows))]
+pub fn relaunch_elevated() -> bool {
+    false
+}
+
+/// Whether the launcher is running as administrator (the Settings toggle shows it).
+#[tauri::command]
+#[specta::specta]
+pub fn launcher_elevated() -> bool {
+    is_elevated()
 }
 
 /// Bytes this user may still write on the filesystem holding `path` — what

@@ -8,6 +8,8 @@ import { deferred, makeSettings, makeStatus, makeVersions } from "@/test/fixture
 // hoisted so the vi.mock factory below — which vitest lifts to the top of the
 // file — can close over it.
 const commands = vi.hoisted(() => ({
+  checkGameFolder: vi.fn().mockResolvedValue({ verdict: "ok", store: null, path: null, detail: null, fixed: false, restarting: false }),
+  suggestedInstallDir: vi.fn().mockResolvedValue(null),
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   resetSettings: vi.fn(),
@@ -228,6 +230,38 @@ describe("launcher self-update", () => {
 });
 
 describe("provisionInstall", () => {
+  it("refuses a folder inside OneDrive instead of reporting it current", async () => {
+    const { result } = renderGame();
+    await waitFor(() => expect(result.current.status).not.toBeNull());
+    commands.checkGameFolder.mockResolvedValueOnce({
+      verdict: "oneDrive", store: null, path: null, detail: null, fixed: false, restarting: false,
+    });
+    commands.updatePatch.mockClear();
+
+    const report = vi.fn();
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.provisionInstall(report);
+    });
+    expect(ok).toBe(false);
+    expect(commands.updatePatch).not.toHaveBeenCalled();
+    expect(report).toHaveBeenCalledWith(expect.stringContaining("OneDrive"), true);
+  });
+
+  it("refuses Steam's copy of Spellbreak", async () => {
+    const { result } = renderGame();
+    await waitFor(() => expect(result.current.status).not.toBeNull());
+    commands.checkGameFolder.mockResolvedValueOnce({
+      verdict: "storeCopy", store: "steam", path: null, detail: null, fixed: false, restarting: false,
+    });
+
+    const report = vi.fn();
+    await act(async () => {
+      await result.current.provisionInstall(report);
+    });
+    expect(report).toHaveBeenCalledWith(expect.stringContaining("Steam's copy"), true);
+  });
+
   it("skips the patch when the install already matches the CDN", async () => {
     const { result } = renderGame();
     await waitFor(() => expect(result.current.status).not.toBeNull());

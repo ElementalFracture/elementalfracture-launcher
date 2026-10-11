@@ -17,6 +17,7 @@ import { atLeast } from "@/lib/timing";
 import { toast } from "@/lib/toast";
 import { toastError } from "@/i18n/errors";
 import { _ } from "@/i18n";
+import { vetGameFolder } from "@/lib/gameFolder";
 
 /** Where the game lives, which version it is, and the ways to get or move one. */
 export function GameCard() {
@@ -50,6 +51,13 @@ export function GameCard() {
       return;
     }
     try {
+      const problem = await vetGameFolder(dir);
+      if (problem !== null) {
+        if (problem) {
+          toast(problem, true);
+        }
+        return;
+      }
       await saveSettings({ ...settings, game_path: dir });
       setDraft(null);
       const fresh = await refreshStatus();

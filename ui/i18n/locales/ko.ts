@@ -36,6 +36,9 @@ export const ko: Catalogue = {
       closeOnLaunch: "게임이 시작되면 런처 닫기",
       closeOnLaunchHelp:
         "게임이 실행된 직후 런처를 자동으로 닫아, 플레이하는 동안 메모리를 확보합니다.",
+      runAsAdmin: "관리자 권한으로 실행",
+      runAsAdminHelp:
+        "런처와 런처가 시작하는 게임을 관리자 권한으로 실행합니다. 다른 방법으로는 Spellbreak 폴더에 쓸 수 없을 때(예: Program Files 안)에만 필요합니다. 다음에 런처를 시작할 때부터 적용됩니다.",
     },
     steam: {
       title: "Steam",
@@ -354,6 +357,22 @@ export const ko: Catalogue = {
     },
   },
 
+  folder: {
+    steamCopy:
+      "이것은 Steam 버전 Spellbreak입니다. Elemental Fracture는 여기서 실행할 수 없습니다. Steam이 계속 자기 파일로 되돌립니다. 대신 '게임 다운로드'로 Elemental Fracture 전용 사본을 설치하세요.",
+    epicCopy:
+      "이것은 Epic Games 버전 Spellbreak입니다. Elemental Fracture는 여기서 실행할 수 없습니다. Epic이 계속 자기 파일로 되돌립니다. 대신 '게임 다운로드'로 Elemental Fracture 전용 사본을 설치하세요.",
+    oneDrive:
+      "이 폴더는 OneDrive 안에 있습니다. OneDrive는 동기화 중에 파일을 잠그고 되돌리기 때문에 업데이트가 유지되지 않고 게임이 예전 파일로 실행됩니다. Spellbreak 폴더를 C:\\Games 같은 곳으로 옮긴 다음 다시 찾아 주세요(또는 그곳에 게임을 다운로드하세요).",
+    notWritable:
+      "런처가 {path}에 쓸 수 없어 업데이트와 모드를 설치할 수 없습니다. Spellbreak 폴더를 C:\\Games 같은 곳으로 옮기거나 설정에서 '관리자 권한으로 실행'을 켜 주세요.",
+    fixed:
+      "Spellbreak 폴더 권한을 고쳤습니다. 이제 업데이트를 설치할 수 있습니다.",
+    adminTitle:
+      "권한 필요",
+    adminMessage:
+      "Elemental Fracture가 {path}의 Spellbreak 폴더에 쓸 수 없어 업데이트와 모드를 설치할 수 없습니다. 런처를 관리자 권한으로 다시 시작할까요? 앞으로는 관리자 권한으로 시작됩니다(설정에서 끌 수 있습니다).",
+  },
   game: {
     title: "게임",
     version: "(v{version})",
