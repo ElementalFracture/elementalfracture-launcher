@@ -50,8 +50,9 @@ services:
             # Not mirrored: the two multi-GB zips. The spoke serves launcher >= 3.5 its 256 MiB parts; the whole
             # archive stays hub-only (the router Worker falls back to the hub on a spoke 404), and server.zip
             # is a build input. Pulling 12 GB that Cloudflare cannot cache through a 0.3 MB/s long-haul stream
-            # never finishes and blocks the pass.
-            mc mirror --overwrite --remove --exclude "*.bak-*" --exclude "archive/*" --exclude "elefracbase.zip" --exclude "server.zip" "hub/$$b" "local/$$b" \
+            # never finishes and blocks the pass. Nor the publishing history nobody downloads from here: the mod
+            # package backups (patch/mod/backup) and the staging area (patch/staging); the spoke's disk is small.
+            mc mirror --overwrite --remove --exclude "*.bak-*" --exclude "archive/*" --exclude "elefracbase.zip" --exclude "server.zip" --exclude "mod/backup/*" --exclude "staging/*" "hub/$$b" "local/$$b" \
               && echo "[$$(date -u +%FT%TZ)] $$b in sync" || echo "[$$(date -u +%FT%TZ)] $$b mirror failed ($$?); next pass retries"
           done
           sleep "$${MIRROR_EVERY_S:-300}"
