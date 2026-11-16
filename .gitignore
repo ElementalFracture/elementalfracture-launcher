@@ -7,8 +7,9 @@ src-tauri/gen/
 dist/
 node_modules/
 
-# tauri-specta TypeScript bindings, regenerated on every debug run
-ui/generated/
+# tauri-specta TypeScript bindings (ui/generated/bindings.ts) are committed:
+# every debug run rewrites them and `cargo test bindings_are_current` keeps
+# the committed copy honest.
 
 # Editor and agent state, personal to whoever's working here. Claude Code's
 # settings.json is shared on purpose; only the local overrides are ignored.
