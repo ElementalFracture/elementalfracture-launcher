@@ -156,13 +156,21 @@ heartbeat; "in game" comes from the match broadcast feed.
 ### Linux
 
 Needs the Tauri system deps (`webkit2gtk-4.1`, `gtk3`, `libsoup3`, `openssl`,
-`librsvg2`) and a Rust toolchain.
+`librsvg2`), a Rust toolchain, Node 20+ and `cargo-tauri` (`cargo install
+tauri-cli --version "^2" --locked`).
 
 ```sh
-cd src-tauri
-cargo build --release
+npm ci
+cargo tauri build --no-bundle
 # binary: src-tauri/target/release/ef-launcher
 ```
+
+Always build through `cargo tauri build`: it runs `npm run build` and embeds
+the UI. A plain `cargo build --release` produces a dev-mode binary that tries
+to load `http://localhost:1420` and shows "connection refused".
+
+Checks, as CI runs them: `npx tsc --noEmit`, `npm test`, `npm run lint`,
+`npm run format-check`, and `cargo test` in `src-tauri/`.
 
 ### Windows (cross-compiled from Linux)
 
@@ -171,8 +179,8 @@ Uses the MinGW toolchain (`x86_64-w64-mingw32-gcc` + the
 `src-tauri/.cargo/config.toml`):
 
 ```sh
-cd src-tauri
-cargo build --release --target x86_64-pc-windows-gnu
+cargo tauri build --target x86_64-pc-windows-gnu --no-bundle
+# binary: src-tauri/target/x86_64-pc-windows-gnu/release/ef-launcher.exe
 ```
 
 The resulting `ef-launcher.exe` needs `WebView2Loader.dll` beside it (copied
@@ -184,8 +192,8 @@ on `workflow_dispatch` and version tags.
 
 ### Packaging (from Linux)
 
-Release version comes from `src-tauri/Cargo.toml` + `tauri.conf.json` (keep
-them identical); a release means uploading the matching binary AND setting the
+Release version comes from `src-tauri/Cargo.toml` + `tauri.conf.json` +
+`package.json` (`scripts/release.sh` bumps all three; keep them identical); a release means uploading the matching binary AND setting the
 same number in the CDN `config.ini`.
 
 **MSI** (needs `msitools`): bundles the exe + `WebView2Loader.dll`, installs
