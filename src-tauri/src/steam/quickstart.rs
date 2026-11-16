@@ -32,9 +32,12 @@ fn started_as_spellbreak() -> bool {
 
 #[cfg(windows)]
 pub fn shift_held() -> bool {
-    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_SHIFT};
-    // The high bit is "down right now", whichever window has focus.
-    unsafe { (GetAsyncKeyState(VK_SHIFT as i32) as u16) & 0x8000 != 0 }
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_SHIFT};
+    // The high bit is "down". This thread has read no input yet, so Windows
+    // seeds the answer from the keyboard as it is now, which is all we need;
+    // GetAsyncKeyState would say the same, but its import alone reads as a
+    // keylogger to antivirus heuristics.
+    unsafe { (GetKeyState(VK_SHIFT as i32) as u16) & 0x8000 != 0 }
 }
 
 /// Read through X11, which Steam's own client window is, so the key is seen

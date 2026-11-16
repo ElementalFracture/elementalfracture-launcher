@@ -103,7 +103,7 @@ pub fn under_steam() -> bool {
 /// which an explicit value replaces rather than extends.
 pub fn browser_args() -> Option<&'static str> {
     under_steam().then_some(
-        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu --disable-gpu-compositing",
+        "--disable-features=msWebOOUI,msPdfOOUI --disable-gpu --disable-gpu-compositing",
     )
 }
 
