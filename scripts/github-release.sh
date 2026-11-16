@@ -33,7 +33,8 @@ api() {
 json_field() { python3 -c 'import json,sys; d=json.load(sys.stdin); v=d; [v:=v[k] for k in sys.argv[1:]]; print(v)' "$@"; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SHA="$(git -C "$ROOT" rev-parse HEAD)"
+# EF_RELEASE_COMMIT names the commit to tag when it is not HEAD (publishing a build made earlier).
+SHA="$(git -C "$ROOT" rev-parse "${EF_RELEASE_COMMIT:-HEAD}")"
 # The tag has to point at a commit GitHub has. Refuse to tag something only this machine knows about.
 if ! api "$API/commits/$SHA" -o /dev/null 2>/dev/null; then
     echo "!! commit ${SHA:0:7} is not on GitHub yet; commit the version bump and push main first." >&2
