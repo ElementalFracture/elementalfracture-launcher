@@ -266,3 +266,27 @@ src-tauri/              Rust core, Tauri config, icons
   .cargo/config.toml      Windows cross-compile linker
 .github/workflows/      CI build
 ```
+
+## License
+
+The launcher's source code is released under the [MIT License](LICENSE).
+Attribution is the only condition: keep the copyright and permission notice
+in any copy or derivative.
+
+Some bundled files are not ours and are not covered by that license:
+
+- **Spellbreak artwork** (`ui/assets/art/`, `ui/assets/launch-bg*.png`,
+  `ui/assets/logo-full.png`, `ui/assets/mark.png`, `packaging/art/`) is the
+  property of Proletariat, Inc. It is here so the launcher looks like the game
+  it starts. Do not reuse it outside this project.
+- **Friz Quadrata** (`ui/assets/fonts/FrizQuadrata-Regular.ttf`) is a
+  commercial typeface used under its own terms. **Montserrat** is under the
+  SIL Open Font License.
+- **Brand icons** in `ui/assets/icons/` are from Font Awesome Free (CC BY 4.0).
+- **WiX UI dialogs** in `packaging/wixui/ui/` are from the WiX Toolset under
+  the Microsoft Reciprocal License (see `packaging/wixui/ui/LICENSE.txt`).
+- **WebView2Loader.dll** is Microsoft's WebView2 redistributable.
+
+The Elemental Fracture name, the servers and the account system are the
+community's; the launcher talks to them but this license grants no access to
+them.
