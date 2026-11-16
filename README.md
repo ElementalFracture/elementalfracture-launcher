@@ -1,4 +1,4 @@
-bb# Elemental Fracture Launcher
+# Elemental Fracture Launcher
 
 The official launcher for [Elemental Fracture](https://elefrac.com) — the
 community revival of Spellbreak. It installs and patches the game, manages the
