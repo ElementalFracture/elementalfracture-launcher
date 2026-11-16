@@ -53,10 +53,7 @@ pub fn paks_dir(root: &Path) -> PathBuf {
 /// CDN's) may be plain UTF-8. Handle both.
 pub fn decode_version_bytes(bytes: &[u8]) -> String {
     let s = if bytes.len() >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE {
-        let units: Vec<u16> = bytes[2..]
-            .chunks_exact(2)
-            .map(|c| u16::from_le_bytes([c[0], c[1]]))
-            .collect();
+        let units: Vec<u16> = bytes[2..].as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
         String::from_utf16_lossy(&units)
     } else {
         String::from_utf8_lossy(bytes).into_owned()

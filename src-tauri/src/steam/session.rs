@@ -163,10 +163,8 @@ pub fn defer_quit(app: &tauri::AppHandle) -> bool {
         let _ = window.minimize();
     }
     // The game may have exited between the check and the flag.
-    if !GAME_RUNNING.load(Ordering::SeqCst) && QUIT_DEFERRED.swap(false, Ordering::SeqCst) {
-        return false;
-    }
-    true
+    let exited_meanwhile = !GAME_RUNNING.load(Ordering::SeqCst) && QUIT_DEFERRED.swap(false, Ordering::SeqCst);
+    !exited_meanwhile
 }
 
 #[cfg(test)]
