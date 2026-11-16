@@ -2,7 +2,7 @@
 #
 # release.sh — cut an ef-launcher release.
 #
-# Bumps the version in Cargo.toml + tauri.conf.json, refreshes config.ini's
+# Bumps the version in Cargo.toml + tauri.conf.json + package.json (and its lock), refreshes config.ini's
 # LauncherVersion (preserving GameVersion), builds the Linux AppImage and the
 # Windows .exe, and stages all three artifacts under staging/release/.
 #
@@ -130,6 +130,11 @@ build_and_stage() {
     echo "==> Bumping version to $VERSION"
     sed -i -E 's/^version = "[0-9]+\.[0-9]+\.[0-9]+"/version = "'"$VERSION"'"/' "$SRC/Cargo.toml"
     sed -i -E 's/("version"[[:space:]]*:[[:space:]]*)"[0-9]+\.[0-9]+\.[0-9]+"/\1"'"$VERSION"'"/' "$SRC/tauri.conf.json"
+    # package.json and its lock carry the same number so `npm` and the UI's
+    # About box agree with the binary.
+    sed -i -E '0,/"version"/ s/("version"[[:space:]]*:[[:space:]]*)"[0-9]+\.[0-9]+\.[0-9]+"/\1"'"$VERSION"'"/' "$ROOT/package.json"
+    sed -i -E '0,/"version"/ s/("version"[[:space:]]*:[[:space:]]*)"[0-9]+\.[0-9]+\.[0-9]+"/\1"'"$VERSION"'"/' "$ROOT/package-lock.json"
+    sed -i -E '/^  "packages": \{$/,/^    \},$/ s/("version"[[:space:]]*:[[:space:]]*)"[0-9]+\.[0-9]+\.[0-9]+"/\1"'"$VERSION"'"/' "$ROOT/package-lock.json"
 
     echo "==> Building Linux AppImage"
     ( cd "$ROOT" && cargo tauri build --bundles appimage )
@@ -249,5 +254,5 @@ else
 fi
 
 echo
-echo "Version bumped in Cargo.toml + tauri.conf.json. Commit when ready:"
+echo "Version bumped in Cargo.toml + tauri.conf.json + package.json. Commit when ready:"
 echo "    git -C \"$ROOT\" add -A && git -C \"$ROOT\" commit -m \"Launcher v$VERSION\""
