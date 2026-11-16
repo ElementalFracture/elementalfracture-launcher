@@ -125,7 +125,7 @@ fn write_steam_file(file: &Path, bytes: &[u8]) -> AppResult<()> {
 /// Steam, closed, with an account to write for.
 fn writable_steam(need_user: bool) -> AppResult<(Steam, Option<String>)> {
     let steam = Steam::locate().ok_or_else(|| AppError::new(ErrorCode::SteamNotFound))?;
-    if steam.running() {
+    if steam.running_verified() {
         return Err(AppError::new(ErrorCode::SteamRunning));
     }
     let user = steam.active_user();

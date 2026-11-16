@@ -122,12 +122,17 @@ impl Steam {
     }
 
     /// Steam holds its config in memory and writes it back on exit, so an
-    /// edit made while it runs is lost. Every write checks this first.
+    /// edit made while it runs is lost. Every write checks `running_verified`
+    /// first; this cheaper answer is for showing state.
+    ///
+    /// On Windows this is the pid Steam leaves in the registry (0 once it
+    /// exits cleanly) and nothing more: opening a handle to Steam's process
+    /// is what a credential stealer does, and the Settings view used to ask
+    /// every few seconds.
     pub fn running(&self) -> bool {
         #[cfg(windows)]
         {
-            win::reg_dword(r"Software\Valve\Steam\ActiveProcess", "pid")
-                .is_some_and(|pid| pid != 0 && win::process_alive(pid))
+            win::reg_dword(r"Software\Valve\Steam\ActiveProcess", "pid").is_some_and(|pid| pid != 0)
         }
         #[cfg(not(windows))]
         {
@@ -135,6 +140,20 @@ impl Steam {
             procs.flatten().any(|p| {
                 fs::read_to_string(p.path().join("comm")).is_ok_and(|c| c.trim_end() == "steam")
             })
+        }
+    }
+
+    /// `running`, and on Windows the registry pid is confirmed against a live
+    /// process (a crashed Steam leaves its pid behind). Asked once per write.
+    pub fn running_verified(&self) -> bool {
+        #[cfg(windows)]
+        {
+            win::reg_dword(r"Software\Valve\Steam\ActiveProcess", "pid")
+                .is_some_and(|pid| pid != 0 && win::process_alive(pid))
+        }
+        #[cfg(not(windows))]
+        {
+            self.running()
         }
     }
 

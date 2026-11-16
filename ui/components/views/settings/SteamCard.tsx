@@ -19,11 +19,6 @@ import { toastError } from "@/i18n/errors";
 import { _, type Key } from "@/i18n";
 import type { SettingsForm } from "./useSettingsForm";
 
-/** How often Steam is re-read while Settings is open. Closing Steam or
-    installing Spellbreak happens outside the launcher, and the switches
-    should follow without a trip away and back. */
-const POLL_MS = 3000;
-
 /** Link Spellbreak's Play button to the launcher, or add the launcher to
     Steam as a shortcut. Hidden when there's no Steam to wire into. */
 export function SteamCard({ form }: { form: SettingsForm }) {
@@ -37,20 +32,23 @@ export function SteamCard({ form }: { form: SettingsForm }) {
     try {
       setStatus(await rust.steamStatus());
     } catch {
-      // Keep showing the last answer; the next poll tries again.
+      // Keep showing the last answer; the next focus tries again.
     }
   }, []);
 
+  /* Read once when Settings opens and again when the window gets focus:
+     closing Steam or installing Spellbreak happens outside the launcher, and
+     coming back is the moment to notice. No timer: on Windows each read goes
+     through Steam's account files, and an unknown program doing that every
+     few seconds is what antivirus takes for a Steam credential stealer. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!active) {
       return;
     }
     refresh();
-    const timer = setInterval(refresh, POLL_MS);
     window.addEventListener("focus", refresh);
     return () => {
-      clearInterval(timer);
       window.removeEventListener("focus", refresh);
     };
   }, [active, refresh]);
