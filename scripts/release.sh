@@ -220,7 +220,8 @@ if [ "$UPLOAD" = 1 ]; then
     # The alias lives in the host user's ~/.mc. A toolbox with its own HOME
     # (Humble-ROS2 uses ~/Dev/ARC) does not see it, mc then treats "efcdn/..."
     # as a local path, and set -e would end the script without a word.
-    if ! "$MC" alias ls 2>/dev/null | grep -qx "${ALIAS%%/*}"; then
+    # Newer mc pads the alias name with spaces, so compare the first field.
+    if ! "$MC" alias ls 2>/dev/null | awk '{print $1}' | grep -qx "${ALIAS%%/*}"; then
         echo "!! mc alias '${ALIAS%%/*}' not found under MC_CONFIG_DIR=$MC_CONFIG_DIR." >&2
         echo "   Pass MC_CONFIG_DIR=/var/home/<you>/.mc, or run '$(basename "$0") $VERSION --upload-only' on the host." >&2
         exit 1
