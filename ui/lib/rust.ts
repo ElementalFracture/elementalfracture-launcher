@@ -80,7 +80,10 @@ export async function resetSettings(): Promise<Settings> {
 }
 
 /** Email/password sign-in (the account the website uses). Throws on auth failure. */
-export async function loginEmail(email: string, password: string): Promise<LoginResult> {
+export async function loginEmail(
+  email: string,
+  password: string
+): Promise<LoginResult> {
   return unwrap(await commands.loginEmail(email, password));
 }
 
@@ -124,7 +127,9 @@ export async function detectProtons(): Promise<ProtonOption[]> {
   return await commands.detectProtons();
 }
 
-export async function getRemoteConfig(): Promise<Partial<Record<string, string>>> {
+export async function getRemoteConfig(): Promise<
+  Partial<Record<string, string>>
+> {
   return await commands.getRemoteConfig();
 }
 
@@ -307,7 +312,9 @@ export async function getPlayers(): Promise<PlayersData> {
 /** The sidecar wraps its list in `{ events }`; unwrap that here so callers
  *  only ever see the list. Older sidecars omit it entirely. */
 export async function getEvents(): Promise<EventItem[]> {
-  const payload = unwrap(await commands.getEvents()) as { events?: EventItem[] } | null;
+  const payload = unwrap(await commands.getEvents()) as {
+    events?: EventItem[];
+  } | null;
   return Array.isArray(payload?.events) ? payload.events : [];
 }
 
@@ -356,12 +363,16 @@ export async function friendAdd(username: string): Promise<FriendActionResult> {
   return unwrap(await commands.friendAdd(username)) as FriendActionResult;
 }
 
-export async function friendAccept(username: string): Promise<FriendActionResult> {
+export async function friendAccept(
+  username: string
+): Promise<FriendActionResult> {
   return unwrap(await commands.friendAccept(username)) as FriendActionResult;
 }
 
 /** Unfriend, decline an incoming request, or cancel an outgoing one. */
-export async function friendRemove(username: string): Promise<FriendActionResult> {
+export async function friendRemove(
+  username: string
+): Promise<FriendActionResult> {
   return unwrap(await commands.friendRemove(username)) as FriendActionResult;
 }
 
@@ -377,5 +388,7 @@ export interface InstallProgress {
 export function onInstallProgress(
   handler: (progress: InstallProgress) => void
 ): Promise<UnlistenFn> {
-  return listen<InstallProgress>("install-progress", (ev) => handler(ev.payload));
+  return listen<InstallProgress>("install-progress", (ev) =>
+    handler(ev.payload)
+  );
 }

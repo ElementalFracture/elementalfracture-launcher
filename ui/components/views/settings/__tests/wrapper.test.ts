@@ -36,7 +36,10 @@ describe("computeWrapperState", () => {
 
   it("reads a Steam launch back as the Steam option and its game id", () => {
     expect(
-      computeWrapperState("steam steam://rungameid/18150169937639899136", wrappers)
+      computeWrapperState(
+        "steam steam://rungameid/18150169937639899136",
+        wrappers
+      )
     ).toEqual({ mode: "steam", value: "18150169937639899136" });
     // Anything more than the bare launch is the player's own command.
     expect(
@@ -46,7 +49,10 @@ describe("computeWrapperState", () => {
 
   it("falls back to custom when nothing was detected at all", () => {
     expect(computeWrapperState("", [])).toEqual({ mode: "custom", value: "" });
-    expect(computeWrapperState("umu-run", [])).toEqual({ mode: "custom", value: "umu-run" });
+    expect(computeWrapperState("umu-run", [])).toEqual({
+      mode: "custom",
+      value: "umu-run",
+    });
   });
 });
 

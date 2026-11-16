@@ -48,7 +48,11 @@ beforeEach(() => {
   commands.detectWrappers.mockResolvedValue([]);
   commands.getStatus.mockResolvedValue(makeStatus());
   commands.getVersions.mockResolvedValue(makeVersions());
-  commands.getLauncherUpdate.mockResolvedValue({ current: "3.0.2", remote: null, update: false });
+  commands.getLauncherUpdate.mockResolvedValue({
+    current: "3.0.2",
+    remote: null,
+    update: false,
+  });
   // The box already has a runtime, which is the branch that returns instantly.
   commands.ensureRuntime.mockResolvedValue({
     status: "ok",
@@ -96,7 +100,9 @@ describe("a pending game update", () => {
     // The patch is what makes the install current, so the versions read after
     // it agree — which is what hands the button back.
     commands.updatePatch.mockImplementation(async () => {
-      commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.3", remote: "6.0.3" }));
+      commands.getVersions.mockResolvedValue(
+        makeVersions({ local: "6.0.3", remote: "6.0.3" })
+      );
       return { status: "ok", data: "6.0.3" };
     });
 
@@ -109,7 +115,9 @@ describe("a pending game update", () => {
   });
 
   it("leaves Launch alone when the CDN version can't be read", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: null })
+    );
 
     render(<HomeView />, { wrapper: Providers });
     expect(await screen.findByTitle("Launch Spellbreak")).toBeTruthy();
@@ -123,14 +131,18 @@ describe("the check at the launch itself", () => {
     render(<HomeView />, { wrapper: Providers });
     const btn = await screen.findByTitle("Launch Spellbreak");
 
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     await act(async () => {
       btn.click();
     });
 
     expect(commands.launchGame).not.toHaveBeenCalled();
     // And the plate it was pressed on is now the update.
-    expect(await screen.findByTitle("Download game update v6.0.3")).toBeTruthy();
+    expect(
+      await screen.findByTitle("Download game update v6.0.3")
+    ).toBeTruthy();
   });
 
   it("launches when the CDN agrees the install is current", async () => {
@@ -162,7 +174,9 @@ describe("the check at the launch itself", () => {
 
 describe("close on launch", () => {
   it("quits the launcher once the game is on its way", async () => {
-    commands.getSettings.mockResolvedValue(makeSettings({ close_on_launch: true }));
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ close_on_launch: true })
+    );
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     await launch();
@@ -189,7 +203,9 @@ describe("close on launch", () => {
   });
 
   it("does not quit when the launch itself failed", async () => {
-    commands.getSettings.mockResolvedValue(makeSettings({ close_on_launch: true }));
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ close_on_launch: true })
+    );
     // A real AppError, not a bare string: `errorText` reads `params` off it,
     // and a string shape only went unnoticed while the launch died earlier.
     commands.launchGame.mockResolvedValue({

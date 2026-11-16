@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import * as rust from "@/lib/rust";
 import type { EventItem, NewsItem, PlayersData } from "@/lib/rust";
 
@@ -71,7 +78,11 @@ export function LiveDataProvider({ children }: { children: ReactNode }) {
     refreshEvents,
     refreshNews,
   };
-  return <LiveDataContext.Provider value={value}>{children}</LiveDataContext.Provider>;
+  return (
+    <LiveDataContext.Provider value={value}>
+      {children}
+    </LiveDataContext.Provider>
+  );
 }
 
 export function useLiveData() {

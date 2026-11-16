@@ -61,7 +61,8 @@ export const ko: Catalogue = {
       shortcut: "Elemental Fracture를 Steam에 추가",
       shortcutHelp:
         "런처를 아트워크와 함께 비 Steam 게임으로 Steam 라이브러리에 추가하여 Steam 컨트롤러 레이아웃을 지정할 수 있게 합니다. Steam에서 Spellbreak를 보유하지 않았다면 이 옵션을 사용하세요.",
-      shortcutLinux: "Linux에서는 실행 래퍼에서 Steam이 선택되어 있는지 확인하세요.",
+      shortcutLinux:
+        "Linux에서는 실행 래퍼에서 Steam이 선택되어 있는지 확인하세요.",
       added: "Steam 라이브러리에 추가했습니다.",
       removed: "Steam 라이브러리에서 제거했습니다.",
     },
@@ -94,7 +95,8 @@ export const ko: Catalogue = {
       protonMissing: "{path} (설치되지 않음 — 자동 사용)",
       steam: "Steam",
       steamId: "Steam 게임 ID",
-      steamIdHelp: "(게임의 Steam 바탕화면 바로가기에서 steam://rungameid/ 뒤의 숫자)",
+      steamIdHelp:
+        "(게임의 Steam 바탕화면 바로가기에서 steam://rungameid/ 뒤의 숫자)",
       steamIdPlaceholder: "예: 18150169937639899136",
       steamIdDetected: "게임의 Steam 바로가기에서 감지했습니다.",
       steamIdDetectedOther: "감지된 Elemental Fracture 게임 ID:",
@@ -102,7 +104,8 @@ export const ko: Catalogue = {
       steamIdCopied: "게임 ID를 복사했습니다.",
       steamIdCopyFailed: "게임 ID를 복사하지 못했습니다.",
       steamProton: "Proton 버전",
-      steamProtonHelp: "(게임의 Steam 호환성 설정, 바꾸려면 Steam을 종료하세요)",
+      steamProtonHelp:
+        "(게임의 Steam 호환성 설정, 바꾸려면 Steam을 종료하세요)",
       steamProtonDefault: "Steam 기본값",
       steamProtonSet: "Steam이 이 Proton 버전으로 게임을 실행합니다.",
     },
@@ -368,8 +371,7 @@ export const ko: Catalogue = {
       "런처가 {path}에 쓸 수 없어 업데이트와 모드를 설치할 수 없습니다. Spellbreak 폴더를 C:\\Games 같은 곳으로 옮기거나 설정에서 '관리자 권한으로 실행'을 켜 주세요.",
     fixed:
       "Spellbreak 폴더 권한을 고쳤습니다. 이제 업데이트를 설치할 수 있습니다.",
-    adminTitle:
-      "권한 필요",
+    adminTitle: "권한 필요",
     adminMessage:
       "Elemental Fracture가 {path}의 Spellbreak 폴더에 쓸 수 없어 업데이트와 모드를 설치할 수 없습니다. 런처를 관리자 권한으로 다시 시작할까요? 앞으로는 관리자 권한으로 시작됩니다(설정에서 끌 수 있습니다).",
   },
@@ -436,11 +438,14 @@ export const ko: Catalogue = {
     installFailed: "설치에 실패했습니다",
     repair: "게임 파일 검사",
     repairing: "게임 파일을 확인하는 중…",
-    repairChecked: "게임 파일 {count}개를 확인했습니다. 누락된 파일이 없습니다.",
+    repairChecked:
+      "게임 파일 {count}개를 확인했습니다. 누락된 파일이 없습니다.",
     repairFixed: "게임 파일 {count}개를 복구했습니다.",
     repairFixed_other: "게임 파일 {count}개를 복구했습니다.",
-    repairStuck: "파일 {count}개를 복구하지 못했습니다. 다시 시도하고, 계속되면 알려 주세요.",
-    repairStuck_other: "파일 {count}개를 복구하지 못했습니다. 다시 시도하고, 계속되면 알려 주세요.",
+    repairStuck:
+      "파일 {count}개를 복구하지 못했습니다. 다시 시도하고, 계속되면 알려 주세요.",
+    repairStuck_other:
+      "파일 {count}개를 복구하지 못했습니다. 다시 시도하고, 계속되면 알려 주세요.",
   },
 
   errors: {
@@ -466,8 +471,7 @@ export const ko: Catalogue = {
     downloadStalled: "내려받기가 멈췄습니다 (범위 {range}, {remaining} 남음).",
     launcherUpdateDisabledInDev:
       "개발 빌드에서는 런처 자동 업데이트가 꺼져 있습니다 (EF_LAUNCHER_UPDATE=1을 설정하세요).",
-    launcherUpdateWaitsForGame:
-      "게임을 종료하면 런처가 업데이트됩니다.",
+    launcherUpdateWaitsForGame: "게임을 종료하면 런처가 업데이트됩니다.",
     extractionMismatch:
       "다시 압축을 풀었는데도 게임 파일 {count}개가 내려받은 파일과 일치하지 않습니다: {files}. 파일을 쓰는 동안 무언가가 파일을 바꾸고 있습니다 — 보통 백신 프로그램입니다. 게임 폴더를 예외에 추가한 뒤 다시 설치하세요. 내려받은 파일은 보관되므로 다시 내려받지 않습니다.",
     notEnoughSpace:
@@ -482,16 +486,10 @@ export const ko: Catalogue = {
       "이 다운로드는 압축을 풀면 {size}로, {limit} 제한을 넘습니다 — 디스크를 채우는 대신 거부했습니다. 다시 시도하고, 계속되면 제보해 주세요.",
 
     archiveListingUnavailable:
-
       "{url} 에서 게임 다운로드의 파일 목록을 읽지 못해 설치본을 대조할 수 없었습니다. 대개 네트워크나 CDN의 일시적인 문제입니다. 잠시 후 다시 시도해 주세요.",
 
-
     pakSignatureMissing:
-
-
       "게임을 시작할 수 없습니다. {paks} 에 {file} 이(가) 없으며, 서명된 pak은 이 파일 없이는 로드되지 않습니다. Mods를 열고 “게임 파일 검사”를 실행하면 복구됩니다.",
-
-
 
     manifestSignatureInvalid:
       "CDN의 릴리스 매니페스트가 Elemental Fracture의 서명이 아닙니다. 아무것도 설치되지 않았습니다. 나중에 다시 시도하고, 계속되면 신고해 주세요.",

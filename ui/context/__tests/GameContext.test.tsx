@@ -3,12 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { GameProvider, useGame } from "../GameContext";
 import { SettingsProvider } from "../SettingsContext";
-import { deferred, makeSettings, makeStatus, makeVersions } from "@/test/fixtures";
+import {
+  deferred,
+  makeSettings,
+  makeStatus,
+  makeVersions,
+} from "@/test/fixtures";
 
 // hoisted so the vi.mock factory below — which vitest lifts to the top of the
 // file — can close over it.
 const commands = vi.hoisted(() => ({
-  checkGameFolder: vi.fn().mockResolvedValue({ verdict: "ok", store: null, path: null, detail: null, fixed: false, restarting: false }),
+  checkGameFolder: vi.fn().mockResolvedValue({
+    verdict: "ok",
+    store: null,
+    path: null,
+    detail: null,
+    fixed: false,
+    restarting: false,
+  }),
   suggestedInstallDir: vi.fn().mockResolvedValue(null),
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
@@ -41,7 +53,11 @@ beforeEach(() => {
   commands.detectWrappers.mockResolvedValue([]);
   commands.getStatus.mockResolvedValue(makeStatus());
   commands.getVersions.mockResolvedValue(makeVersions());
-  commands.getLauncherUpdate.mockResolvedValue({ current: "3.0.2", remote: null, update: false });
+  commands.getLauncherUpdate.mockResolvedValue({
+    current: "3.0.2",
+    remote: null,
+    update: false,
+  });
   commands.updatePatch.mockResolvedValue({ status: "ok", data: "6.0.3" });
 });
 
@@ -49,9 +65,15 @@ describe("update-first startup", () => {
   it("holds the game work until the launcher update check has answered", async () => {
     // A launcher that is itself out of date shouldn't offer a game update
     // first: its own prompt has to come up before that work begins.
-    const check = deferred<{ current: string; remote: string; update: boolean }>();
+    const check = deferred<{
+      current: string;
+      remote: string;
+      update: boolean;
+    }>();
     commands.getLauncherUpdate.mockReturnValue(check.promise);
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
 
     const { result } = renderGame();
     await Promise.resolve();
@@ -77,13 +99,17 @@ describe("update-first startup", () => {
 
 describe("gameOutdated", () => {
   it("goes up when the install is behind the CDN", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     const { result } = renderGame();
     await waitFor(() => expect(result.current.gameOutdated).toBe(true));
   });
 
   it("never patches on its own — the plate has to be clicked", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     const { result } = renderGame();
     await waitFor(() => expect(result.current.gameOutdated).toBe(true));
     expect(commands.updatePatch).not.toHaveBeenCalled();
@@ -94,7 +120,9 @@ describe("gameOutdated", () => {
     // version answer on its own says nothing about an install that isn't there.
     const status = deferred<ReturnType<typeof makeStatus>>();
     commands.getStatus.mockReturnValue(status.promise);
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
 
     const { result } = renderGame();
     await Promise.resolve();
@@ -115,14 +143,18 @@ describe("gameOutdated", () => {
 
   it("stays down when the game is not installed", async () => {
     commands.getStatus.mockResolvedValue(makeStatus({ exe_present: false }));
-    commands.getVersions.mockResolvedValue(makeVersions({ local: null, remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: null, remote: "6.0.3" })
+    );
     const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
     expect(result.current.gameOutdated).toBe(false);
   });
 
   it("stays down when the CDN version is unavailable — nobody is locked out offline", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: null }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: null })
+    );
     const { result } = renderGame();
     await waitFor(() => expect(commands.getVersions).toHaveBeenCalled());
     expect(result.current.gameOutdated).toBe(false);
@@ -138,7 +170,9 @@ describe("noticing an update without being asked", () => {
     await waitFor(() => expect(result.current.versions).not.toBeNull());
     expect(result.current.gameOutdated).toBe(false);
 
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
     });
@@ -168,11 +202,15 @@ describe("applyGameUpdate", () => {
   });
 
   it("stops offering once the patch lands", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     // The patch is what makes the install current, so the versions read
     // afterwards agree — which is what lowers the flag.
     commands.updatePatch.mockImplementation(async () => {
-      commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.3", remote: "6.0.3" }));
+      commands.getVersions.mockResolvedValue(
+        makeVersions({ local: "6.0.3", remote: "6.0.3" })
+      );
       return { status: "ok", data: "6.0.3" };
     });
 
@@ -187,7 +225,9 @@ describe("applyGameUpdate", () => {
   });
 
   it("keeps offering it and lowers the flag when the patch fails", async () => {
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.2", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.2", remote: "6.0.3" })
+    );
     commands.updatePatch.mockResolvedValue({
       status: "error",
       error: { code: "network", params: { detail: "connection reset" } },
@@ -234,7 +274,12 @@ describe("provisionInstall", () => {
     const { result } = renderGame();
     await waitFor(() => expect(result.current.status).not.toBeNull());
     commands.checkGameFolder.mockResolvedValueOnce({
-      verdict: "oneDrive", store: null, path: null, detail: null, fixed: false, restarting: false,
+      verdict: "oneDrive",
+      store: null,
+      path: null,
+      detail: null,
+      fixed: false,
+      restarting: false,
     });
     commands.updatePatch.mockClear();
 
@@ -245,21 +290,32 @@ describe("provisionInstall", () => {
     });
     expect(ok).toBe(false);
     expect(commands.updatePatch).not.toHaveBeenCalled();
-    expect(report).toHaveBeenCalledWith(expect.stringContaining("OneDrive"), true);
+    expect(report).toHaveBeenCalledWith(
+      expect.stringContaining("OneDrive"),
+      true
+    );
   });
 
   it("refuses Steam's copy of Spellbreak", async () => {
     const { result } = renderGame();
     await waitFor(() => expect(result.current.status).not.toBeNull());
     commands.checkGameFolder.mockResolvedValueOnce({
-      verdict: "storeCopy", store: "steam", path: null, detail: null, fixed: false, restarting: false,
+      verdict: "storeCopy",
+      store: "steam",
+      path: null,
+      detail: null,
+      fixed: false,
+      restarting: false,
     });
 
     const report = vi.fn();
     await act(async () => {
       await result.current.provisionInstall(report);
     });
-    expect(report).toHaveBeenCalledWith(expect.stringContaining("Steam's copy"), true);
+    expect(report).toHaveBeenCalledWith(
+      expect.stringContaining("Steam's copy"),
+      true
+    );
   });
 
   it("skips the patch when the install already matches the CDN", async () => {
@@ -278,7 +334,9 @@ describe("provisionInstall", () => {
   it("patches when the versions disagree", async () => {
     const { result } = renderGame();
     await waitFor(() => expect(result.current.status).not.toBeNull());
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.1", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.1", remote: "6.0.3" })
+    );
     commands.updatePatch.mockClear();
 
     const report = vi.fn();
@@ -292,7 +350,9 @@ describe("provisionInstall", () => {
   it("reports a failure instead of claiming the install is ready", async () => {
     const { result } = renderGame();
     await waitFor(() => expect(result.current.status).not.toBeNull());
-    commands.getVersions.mockResolvedValue(makeVersions({ local: "6.0.1", remote: "6.0.3" }));
+    commands.getVersions.mockResolvedValue(
+      makeVersions({ local: "6.0.1", remote: "6.0.3" })
+    );
     commands.updatePatch.mockResolvedValue({
       status: "error",
       error: { code: "io", params: { detail: "disk full" } },
@@ -306,7 +366,10 @@ describe("provisionInstall", () => {
     expect(ok).toBe(false);
     /* The code becomes a sentence here, and the library's own words ride along
        in it — a failure the backend can't phrase still says what happened. */
-    expect(report).toHaveBeenLastCalledWith(expect.stringContaining("disk full"), true);
+    expect(report).toHaveBeenLastCalledWith(
+      expect.stringContaining("disk full"),
+      true
+    );
   });
 });
 

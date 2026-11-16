@@ -62,7 +62,8 @@ export const ja: Catalogue = {
       shortcut: "Elemental Fracture を Steam に追加",
       shortcutHelp:
         "ランチャーを非 Steam ゲームとしてアートワーク付きで Steam ライブラリに追加し、Steam のコントローラー設定を割り当てられるようにします。Steam で Spellbreak を所有していない場合に使ってください。",
-      shortcutLinux: "Linux では、起動ラッパーで Steam が選ばれていることを確認してください。",
+      shortcutLinux:
+        "Linux では、起動ラッパーで Steam が選ばれていることを確認してください。",
       added: "Steam ライブラリに追加しました。",
       removed: "Steam ライブラリから削除しました。",
     },
@@ -95,7 +96,8 @@ export const ja: Catalogue = {
       protonMissing: "{path}（未インストール — 自動を使用）",
       steam: "Steam",
       steamId: "Steam のゲーム ID",
-      steamIdHelp: "（ゲームの Steam デスクトップショートカットにある steam://rungameid/ の後の数字）",
+      steamIdHelp:
+        "（ゲームの Steam デスクトップショートカットにある steam://rungameid/ の後の数字）",
       steamIdPlaceholder: "例: 18150169937639899136",
       steamIdDetected: "ゲームの Steam ショートカットから検出しました。",
       steamIdDetectedOther: "検出された Elemental Fracture のゲーム ID：",
@@ -103,7 +105,8 @@ export const ja: Catalogue = {
       steamIdCopied: "ゲーム ID をコピーしました。",
       steamIdCopyFailed: "ゲーム ID をコピーできませんでした。",
       steamProton: "Proton のバージョン",
-      steamProtonHelp: "（ゲームの Steam 互換性設定。変更するには Steam を終了してください）",
+      steamProtonHelp:
+        "（ゲームの Steam 互換性設定。変更するには Steam を終了してください）",
       steamProtonDefault: "Steam の既定",
       steamProtonSet: "Steam はこの Proton のバージョンでゲームを起動します。",
     },
@@ -372,8 +375,7 @@ export const ja: Catalogue = {
       "ランチャーが {path} に書き込めないため、更新や MOD をインストールできません。Spellbreak フォルダーを C:\\Games などに移動するか、設定で「管理者として実行」をオンにしてください。",
     fixed:
       "Spellbreak フォルダーの権限を修正しました。更新をインストールできます。",
-    adminTitle:
-      "権限が必要です",
+    adminTitle: "権限が必要です",
     adminMessage:
       "Elemental Fracture は {path} の Spellbreak フォルダーに書き込めないため、更新や MOD をインストールできません。ランチャーを管理者として再起動しますか？ 今後は管理者として起動します（設定でオフにできます）。",
   },
@@ -441,11 +443,14 @@ export const ja: Catalogue = {
     installFailed: "インストールに失敗しました",
     repair: "ゲームファイルを検証",
     repairing: "ゲームファイルを確認しています…",
-    repairChecked: "{count} 個のゲームファイルを確認しました。不足はありません。",
+    repairChecked:
+      "{count} 個のゲームファイルを確認しました。不足はありません。",
     repairFixed: "{count} 個のゲームファイルを復元しました。",
     repairFixed_other: "{count} 個のゲームファイルを復元しました。",
-    repairStuck: "{count} 個のファイルを復元できませんでした。もう一度お試しいただき、続く場合はご報告ください。",
-    repairStuck_other: "{count} 個のファイルを復元できませんでした。もう一度お試しいただき、続く場合はご報告ください。",
+    repairStuck:
+      "{count} 個のファイルを復元できませんでした。もう一度お試しいただき、続く場合はご報告ください。",
+    repairStuck_other:
+      "{count} 個のファイルを復元できませんでした。もう一度お試しいただき、続く場合はご報告ください。",
   },
 
   errors: {
@@ -475,8 +480,7 @@ export const ja: Catalogue = {
       "ダウンロードが停止しました（範囲 {range}、残り {remaining}）。",
     launcherUpdateDisabledInDev:
       "開発ビルドではランチャーの自動更新は無効です（EF_LAUNCHER_UPDATE=1 を設定してください）。",
-    launcherUpdateWaitsForGame:
-      "ゲームの終了後にランチャーが更新されます。",
+    launcherUpdateWaitsForGame: "ゲームの終了後にランチャーが更新されます。",
     extractionMismatch:
       "再展開後も {count} 個のゲームファイルがダウンロードと一致しません: {files}。書き込み中のファイルを何かが変更しています — 多くの場合ウイルス対策ソフトです。ゲームフォルダーを除外に追加してから、もう一度インストールしてください。ダウンロード済みのファイルは保持されるため、再ダウンロードは不要です。",
     notEnoughSpace:
@@ -492,16 +496,10 @@ export const ja: Catalogue = {
       "このダウンロードは展開すると {size} になり、{limit} の上限を超えます — ディスクを埋める代わりに拒否しました。もう一度お試しください。繰り返す場合は報告してください。",
 
     archiveListingUnavailable:
-
       "{url} からゲームダウンロードのファイル一覧を読み取れなかったため、インストール内容を照合できませんでした。多くはネットワークまたは CDN の一時的な問題です。少し待ってからもう一度お試しください。",
 
-
     pakSignatureMissing:
-
-
       "ゲームを開始できません。{paks} に {file} がなく、署名済みの pak はこのファイルがないと読み込めません。「Mods」を開いて「ゲームファイルを検証」を実行すると復元できます。",
-
-
 
     manifestSignatureInvalid:
       "CDN 上のリリースマニフェストは Elemental Fracture によって署名されていません。何もインストールされませんでした。後でもう一度お試しください。続く場合は報告してください。",

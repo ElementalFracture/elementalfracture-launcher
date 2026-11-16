@@ -53,8 +53,13 @@ export default [
           ],
           patterns: [
             {
-              group: ["@tauri-apps/api", "@tauri-apps/api/*", "@tauri-apps/plugin-*"],
-              message: "Wrap the Tauri API in @/lib/rust instead of calling it from a component.",
+              group: [
+                "@tauri-apps/api",
+                "@tauri-apps/api/*",
+                "@tauri-apps/plugin-*",
+              ],
+              message:
+                "Wrap the Tauri API in @/lib/rust instead of calling it from a component.",
             },
           ],
         },

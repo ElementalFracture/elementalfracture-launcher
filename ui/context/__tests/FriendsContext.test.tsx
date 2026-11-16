@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { FriendsProvider, statusRank, getStatusText, useFriends } from "../FriendsContext";
+import {
+  FriendsProvider,
+  statusRank,
+  getStatusText,
+  useFriends,
+} from "../FriendsContext";
 import { SettingsProvider } from "../SettingsContext";
 import { makeSettings } from "@/test/fixtures";
 
@@ -42,10 +47,14 @@ const renderFriends = () => renderHook(() => useFriends(), { wrapper });
 
 beforeEach(() => {
   toast.mockClear();
-  commands.getSettings.mockResolvedValue(makeSettings({ auth_token: "tok-abc" }));
+  commands.getSettings.mockResolvedValue(
+    makeSettings({ auth_token: "tok-abc" })
+  );
   commands.detectWrappers.mockResolvedValue([]);
   commands.friendsList.mockResolvedValue(ok(graph));
-  commands.friendAdd.mockResolvedValue(ok({ ok: true, state: "sent", username: "Breadman" }));
+  commands.friendAdd.mockResolvedValue(
+    ok({ ok: true, state: "sent", username: "Breadman" })
+  );
   commands.friendAccept.mockResolvedValue(ok({ ok: true }));
   commands.friendRemove.mockResolvedValue(ok({ ok: true }));
 });
@@ -58,7 +67,9 @@ describe("presence helpers", () => {
   });
 
   it("ranks in-game friends above online ones, and both above offline", () => {
-    expect([undefined, "online", "in_game"].map((s) => statusRank(s as never))).toEqual([2, 1, 0]);
+    expect(
+      [undefined, "online", "in_game"].map((s) => statusRank(s as never))
+    ).toEqual([2, 1, 0]);
   });
 });
 
@@ -91,7 +102,9 @@ describe("loading the graph", () => {
   });
 
   it("ignores a payload the server did not mark ok", async () => {
-    commands.friendsList.mockResolvedValue(ok({ ok: false, error: "invalid_token" }));
+    commands.friendsList.mockResolvedValue(
+      ok({ ok: false, error: "invalid_token" })
+    );
     const { result } = renderFriends();
     await act(async () => {
       await result.current.refreshFriends();
@@ -126,7 +139,9 @@ describe("friend actions", () => {
   });
 
   it("turns a server error code into wording a player can act on", async () => {
-    commands.friendAdd.mockResolvedValue(ok({ ok: false, error: "user_not_found" }));
+    commands.friendAdd.mockResolvedValue(
+      ok({ ok: false, error: "user_not_found" })
+    );
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
 
@@ -138,8 +153,12 @@ describe("friend actions", () => {
   });
 
   it("hands every failure back rather than toasting it — the UI renders it in place", async () => {
-    commands.friendAdd.mockResolvedValue(ok({ ok: false, error: "user_not_found" }));
-    commands.friendRemove.mockResolvedValue(ok({ ok: false, error: "user_not_found" }));
+    commands.friendAdd.mockResolvedValue(
+      ok({ ok: false, error: "user_not_found" })
+    );
+    commands.friendRemove.mockResolvedValue(
+      ok({ ok: false, error: "user_not_found" })
+    );
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
 
@@ -179,7 +198,9 @@ describe("friend actions", () => {
   });
 
   it("leaves the graph alone when the action fails", async () => {
-    commands.friendRemove.mockResolvedValue(ok({ ok: false, error: "user_not_found" }));
+    commands.friendRemove.mockResolvedValue(
+      ok({ ok: false, error: "user_not_found" })
+    );
     const { result } = renderFriends();
     await waitFor(() => expect(result.current.friends).not.toBeNull());
     commands.friendsList.mockClear();

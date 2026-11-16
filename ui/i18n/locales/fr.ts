@@ -40,17 +40,25 @@ export const fr: Catalogue = {
       title: "Steam",
       closeSteam: "Fermer Steam",
       closing: "Demande de fermeture envoyée à Steam…",
-      closeFirst: "Fermez Steam pour modifier ces options. Steam enregistre ses propres paramètres en quittant et annulerait la modification.",
-      noUser: "Connectez-vous une fois à Steam sur cet ordinateur pour modifier ces options.",
+      closeFirst:
+        "Fermez Steam pour modifier ces options. Steam enregistre ses propres paramètres en quittant et annulerait la modification.",
+      noUser:
+        "Connectez-vous une fois à Steam sur cet ordinateur pour modifier ces options.",
       link: "Jouer à Spellbreak depuis Steam",
-      linkHelp: "Cliquer sur Jouer pour Spellbreak dans votre bibliothèque Steam ouvre ce launcher. Steam le considère comme Spellbreak : les configurations de manette, l'overlay et le temps de jeu fonctionnent. Vos fichiers Elemental Fracture restent où ils sont.",
-      linkUnavailable: "Installez d'abord Spellbreak dans Steam. Steam n'affiche Jouer que pour les jeux installés, mais le jeu se lance toujours depuis votre dossier Elemental Fracture.",
-      linked: "Jouer sur Spellbreak dans Steam ouvre désormais Elemental Fracture.",
-      unlinked: "Le bouton Jouer de Spellbreak dans Steam est revenu à la normale.",
+      linkHelp:
+        "Cliquer sur Jouer pour Spellbreak dans votre bibliothèque Steam ouvre ce launcher. Steam le considère comme Spellbreak : les configurations de manette, l'overlay et le temps de jeu fonctionnent. Vos fichiers Elemental Fracture restent où ils sont.",
+      linkUnavailable:
+        "Installez d'abord Spellbreak dans Steam. Steam n'affiche Jouer que pour les jeux installés, mais le jeu se lance toujours depuis votre dossier Elemental Fracture.",
+      linked:
+        "Jouer sur Spellbreak dans Steam ouvre désormais Elemental Fracture.",
+      unlinked:
+        "Le bouton Jouer de Spellbreak dans Steam est revenu à la normale.",
       quickstart: "Lancer directement le jeu",
-      quickstartHelp: "Cliquer sur Jouer pour Spellbreak dans Steam lance le jeu sans afficher le launcher, avec le dernier mode de jeu choisi. Pour ouvrir le launcher (pour changer de mode de jeu, par exemple), maintenez Maj en cliquant sur Jouer jusqu'à ce qu'il apparaisse. Il s'ouvre aussi de lui-même quand une mise à jour est à installer ou qu'il faut vous connecter.",
+      quickstartHelp:
+        "Cliquer sur Jouer pour Spellbreak dans Steam lance le jeu sans afficher le launcher, avec le dernier mode de jeu choisi. Pour ouvrir le launcher (pour changer de mode de jeu, par exemple), maintenez Maj en cliquant sur Jouer jusqu'à ce qu'il apparaisse. Il s'ouvre aussi de lui-même quand une mise à jour est à installer ou qu'il faut vous connecter.",
       shortcut: "Ajouter Elemental Fracture à Steam",
-      shortcutHelp: "Ajoute le launcher à votre bibliothèque Steam comme jeu non-Steam, avec ses visuels, pour lui attribuer une configuration de manette Steam. À utiliser si vous ne possédez pas Spellbreak sur Steam.",
+      shortcutHelp:
+        "Ajoute le launcher à votre bibliothèque Steam comme jeu non-Steam, avec ses visuels, pour lui attribuer une configuration de manette Steam. À utiliser si vous ne possédez pas Spellbreak sur Steam.",
       shortcutLinux:
         "Sous Linux, vérifiez que Steam est sélectionné dans Commande de lancement.",
       added: "Ajouté à votre bibliothèque Steam.",
@@ -102,7 +110,8 @@ export const fr: Catalogue = {
     urls: {
       title: "URL",
       cdn: "Base CDN",
-      cdnHelp: "(d'où sont téléchargées les mises à jour du jeu et du launcher)",
+      cdnHelp:
+        "(d'où sont téléchargées les mises à jour du jeu et du launcher)",
       auth: "URL d'authentification",
       authHelp:
         "(point de validation de session ; l'hôte du serveur de jeu en est déduit)",
@@ -112,8 +121,7 @@ export const fr: Catalogue = {
     reset: {
       button: "Réinitialiser les paramètres",
       confirm: "Cliquez à nouveau pour confirmer",
-      title:
-        "Rétablir les paramètres de cette page à leurs valeurs par défaut",
+      title: "Rétablir les paramètres de cette page à leurs valeurs par défaut",
       done: "Paramètres réinitialisés",
     },
   },
@@ -365,8 +373,7 @@ export const fr: Catalogue = {
       "Le launcher ne peut pas écrire dans {path}, donc les mises à jour et les mods ne peuvent pas y être installés. Déplacez le dossier Spellbreak par exemple dans C:\\Games, ou activez Exécuter en tant qu'administrateur dans les paramètres.",
     fixed:
       "Les autorisations du dossier Spellbreak ont été réparées, les mises à jour peuvent être installées.",
-    adminTitle:
-      "Autorisation nécessaire",
+    adminTitle: "Autorisation nécessaire",
     adminMessage:
       "Elemental Fracture ne peut pas écrire dans le dossier Spellbreak ({path}), donc les mises à jour et les mods ne peuvent pas être installés. Redémarrer le launcher en tant qu'administrateur ? Il démarrera désormais en tant qu'administrateur (désactivable dans les paramètres).",
   },
@@ -438,8 +445,10 @@ export const fr: Catalogue = {
     repairChecked: "{count} fichiers du jeu vérifiés : rien ne manque.",
     repairFixed: "{count} fichier du jeu restauré.",
     repairFixed_other: "{count} fichiers du jeu restaurés.",
-    repairStuck: "{count} fichier n'a pas pu être restauré. Réessaie, et signale-le si cela persiste.",
-    repairStuck_other: "{count} fichiers n'ont pas pu être restaurés. Réessaie, et signale-le si cela persiste.",
+    repairStuck:
+      "{count} fichier n'a pas pu être restauré. Réessaie, et signale-le si cela persiste.",
+    repairStuck_other:
+      "{count} fichiers n'ont pas pu être restaurés. Réessaie, et signale-le si cela persiste.",
   },
 
   errors: {
@@ -484,16 +493,10 @@ export const fr: Catalogue = {
       "Ce téléchargement se décompresse en {size}, au-delà de la limite de {limit} — il a été refusé plutôt que de remplir votre disque. Réessayez ; si cela persiste, signalez-le.",
 
     archiveListingUnavailable:
-
       "Impossible de lire la liste des fichiers du téléchargement du jeu depuis {url}, l'installation n'a donc pas pu être comparée. En général un incident réseau ou CDN : réessaie dans un instant.",
 
-
     pakSignatureMissing:
-
-
       "Le jeu ne peut pas démarrer : {file} est absent de {paks}, et un pak signé ne se charge pas sans ce fichier. Ouvre Mods et lance « Vérifier les fichiers du jeu » pour le restaurer.",
-
-
 
     manifestSignatureInvalid:
       "Le manifeste de version sur le CDN n'est pas signé par Elemental Fracture. Rien n'a été installé. Réessayez plus tard ; si cela persiste, signalez-le.",
@@ -533,9 +536,12 @@ export const fr: Catalogue = {
       "Le préfixe situé dans {prefix} a été créé par un autre Wine, et {wrapper} le convertirait définitivement (au risque de casser l'application à qui il appartient). Choisissez un dossier vide pour obtenir un nouveau préfixe, ou videz le champ pour utiliser celui par défaut.",
 
     steamNotFound: "Steam n'est pas installé sur cet ordinateur.",
-    steamRunning: "Fermez d'abord Steam. Il enregistre ses propres paramètres en quittant et annulerait la modification.",
-    steamNoUser: "Connectez-vous une fois à Steam sur cet ordinateur, puis réessayez.",
-    spellbreakNotInSteam: "Spellbreak n'est pas installé via Steam sur cet ordinateur.",
+    steamRunning:
+      "Fermez d'abord Steam. Il enregistre ses propres paramètres en quittant et annulerait la modification.",
+    steamNoUser:
+      "Connectez-vous une fois à Steam sur cet ordinateur, puis réessayez.",
+    spellbreakNotInSteam:
+      "Spellbreak n'est pas installé via Steam sur cet ordinateur.",
 
     unsupportedLinkScheme: "Seuls les liens http(s) peuvent être ouverts.",
 
@@ -547,7 +553,8 @@ export const fr: Catalogue = {
     badJson: "Réponse illisible : {detail}",
     downloadFailed: "Échec du téléchargement ({url}) : {detail}",
     modDownloadFailed: "Échec du téléchargement du mod : {detail}",
-    steamConfigUnreadable: "Impossible de lire le fichier {file} de Steam, rien n'a été modifié : {detail}",
+    steamConfigUnreadable:
+      "Impossible de lire le fichier {file} de Steam, rien n'a été modifié : {detail}",
     launchFailed: "Échec du lancement ({command}) : {detail}",
     signInUnreachable:
       "Impossible de joindre le service de connexion : {detail}",

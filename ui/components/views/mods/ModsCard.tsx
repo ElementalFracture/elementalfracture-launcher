@@ -156,11 +156,7 @@ export function ModsCard() {
             )}
           </Button>
           {status?.game_path && (
-            <Button
-              variant="secondary"
-              disabled={repairing}
-              onClick={onRepair}
-            >
+            <Button variant="secondary" disabled={repairing} onClick={onRepair}>
               {repairing ? (
                 <>
                   <Spinner />

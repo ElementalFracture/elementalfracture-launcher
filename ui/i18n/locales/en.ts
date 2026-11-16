@@ -405,8 +405,7 @@ export const en = {
       "The launcher can't write to {path}, so updates and mods can't be installed there. Move the Spellbreak folder somewhere like C:\\Games, or turn on Run as administrator in Settings.",
     fixed:
       "Fixed the Spellbreak folder's permissions so updates can be installed.",
-    adminTitle:
-      "Permission needed",
+    adminTitle: "Permission needed",
     adminMessage:
       "Elemental Fracture can't write to the Spellbreak folder at {path}, so updates and mods can't be installed. Restart the launcher as administrator? It will start as administrator from now on (you can turn this off in Settings).",
   },
@@ -508,8 +507,7 @@ export const en = {
     downloadStalled: "Download stalled (range {range}, {remaining} left).",
     launcherUpdateDisabledInDev:
       "Launcher self-update is off in dev builds (set EF_LAUNCHER_UPDATE=1).",
-    launcherUpdateWaitsForGame:
-      "The launcher updates once the game closes.",
+    launcherUpdateWaitsForGame: "The launcher updates once the game closes.",
     extractionMismatch:
       "{count} game file(s) still didn't match the download after being extracted again: {files}. Something is changing files as they're written — usually antivirus. Add an exclusion for the game folder, then install again; the download is kept, so it won't be fetched twice.",
     notEnoughSpace:
@@ -528,9 +526,7 @@ export const en = {
       "Could not read the file list for the game download from {url}, so the install could not be checked against it. Usually a network or CDN hiccup — try again in a moment.",
 
     pakSignatureMissing:
-
       "The game can't start: {file} is missing from {paks}, and a signed pak won't load without it. Open Mods and run “Verify game files” to put it back.",
-
 
     manifestSignatureInvalid:
       "The release manifest on the CDN isn't signed by Elemental Fracture. Nothing was installed. Try again later; if it keeps happening, report it.",

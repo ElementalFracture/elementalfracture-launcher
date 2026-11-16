@@ -44,17 +44,23 @@ export const zhHans: Catalogue = {
       title: "Steam",
       closeSteam: "关闭 Steam",
       closing: "正在请求 Steam 退出…",
-      closeFirst: "请先关闭 Steam 再更改这些设置。Steam 退出时会保存自己的设置，并撤销这里的更改。",
+      closeFirst:
+        "请先关闭 Steam 再更改这些设置。Steam 退出时会保存自己的设置，并撤销这里的更改。",
       noUser: "请先在这台电脑上登录一次 Steam，再更改这些设置。",
       link: "从 Steam 启动 Spellbreak",
-      linkHelp: "在 Steam 库中点击 Spellbreak 的“开始游戏”会打开本启动器。Steam 会把它当作 Spellbreak，因此手柄布局、游戏内覆盖和游戏时长都能正常使用。你的 Elemental Fracture 文件保持原位。",
-      linkUnavailable: "请先在 Steam 中安装 Spellbreak。Steam 只会为已安装的游戏显示“开始游戏”，但游戏仍从你的 Elemental Fracture 文件夹运行。",
-      linked: "现在在 Steam 中点击 Spellbreak 的“开始游戏”会打开 Elemental Fracture。",
+      linkHelp:
+        "在 Steam 库中点击 Spellbreak 的“开始游戏”会打开本启动器。Steam 会把它当作 Spellbreak，因此手柄布局、游戏内覆盖和游戏时长都能正常使用。你的 Elemental Fracture 文件保持原位。",
+      linkUnavailable:
+        "请先在 Steam 中安装 Spellbreak。Steam 只会为已安装的游戏显示“开始游戏”，但游戏仍从你的 Elemental Fracture 文件夹运行。",
+      linked:
+        "现在在 Steam 中点击 Spellbreak 的“开始游戏”会打开 Elemental Fracture。",
       unlinked: "Spellbreak 在 Steam 中的“开始游戏”按钮已恢复原样。",
       quickstart: "直接进入游戏",
-      quickstartHelp: "在 Steam 中点击 Spellbreak 的“开始游戏”会直接启动游戏，不显示启动器，并使用你上次选择的游戏模式。若想打开启动器（例如切换游戏模式），请在点击“开始游戏”时按住 Shift，直到启动器出现。有更新需要安装或需要登录时，启动器也会自动打开。",
+      quickstartHelp:
+        "在 Steam 中点击 Spellbreak 的“开始游戏”会直接启动游戏，不显示启动器，并使用你上次选择的游戏模式。若想打开启动器（例如切换游戏模式），请在点击“开始游戏”时按住 Shift，直到启动器出现。有更新需要安装或需要登录时，启动器也会自动打开。",
       shortcut: "将 Elemental Fracture 添加到 Steam",
-      shortcutHelp: "把启动器作为非 Steam 游戏（带封面图）添加到你的 Steam 库，这样你就能为它设置 Steam 手柄布局。如果你没有在 Steam 上拥有 Spellbreak，请使用此项。",
+      shortcutHelp:
+        "把启动器作为非 Steam 游戏（带封面图）添加到你的 Steam 库，这样你就能为它设置 Steam 手柄布局。如果你没有在 Steam 上拥有 Spellbreak，请使用此项。",
       shortcutLinux: "在 Linux 上，请确认启动包装器中已选择 Steam。",
       added: "已添加到你的 Steam 库。",
       removed: "已从你的 Steam 库移除。",
@@ -86,7 +92,8 @@ export const zhHans: Catalogue = {
       protonMissing: "{path}（未安装 — 将使用自动）",
       steam: "Steam",
       steamId: "Steam 游戏 ID",
-      steamIdHelp: "（游戏的 Steam 桌面快捷方式中 steam://rungameid/ 之后的数字）",
+      steamIdHelp:
+        "（游戏的 Steam 桌面快捷方式中 steam://rungameid/ 之后的数字）",
       steamIdPlaceholder: "例如 18150169937639899136",
       steamIdDetected: "已从游戏的 Steam 快捷方式中检测到。",
       steamIdDetectedOther: "检测到的 Elemental Fracture 游戏 ID 为：",
@@ -353,10 +360,8 @@ export const zhHans: Catalogue = {
       "该文件夹位于 OneDrive 中。OneDrive 在同步时会锁定并还原文件，导致更新无法保留，游戏一直运行旧文件。请将 Spellbreak 文件夹移到 C:\\Games 等位置，然后重新定位（或将游戏下载到那里）。",
     notWritable:
       "启动器无法写入 {path}，因此无法在那里安装更新和模组。请将 Spellbreak 文件夹移到 C:\\Games 等位置，或在设置中开启“以管理员身份运行”。",
-    fixed:
-      "已修复 Spellbreak 文件夹的权限，现在可以安装更新了。",
-    adminTitle:
-      "需要权限",
+    fixed: "已修复 Spellbreak 文件夹的权限，现在可以安装更新了。",
+    adminTitle: "需要权限",
     adminMessage:
       "Elemental Fracture 无法写入位于 {path} 的 Spellbreak 文件夹，因此无法安装更新和模组。要以管理员身份重启启动器吗？之后它将始终以管理员身份启动（可在设置中关闭）。",
   },
@@ -422,8 +427,10 @@ export const zhHans: Catalogue = {
     repairChecked: "已检查 {count} 个游戏文件，没有缺失。",
     repairFixed: "已恢复 {count} 个游戏文件。",
     repairFixed_other: "已恢复 {count} 个游戏文件。",
-    repairStuck: "有 {count} 个文件无法恢复。请重试；若持续出现，请反馈给我们。",
-    repairStuck_other: "有 {count} 个文件无法恢复。请重试；若持续出现，请反馈给我们。",
+    repairStuck:
+      "有 {count} 个文件无法恢复。请重试；若持续出现，请反馈给我们。",
+    repairStuck_other:
+      "有 {count} 个文件无法恢复。请重试；若持续出现，请反馈给我们。",
   },
 
   errors: {
@@ -447,8 +454,7 @@ export const zhHans: Catalogue = {
     downloadStalled: "下载已停滞（范围 {range}，还剩 {remaining}）。",
     launcherUpdateDisabledInDev:
       "开发版中已关闭启动器自更新（可设置 EF_LAUNCHER_UPDATE=1）。",
-    launcherUpdateWaitsForGame:
-      "游戏关闭后启动器将自动更新。",
+    launcherUpdateWaitsForGame: "游戏关闭后启动器将自动更新。",
     extractionMismatch:
       "重新解压后仍有 {count} 个游戏文件与下载内容不一致：{files}。有程序在写入时修改了文件 — 通常是杀毒软件。请将游戏文件夹加入排除列表后重新安装；已下载的文件会保留，不会重复下载。",
     notEnoughSpace:
@@ -462,16 +468,10 @@ export const zhHans: Catalogue = {
       "此下载解压后为 {size}，超过 {limit} 的上限——已拒绝，以免占满磁盘。请重试；如果反复出现，请反馈。",
 
     archiveListingUnavailable:
-
       "无法从 {url} 读取游戏下载的文件列表，因此无法据此校验安装。通常是网络或 CDN 的临时问题，请稍后重试。",
 
-
     pakSignatureMissing:
-
-
       "游戏无法启动：{paks} 中缺少 {file}，已签名的 pak 没有它就无法加载。打开“Mods”并运行“校验游戏文件”即可恢复。",
-
-
 
     manifestSignatureInvalid:
       "CDN 上的发布清单未经 Elemental Fracture 签名。未安装任何内容。请稍后重试；若持续出现，请反馈。",
@@ -481,8 +481,7 @@ export const zhHans: Catalogue = {
       "发布清单中没有 {file} 的条目，因此无法校验。未安装任何内容。",
     downloadHashMismatch:
       "{file} 与已发布的校验和不匹配，已丢弃。请重试；若持续出现，请反馈。",
-    manifestUnavailable:
-      "无法从 CDN 获取发布清单：{detail}",
+    manifestUnavailable: "无法从 CDN 获取发布清单：{detail}",
 
     notSignedIn: "你尚未登录。",
     playersUrlNotConfigured: "尚未配置玩家数地址。",
@@ -509,7 +508,8 @@ export const zhHans: Catalogue = {
       "{prefix} 中的 prefix 是由另一个 Wine 创建的，{wrapper} 会将其永久转换（可能破坏拥有它的那个程序）。请选择一个空文件夹以新建 prefix，或清空该字段以使用默认值。",
 
     steamNotFound: "这台电脑上没有安装 Steam。",
-    steamRunning: "请先关闭 Steam。它退出时会保存自己的设置，并撤销这里的更改。",
+    steamRunning:
+      "请先关闭 Steam。它退出时会保存自己的设置，并撤销这里的更改。",
     steamNoUser: "请先在这台电脑上登录一次 Steam，然后重试。",
     spellbreakNotInSteam: "这台电脑上的 Spellbreak 不是通过 Steam 安装的。",
 
@@ -522,7 +522,8 @@ export const zhHans: Catalogue = {
     badJson: "无法解析的响应：{detail}",
     downloadFailed: "下载失败（{url}）：{detail}",
     modDownloadFailed: "模组下载失败：{detail}",
-    steamConfigUnreadable: "无法读取 Steam 的 {file}，因此未做任何更改：{detail}",
+    steamConfigUnreadable:
+      "无法读取 Steam 的 {file}，因此未做任何更改：{detail}",
     launchFailed: "启动失败（{command}）：{detail}",
     signInUnreachable: "无法连接登录服务：{detail}",
     noAppDataDir: "没有可用的应用数据目录：{detail}",

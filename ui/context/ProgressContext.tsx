@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import * as rust from "@/lib/rust";
 import type { InstallProgress } from "@/lib/rust";
 
@@ -24,7 +30,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <ProgressContext.Provider value={progress}>{children}</ProgressContext.Provider>;
+  return (
+    <ProgressContext.Provider value={progress}>
+      {children}
+    </ProgressContext.Provider>
+  );
 }
 
 export function useProgress() {

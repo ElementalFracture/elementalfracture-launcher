@@ -44,17 +44,23 @@ export const zhHant: Catalogue = {
       title: "Steam",
       closeSteam: "關閉 Steam",
       closing: "正在要求 Steam 結束…",
-      closeFirst: "請先關閉 Steam 再變更這些設定。Steam 結束時會儲存自己的設定，並還原這裡的變更。",
+      closeFirst:
+        "請先關閉 Steam 再變更這些設定。Steam 結束時會儲存自己的設定，並還原這裡的變更。",
       noUser: "請先在這台電腦上登入一次 Steam，再變更這些設定。",
       link: "從 Steam 啟動 Spellbreak",
-      linkHelp: "在 Steam 收藏庫中點擊 Spellbreak 的「開始遊戲」會開啟本啟動器。Steam 會把它當作 Spellbreak，因此控制器配置、遊戲內覆蓋和遊戲時數都能正常運作。你的 Elemental Fracture 檔案保持原位。",
-      linkUnavailable: "請先在 Steam 中安裝 Spellbreak。Steam 只會為已安裝的遊戲顯示「開始遊戲」，但遊戲仍從你的 Elemental Fracture 資料夾執行。",
-      linked: "現在在 Steam 中點擊 Spellbreak 的「開始遊戲」會開啟 Elemental Fracture。",
+      linkHelp:
+        "在 Steam 收藏庫中點擊 Spellbreak 的「開始遊戲」會開啟本啟動器。Steam 會把它當作 Spellbreak，因此控制器配置、遊戲內覆蓋和遊戲時數都能正常運作。你的 Elemental Fracture 檔案保持原位。",
+      linkUnavailable:
+        "請先在 Steam 中安裝 Spellbreak。Steam 只會為已安裝的遊戲顯示「開始遊戲」，但遊戲仍從你的 Elemental Fracture 資料夾執行。",
+      linked:
+        "現在在 Steam 中點擊 Spellbreak 的「開始遊戲」會開啟 Elemental Fracture。",
       unlinked: "Spellbreak 在 Steam 中的「開始遊戲」按鈕已恢復原狀。",
       quickstart: "直接進入遊戲",
-      quickstartHelp: "在 Steam 中點擊 Spellbreak 的「開始遊戲」會直接啟動遊戲，不顯示啟動器，並使用你上次選擇的遊戲模式。若想開啟啟動器（例如切換遊戲模式），請在點擊「開始遊戲」時按住 Shift，直到啟動器出現。有更新需要安裝或需要登入時，啟動器也會自動開啟。",
+      quickstartHelp:
+        "在 Steam 中點擊 Spellbreak 的「開始遊戲」會直接啟動遊戲，不顯示啟動器，並使用你上次選擇的遊戲模式。若想開啟啟動器（例如切換遊戲模式），請在點擊「開始遊戲」時按住 Shift，直到啟動器出現。有更新需要安裝或需要登入時，啟動器也會自動開啟。",
       shortcut: "將 Elemental Fracture 加入 Steam",
-      shortcutHelp: "把啟動器作為非 Steam 遊戲（附封面圖）加入你的 Steam 收藏庫，這樣你就能為它設定 Steam 控制器配置。如果你沒有在 Steam 上擁有 Spellbreak，請使用此項。",
+      shortcutHelp:
+        "把啟動器作為非 Steam 遊戲（附封面圖）加入你的 Steam 收藏庫，這樣你就能為它設定 Steam 控制器配置。如果你沒有在 Steam 上擁有 Spellbreak，請使用此項。",
       shortcutLinux: "在 Linux 上，請確認啟動包裝器中已選擇 Steam。",
       added: "已加入你的 Steam 收藏庫。",
       removed: "已從你的 Steam 收藏庫移除。",
@@ -353,10 +359,8 @@ export const zhHant: Catalogue = {
       "此資料夾位於 OneDrive 中。OneDrive 在同步時會鎖定並還原檔案，導致更新無法保留，遊戲一直執行舊檔案。請將 Spellbreak 資料夾移到 C:\\Games 等位置，然後重新定位（或將遊戲下載到那裡）。",
     notWritable:
       "啟動器無法寫入 {path}，因此無法在那裡安裝更新和模組。請將 Spellbreak 資料夾移到 C:\\Games 等位置，或在設定中開啟「以系統管理員身分執行」。",
-    fixed:
-      "已修復 Spellbreak 資料夾的權限，現在可以安裝更新了。",
-    adminTitle:
-      "需要權限",
+    fixed: "已修復 Spellbreak 資料夾的權限，現在可以安裝更新了。",
+    adminTitle: "需要權限",
     adminMessage:
       "Elemental Fracture 無法寫入位於 {path} 的 Spellbreak 資料夾，因此無法安裝更新和模組。要以系統管理員身分重新啟動啟動器嗎？之後它將一律以系統管理員身分啟動（可在設定中關閉）。",
   },
@@ -422,8 +426,10 @@ export const zhHant: Catalogue = {
     repairChecked: "已檢查 {count} 個遊戲檔案，沒有缺少。",
     repairFixed: "已還原 {count} 個遊戲檔案。",
     repairFixed_other: "已還原 {count} 個遊戲檔案。",
-    repairStuck: "有 {count} 個檔案無法還原。請重試；若持續發生，請回報給我們。",
-    repairStuck_other: "有 {count} 個檔案無法還原。請重試；若持續發生，請回報給我們。",
+    repairStuck:
+      "有 {count} 個檔案無法還原。請重試；若持續發生，請回報給我們。",
+    repairStuck_other:
+      "有 {count} 個檔案無法還原。請重試；若持續發生，請回報給我們。",
   },
 
   errors: {
@@ -447,8 +453,7 @@ export const zhHant: Catalogue = {
     downloadStalled: "下載停滯（範圍 {range}，還剩 {remaining}）。",
     launcherUpdateDisabledInDev:
       "開發版本中已關閉啟動器自動更新（可設定 EF_LAUNCHER_UPDATE=1）。",
-    launcherUpdateWaitsForGame:
-      "遊戲關閉後啟動器將自動更新。",
+    launcherUpdateWaitsForGame: "遊戲關閉後啟動器將自動更新。",
     extractionMismatch:
       "重新解壓縮後仍有 {count} 個遊戲檔案與下載內容不一致：{files}。有程式在寫入時修改了檔案 — 通常是防毒軟體。請將遊戲資料夾加入排除清單後重新安裝；已下載的檔案會保留，不會重複下載。",
     notEnoughSpace:
@@ -463,16 +468,10 @@ export const zhHant: Catalogue = {
       "此下載解壓後為 {size}，超過 {limit} 的上限——已拒絕，以免佔滿磁碟。請重試；如果反覆出現，請回報。",
 
     archiveListingUnavailable:
-
       "無法從 {url} 讀取遊戲下載的檔案列表，因此無法據此驗證安裝。通常是網路或 CDN 的暫時問題，請稍後重試。",
 
-
     pakSignatureMissing:
-
-
       "遊戲無法啟動：{paks} 中缺少 {file}，已簽章的 pak 沒有它就無法載入。開啟「Mods」並執行「驗證遊戲檔案」即可還原。",
-
-
 
     manifestSignatureInvalid:
       "CDN 上的發佈清單未經 Elemental Fracture 簽署。未安裝任何內容。請稍後再試；若持續發生，請回報。",
@@ -482,8 +481,7 @@ export const zhHant: Catalogue = {
       "發佈清單中沒有 {file} 的項目，因此無法驗證。未安裝任何內容。",
     downloadHashMismatch:
       "{file} 與已發佈的校驗和不符，已丟棄。請再試一次；若持續發生，請回報。",
-    manifestUnavailable:
-      "無法從 CDN 取得發佈清單：{detail}",
+    manifestUnavailable: "無法從 CDN 取得發佈清單：{detail}",
 
     notSignedIn: "你尚未登入。",
     playersUrlNotConfigured: "尚未設定玩家數網址。",
@@ -510,7 +508,8 @@ export const zhHant: Catalogue = {
       "{prefix} 中的 prefix 是由另一個 Wine 建立的，{wrapper} 會將它永久轉換（可能破壞擁有它的那個程式）。請選擇一個空資料夾以建立新的 prefix，或清空此欄位以使用預設值。",
 
     steamNotFound: "這台電腦上沒有安裝 Steam。",
-    steamRunning: "請先關閉 Steam。它結束時會儲存自己的設定，並還原這裡的變更。",
+    steamRunning:
+      "請先關閉 Steam。它結束時會儲存自己的設定，並還原這裡的變更。",
     steamNoUser: "請先在這台電腦上登入一次 Steam，然後再試一次。",
     spellbreakNotInSteam: "這台電腦上的 Spellbreak 不是透過 Steam 安裝的。",
 
@@ -523,7 +522,8 @@ export const zhHant: Catalogue = {
     badJson: "無法解析的回應：{detail}",
     downloadFailed: "下載失敗（{url}）：{detail}",
     modDownloadFailed: "模組下載失敗：{detail}",
-    steamConfigUnreadable: "無法讀取 Steam 的 {file}，因此未做任何變更：{detail}",
+    steamConfigUnreadable:
+      "無法讀取 Steam 的 {file}，因此未做任何變更：{detail}",
     launchFailed: "啟動失敗（{command}）：{detail}",
     signInUnreachable: "無法連線登入服務：{detail}",
     noAppDataDir: "沒有可用的應用程式資料目錄：{detail}",

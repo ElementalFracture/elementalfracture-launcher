@@ -23,7 +23,9 @@ const renderSettings = () => renderHook(() => useSettings(), { wrapper });
 
 beforeEach(() => {
   commands.getSettings.mockResolvedValue(makeSettings());
-  commands.detectWrappers.mockResolvedValue([{ command: "umu-run", label: "umu-run" }]);
+  commands.detectWrappers.mockResolvedValue([
+    { command: "umu-run", label: "umu-run" },
+  ]);
   commands.saveSettings.mockResolvedValue({ status: "ok", data: null });
   commands.refreshAccount.mockResolvedValue({ status: "ok", data: null });
 });
@@ -37,7 +39,12 @@ describe("refreshAccount", () => {
 
     commands.refreshAccount.mockResolvedValue({
       status: "ok",
-      data: { username: "Lytion", is_staff: false, is_dev: false, is_tester: true },
+      data: {
+        username: "Lytion",
+        is_staff: false,
+        is_dev: false,
+        is_tester: true,
+      },
     });
     commands.getSettings.mockResolvedValue(makeSettings({ is_tester: true }));
 
@@ -55,7 +62,9 @@ describe("refreshAccount", () => {
       makeSettings({ username: "Doobs", is_tester: true })
     );
     const { result } = renderSettings();
-    await waitFor(() => expect(result.current.settings?.username).toBe("Doobs"));
+    await waitFor(() =>
+      expect(result.current.settings?.username).toBe("Doobs")
+    );
 
     commands.refreshAccount.mockResolvedValue({
       status: "ok",
@@ -122,7 +131,9 @@ describe("refreshSettings", () => {
     const { result } = renderSettings();
     await waitFor(() => expect(result.current.settings).not.toBeNull());
 
-    commands.getSettings.mockResolvedValue(makeSettings({ game_path: "/mnt/games/spellbreak" }));
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ game_path: "/mnt/games/spellbreak" })
+    );
     await act(async () => {
       await result.current.refreshSettings();
     });
@@ -168,7 +179,9 @@ describe("saveSettings", () => {
        chosen once a locale is known. */
     await expect(
       act(async () => {
-        await result.current.saveSettings(makeSettings({ game_path: "/read-only" }));
+        await result.current.saveSettings(
+          makeSettings({ game_path: "/read-only" })
+        );
       })
     ).rejects.toThrow("io");
     expect(result.current.settings?.game_path).toBe("/games/spellbreak");
@@ -182,14 +195,24 @@ describe("loginEmail", () => {
 
     commands.loginEmail.mockResolvedValue({
       status: "ok",
-      data: { username: "Breaker", is_staff: true, is_dev: false, is_tester: false },
+      data: {
+        username: "Breaker",
+        is_staff: true,
+        is_dev: false,
+        is_tester: false,
+      },
     });
-    commands.getSettings.mockResolvedValue(makeSettings({ username: "Breaker", is_staff: true }));
+    commands.getSettings.mockResolvedValue(
+      makeSettings({ username: "Breaker", is_staff: true })
+    );
 
     await act(async () => {
       await result.current.loginEmail("breaker@example.com", "hunter2");
     });
-    expect(commands.loginEmail).toHaveBeenCalledWith("breaker@example.com", "hunter2");
+    expect(commands.loginEmail).toHaveBeenCalledWith(
+      "breaker@example.com",
+      "hunter2"
+    );
     expect(result.current.settings?.username).toBe("Breaker");
     expect(result.current.settings?.is_staff).toBe(true);
   });

@@ -41,17 +41,22 @@ export const ptBR: Catalogue = {
       title: "Steam",
       closeSteam: "Fechar a Steam",
       closing: "Pedindo para a Steam fechar…",
-      closeFirst: "Feche a Steam para alterar isto. A Steam salva as próprias configurações ao sair e desfaria a alteração.",
+      closeFirst:
+        "Feche a Steam para alterar isto. A Steam salva as próprias configurações ao sair e desfaria a alteração.",
       noUser: "Entre na Steam uma vez neste computador para alterar isto.",
       link: "Jogar Spellbreak pela Steam",
-      linkHelp: "Clicar em Jogar no Spellbreak da sua biblioteca Steam abre este launcher. A Steam trata como Spellbreak, então as configurações de controle, o overlay e o tempo de jogo funcionam. Seus arquivos do Elemental Fracture continuam onde estão.",
-      linkUnavailable: "Instale o Spellbreak na Steam primeiro. A Steam só mostra Jogar em jogos instalados, mas o jogo continua rodando da sua pasta do Elemental Fracture.",
+      linkHelp:
+        "Clicar em Jogar no Spellbreak da sua biblioteca Steam abre este launcher. A Steam trata como Spellbreak, então as configurações de controle, o overlay e o tempo de jogo funcionam. Seus arquivos do Elemental Fracture continuam onde estão.",
+      linkUnavailable:
+        "Instale o Spellbreak na Steam primeiro. A Steam só mostra Jogar em jogos instalados, mas o jogo continua rodando da sua pasta do Elemental Fracture.",
       linked: "Agora Jogar no Spellbreak na Steam abre o Elemental Fracture.",
       unlinked: "O botão Jogar do Spellbreak na Steam voltou ao normal.",
       quickstart: "Ir direto para o jogo",
-      quickstartHelp: "Clicar em Jogar no Spellbreak na Steam inicia o jogo sem mostrar o launcher, usando o último modo de jogo escolhido. Para abrir o launcher (para trocar de modo de jogo, por exemplo), segure Shift ao clicar em Jogar até ele aparecer. Ele também abre sozinho quando há uma atualização para instalar ou você precisa entrar na conta.",
+      quickstartHelp:
+        "Clicar em Jogar no Spellbreak na Steam inicia o jogo sem mostrar o launcher, usando o último modo de jogo escolhido. Para abrir o launcher (para trocar de modo de jogo, por exemplo), segure Shift ao clicar em Jogar até ele aparecer. Ele também abre sozinho quando há uma atualização para instalar ou você precisa entrar na conta.",
       shortcut: "Adicionar o Elemental Fracture à Steam",
-      shortcutHelp: "Adiciona o launcher à sua biblioteca Steam como jogo externo, com arte, para você poder definir uma configuração de controle da Steam. Use se você não tem o Spellbreak na Steam.",
+      shortcutHelp:
+        "Adiciona o launcher à sua biblioteca Steam como jogo externo, com arte, para você poder definir uma configuração de controle da Steam. Use se você não tem o Spellbreak na Steam.",
       shortcutLinux:
         "No Linux, verifique se Steam está selecionado em Comando de inicialização.",
       added: "Adicionado à sua biblioteca Steam.",
@@ -114,8 +119,7 @@ export const ptBR: Catalogue = {
     reset: {
       button: "Redefinir as configurações",
       confirm: "Clique de novo para confirmar",
-      title:
-        "Restaurar as configurações desta página para os valores padrão",
+      title: "Restaurar as configurações desta página para os valores padrão",
       done: "Configurações redefinidas",
     },
   },
@@ -365,8 +369,7 @@ export const ptBR: Catalogue = {
       "O launcher não consegue gravar em {path}, então atualizações e mods não podem ser instalados ali. Mova a pasta do Spellbreak para um lugar como C:\\Games ou ative Executar como administrador nas Configurações.",
     fixed:
       "As permissões da pasta do Spellbreak foram corrigidas, as atualizações já podem ser instaladas.",
-    adminTitle:
-      "Permissão necessária",
+    adminTitle: "Permissão necessária",
     adminMessage:
       "O Elemental Fracture não consegue gravar na pasta do Spellbreak em {path}, então atualizações e mods não podem ser instalados. Reiniciar o launcher como administrador? A partir de agora ele vai iniciar como administrador (dá para desativar nas Configurações).",
   },
@@ -437,8 +440,10 @@ export const ptBR: Catalogue = {
     repairChecked: "{count} arquivos do jogo verificados — nada faltando.",
     repairFixed: "{count} arquivo do jogo restaurado.",
     repairFixed_other: "{count} arquivos do jogo restaurados.",
-    repairStuck: "Não foi possível restaurar {count} arquivo. Tente de novo e avise se continuar acontecendo.",
-    repairStuck_other: "Não foi possível restaurar {count} arquivos. Tente de novo e avise se continuar acontecendo.",
+    repairStuck:
+      "Não foi possível restaurar {count} arquivo. Tente de novo e avise se continuar acontecendo.",
+    repairStuck_other:
+      "Não foi possível restaurar {count} arquivos. Tente de novo e avise se continuar acontecendo.",
   },
 
   errors: {
@@ -485,16 +490,10 @@ export const ptBR: Catalogue = {
       "Este download descompacta para {size}, acima do limite de {limit} — foi recusado em vez de encher seu disco. Tente de novo; se continuar, reporte.",
 
     archiveListingUnavailable:
-
       "Não foi possível ler a lista de arquivos do download do jogo em {url}, então a instalação não pôde ser comparada com ela. Normalmente é uma falha de rede ou do CDN — tente de novo em instantes.",
 
-
     pakSignatureMissing:
-
-
       "O jogo não consegue iniciar: {file} está faltando em {paks}, e um pak assinado não carrega sem esse arquivo. Abra Mods e use “Verificar arquivos do jogo” para restaurá-lo.",
-
-
 
     manifestSignatureInvalid:
       "O manifesto de lançamento no CDN não está assinado pela Elemental Fracture. Nada foi instalado. Tente novamente mais tarde; se continuar, reporte.",
@@ -534,9 +533,11 @@ export const ptBR: Catalogue = {
       "O prefixo em {prefix} foi criado por outro Wine, e o {wrapper} iria convertê-lo permanentemente (podendo quebrar o aplicativo dono dele). Escolha uma pasta vazia para ter um prefixo novo, ou limpe o campo para usar o padrão.",
 
     steamNotFound: "A Steam não está instalada neste computador.",
-    steamRunning: "Feche a Steam primeiro. Ela salva as próprias configurações ao sair e desfaria a alteração.",
+    steamRunning:
+      "Feche a Steam primeiro. Ela salva as próprias configurações ao sair e desfaria a alteração.",
     steamNoUser: "Entre na Steam uma vez neste computador e tente de novo.",
-    spellbreakNotInSteam: "O Spellbreak não está instalado pela Steam neste computador.",
+    spellbreakNotInSteam:
+      "O Spellbreak não está instalado pela Steam neste computador.",
 
     unsupportedLinkScheme: "Só é possível abrir links http(s).",
 
@@ -548,7 +549,8 @@ export const ptBR: Catalogue = {
     badJson: "Resposta ilegível: {detail}",
     downloadFailed: "Falha no download ({url}): {detail}",
     modDownloadFailed: "Falha no download do mod: {detail}",
-    steamConfigUnreadable: "Não foi possível ler o arquivo {file} da Steam, então nada foi alterado: {detail}",
+    steamConfigUnreadable:
+      "Não foi possível ler o arquivo {file} da Steam, então nada foi alterado: {detail}",
     launchFailed: "Falha ao iniciar ({command}): {detail}",
     signInUnreachable: "Não foi possível contatar o serviço de login: {detail}",
     noAppDataDir: "Nenhuma pasta de dados do aplicativo disponível: {detail}",

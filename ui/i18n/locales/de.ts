@@ -372,8 +372,7 @@ export const de: Catalogue = {
       "Der Launcher kann nicht in {path} schreiben, daher können dort keine Updates und Mods installiert werden. Verschiebe den Spellbreak-Ordner z. B. nach C:\\Games oder aktiviere „Als Administrator ausführen“ in den Einstellungen.",
     fixed:
       "Die Berechtigungen des Spellbreak-Ordners wurden repariert, Updates können jetzt installiert werden.",
-    adminTitle:
-      "Berechtigung erforderlich",
+    adminTitle: "Berechtigung erforderlich",
     adminMessage:
       "Elemental Fracture kann nicht in den Spellbreak-Ordner unter {path} schreiben, daher können keine Updates und Mods installiert werden. Launcher als Administrator neu starten? Er startet ab jetzt immer als Administrator (das kannst du in den Einstellungen ausschalten).",
   },
@@ -446,8 +445,10 @@ export const de: Catalogue = {
     repairChecked: "{count} Spieldateien geprüft – nichts fehlt.",
     repairFixed: "{count} Spieldatei wiederhergestellt.",
     repairFixed_other: "{count} Spieldateien wiederhergestellt.",
-    repairStuck: "{count} Datei konnte nicht wiederhergestellt werden. Versuche es erneut und melde es, wenn es weiter auftritt.",
-    repairStuck_other: "{count} Dateien konnten nicht wiederhergestellt werden. Versuche es erneut und melde es, wenn es weiter auftritt.",
+    repairStuck:
+      "{count} Datei konnte nicht wiederhergestellt werden. Versuche es erneut und melde es, wenn es weiter auftritt.",
+    repairStuck_other:
+      "{count} Dateien konnten nicht wiederhergestellt werden. Versuche es erneut und melde es, wenn es weiter auftritt.",
   },
 
   errors: {
@@ -492,16 +493,10 @@ export const de: Catalogue = {
       "Dieser Download entpackt sich zu {size} und liegt damit über dem Limit von {limit} — er wurde abgelehnt, statt deine Festplatte zu füllen. Versuche es erneut; wenn es weiter passiert, melde es.",
 
     archiveListingUnavailable:
-
       "Die Dateiliste des Spiel-Downloads unter {url} konnte nicht gelesen werden, daher ließ sich die Installation nicht damit abgleichen. Meist ein Netzwerk- oder CDN-Aussetzer – versuche es gleich noch einmal.",
 
-
     pakSignatureMissing:
-
-
       "Das Spiel kann nicht starten: {file} fehlt in {paks}, und ein signiertes Pak lädt ohne diese Datei nicht. Öffne „Mods“ und führe „Spieldateien prüfen“ aus, um sie wiederherzustellen.",
-
-
 
     manifestSignatureInvalid:
       "Das Release-Manifest auf dem CDN ist nicht von Elemental Fracture signiert. Es wurde nichts installiert. Versuche es später erneut; falls es weiterhin passiert, melde es.",

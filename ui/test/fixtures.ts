@@ -51,8 +51,14 @@ export function makeVersions(over: Partial<VersionInfo> = {}): VersionInfo {
     remote,
     local_game: over.local_game !== undefined ? over.local_game : local,
     remote_game: over.remote_game !== undefined ? over.remote_game : remote,
-    local_mod: over.local_mod !== undefined ? over.local_mod : (local ? "3.17.0" : null),
-    remote_mod: over.remote_mod !== undefined ? over.remote_mod : (remote ? "3.17.0" : null),
+    local_mod:
+      over.local_mod !== undefined ? over.local_mod : local ? "3.17.0" : null,
+    remote_mod:
+      over.remote_mod !== undefined
+        ? over.remote_mod
+        : remote
+          ? "3.17.0"
+          : null,
     ...over,
   };
 }

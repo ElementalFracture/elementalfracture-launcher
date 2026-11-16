@@ -1,6 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import * as rust from "@/lib/rust";
-import type { Settings, LoginResult, ProtonOption, WrapperOption } from "@/lib/rust";
+import type {
+  Settings,
+  LoginResult,
+  ProtonOption,
+  WrapperOption,
+} from "@/lib/rust";
 import { isWindows } from "@/lib/platform";
 
 interface SettingsContextValue {
@@ -123,7 +135,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     loadWrappers,
   };
 
-  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+  return (
+    <SettingsContext.Provider value={value}>
+      {children}
+    </SettingsContext.Provider>
+  );
 }
 
 export function useSettings() {

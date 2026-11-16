@@ -64,7 +64,9 @@ describe("errorText", () => {
 
   it("says 'on the host' for a wrapper missing outside the container", () => {
     expect(
-      errorText(boom("wrapperNotInstalled", { wrapper: "wine", onHost: "true" }))
+      errorText(
+        boom("wrapperNotInstalled", { wrapper: "wine", onHost: "true" })
+      )
     ).toContain("isn't installed on the host");
     expect(
       errorText(

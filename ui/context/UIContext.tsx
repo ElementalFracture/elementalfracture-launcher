@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSettings } from "@/context/SettingsContext";
 
 export type ViewName = "home" | "mods" | "settings";
@@ -41,7 +48,13 @@ export function UIProvider({ children }: { children: ReactNode }) {
   }, [settings]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const value: UIContextValue = { view, setView, showWizard, startWizard, finishWizard };
+  const value: UIContextValue = {
+    view,
+    setView,
+    showWizard,
+    startWizard,
+    finishWizard,
+  };
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }
 

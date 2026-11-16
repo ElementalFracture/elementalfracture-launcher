@@ -159,7 +159,9 @@ describe("GameVariantPill", () => {
 
     it("puts a failed download in front of the player", async () => {
       account.is_tester = true;
-      rust.installPlaytestBuild.mockRejectedValueOnce(new Error("playtest archive: 404"));
+      rust.installPlaytestBuild.mockRejectedValueOnce(
+        new Error("playtest archive: 404")
+      );
       render(<GameVariantPill />);
       fireEvent.click(seg("Enable Playtest"));
 
