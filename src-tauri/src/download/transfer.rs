@@ -472,7 +472,7 @@ pub(super) async fn assemble_parts(
     // "No such file or directory" on the first part).
     if on_disk != keep || !dest.exists() {
         let _ = fs::remove_file(state_path(dest));
-        fs::OpenOptions::new().write(true).create(true).open(dest)?.set_len(keep)?;
+        fs::OpenOptions::new().write(true).create(true).truncate(false).open(dest)?.set_len(keep)?;
     }
     if have > 0 {
         Span { offset: 0, total }.report(app, stage, keep, total, "  (resuming)");

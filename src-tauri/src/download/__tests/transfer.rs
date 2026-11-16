@@ -167,7 +167,7 @@ fn a_fresh_install_has_no_payload_yet_and_appending_must_create_it() {
     let dest = tmp.path().join("_elefracbase.zip.part");
     assert!(fs::OpenOptions::new().append(true).open(&dest).is_err());
     // What assemble_parts does now, in order: create (len 0), then append.
-    fs::OpenOptions::new().write(true).create(true).open(&dest).unwrap().set_len(0).unwrap();
+    fs::OpenOptions::new().write(true).create(true).truncate(true).open(&dest).unwrap().set_len(0).unwrap();
     fs::OpenOptions::new().append(true).create(true).open(&dest).unwrap().write_all(b"part").unwrap();
     assert_eq!(fs::read(&dest).unwrap(), b"part");
     assert_eq!(parts_landed(fs::metadata(&dest).unwrap().len(), 256, 3), 0);

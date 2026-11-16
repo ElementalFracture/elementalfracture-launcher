@@ -110,6 +110,7 @@ fn proton_and_custom_commands_are_not_plain_wine() {
     }
 }
 
+#[test]
 fn a_steam_run_command_is_recognised() {
     let run = "steam steam://rungameid/18150169937639899136";
     assert_eq!(
