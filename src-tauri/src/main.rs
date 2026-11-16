@@ -38,6 +38,7 @@ fn commands() -> Builder<tauri::Wry> {
         settings::reset_settings,
         platform::pick_game_dir,
         platform::launcher_elevated,
+        platform::relaunch_as_admin,
         game::check_game_folder,
         game::suggested_install_dir,
         platform::open_url,
@@ -162,15 +163,6 @@ fn main() {
         .invoke_handler(builder.invoke_handler())
         .setup(|app| {
             let handle = app.handle().clone();
-            // "Run as administrator" (Settings, or offered when the game folder can't be written to): start again
-            // elevated, then stop this copy. A Steam start is left alone (the elevated copy wouldn't carry Steam's
-            // environment), and so is a player who declines the UAC prompt: they get a normal launcher.
-            #[cfg(windows)]
-            if settings::load(&handle).run_as_admin && !platform::is_elevated() && !steam::wanted(&handle)
-                && platform::relaunch_elevated()
-            {
-                std::process::exit(0);
-            }
             steam::refresh_tool();
             if !steam::wanted(&handle) {
                 return Ok(open_window(&handle)?);

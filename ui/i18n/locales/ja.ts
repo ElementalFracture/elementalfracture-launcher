@@ -36,9 +36,10 @@ export const ja: Catalogue = {
       closeOnLaunch: "ゲーム開始時にランチャーを閉じる",
       closeOnLaunchHelp:
         "ゲームが起動した少しあとにランチャーを自動で閉じ、プレイ中のメモリを解放します。",
-      runAsAdmin: "管理者として実行",
+      runAsAdmin: "管理者として再起動",
       runAsAdminHelp:
-        "ランチャーと、そこから起動するゲームを管理者として実行します。Spellbreak フォルダーにほかの方法で書き込めない場合（Program Files 内など）にのみ必要です。次回ランチャー起動時から有効になります。",
+        "ランチャーと、そこから起動するゲームを、このセッションに限り管理者として再起動します。Spellbreak フォルダーにほかの方法で書き込めない場合（Program Files 内など）にのみ必要です。先に Windows が許可を求めます。",
+      elevated: "管理者として実行中です。",
     },
     steam: {
       title: "Steam",
@@ -372,12 +373,12 @@ export const ja: Catalogue = {
     oneDrive:
       "このフォルダーは OneDrive の中にあります。OneDrive は同期中にファイルをロックしたり元に戻したりするため、更新が反映されず古いファイルのままゲームが起動します。Spellbreak フォルダーを C:\\Games などに移動してから、もう一度指定してください（またはそこにゲームをダウンロードしてください）。",
     notWritable:
-      "ランチャーが {path} に書き込めないため、更新や MOD をインストールできません。Spellbreak フォルダーを C:\\Games などに移動するか、設定で「管理者として実行」をオンにしてください。",
+      "ランチャーが {path} に書き込めないため、更新や MOD をインストールできません。Spellbreak フォルダーを C:\\Games などに移動するか、設定の「管理者として再起動」を使ってください。",
     fixed:
       "Spellbreak フォルダーの権限を修正しました。更新をインストールできます。",
     adminTitle: "権限が必要です",
     adminMessage:
-      "Elemental Fracture は {path} の Spellbreak フォルダーに書き込めないため、更新や MOD をインストールできません。ランチャーを管理者として再起動しますか？ 今後は管理者として起動します（設定でオフにできます）。",
+      "Elemental Fracture は {path} の Spellbreak フォルダーに書き込めないため、更新や MOD をインストールできません。このセッションに限り、ランチャーを管理者として再起動しますか？",
   },
   game: {
     title: "ゲーム",

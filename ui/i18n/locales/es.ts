@@ -32,9 +32,10 @@ export const es: Catalogue = {
       closeOnLaunch: "Cerrar el launcher al iniciar el juego",
       closeOnLaunchHelp:
         "Cierra el launcher automáticamente poco después de iniciar el juego, para liberar memoria mientras juegas.",
-      runAsAdmin: "Ejecutar como administrador",
+      runAsAdmin: "Reiniciar como administrador",
       runAsAdminHelp:
-        "Inicia el launcher, y con él el juego, como administrador. Solo hace falta si no se puede escribir en tu carpeta de Spellbreak de otra forma (por ejemplo, dentro de Archivos de programa). Se aplica la próxima vez que se inicie el launcher.",
+        "Vuelve a iniciar el launcher, y con él el juego, como administrador solo durante esta sesión. Solo hace falta si no se puede escribir en tu carpeta de Spellbreak de otra forma (por ejemplo, dentro de Archivos de programa). Windows pide permiso antes.",
+      elevated: "Ejecutándose como administrador.",
     },
     steam: {
       title: "Steam",
@@ -371,12 +372,12 @@ export const es: Catalogue = {
     oneDrive:
       "Esa carpeta está dentro de OneDrive. OneDrive bloquea y restaura archivos mientras sincroniza, así que las actualizaciones no se mantienen y el juego sigue usando archivos viejos. Mueve la carpeta de Spellbreak a un lugar como C:\\Games y vuelve a localizarla (o descarga el juego allí).",
     notWritable:
-      "El launcher no puede escribir en {path}, así que no se pueden instalar actualizaciones ni mods ahí. Mueve la carpeta de Spellbreak a un lugar como C:\\Games o activa Ejecutar como administrador en Ajustes.",
+      "El launcher no puede escribir en {path}, así que no se pueden instalar actualizaciones ni mods ahí. Mueve la carpeta de Spellbreak a un lugar como C:\\Games o usa Reiniciar como administrador en Ajustes.",
     fixed:
       "Se arreglaron los permisos de la carpeta de Spellbreak para poder instalar actualizaciones.",
     adminTitle: "Se necesita permiso",
     adminMessage:
-      "Elemental Fracture no puede escribir en la carpeta de Spellbreak en {path}, así que no se pueden instalar actualizaciones ni mods. ¿Reiniciar el launcher como administrador? A partir de ahora se iniciará como administrador (puedes desactivarlo en Ajustes).",
+      "Elemental Fracture no puede escribir en la carpeta de Spellbreak en {path}, así que no se pueden instalar actualizaciones ni mods. ¿Reiniciar el launcher como administrador durante esta sesión?",
   },
   game: {
     title: "Juego",

@@ -257,6 +257,17 @@ export async function steamShutdown(): Promise<void> {
   unwrap(await commands.steamShutdown());
 }
 
+/** Whether this launcher runs as administrator (Windows; false elsewhere). */
+export async function launcherElevated(): Promise<boolean> {
+  return await commands.launcherElevated();
+}
+
+/** Restart as administrator for this session. True when the new copy
+    started (this one exits); false when the player declined. */
+export async function relaunchAsAdmin(): Promise<boolean> {
+  return await commands.relaunchAsAdmin();
+}
+
 /** Fully exit the launcher — the real quit path, bypassing minimize-on-close. */
 export async function quitLauncher(): Promise<void> {
   await commands.quitLauncher();

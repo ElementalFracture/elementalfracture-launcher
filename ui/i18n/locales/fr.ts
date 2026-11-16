@@ -32,9 +32,10 @@ export const fr: Catalogue = {
       closeOnLaunch: "Fermer le launcher au démarrage du jeu",
       closeOnLaunchHelp:
         "Ferme automatiquement le launcher peu après le démarrage du jeu, pour libérer de la mémoire pendant que vous jouez.",
-      runAsAdmin: "Exécuter en tant qu'administrateur",
+      runAsAdmin: "Redémarrer en tant qu'administrateur",
       runAsAdminHelp:
-        "Démarre le launcher, et donc le jeu, en tant qu'administrateur. Utile seulement si votre dossier Spellbreak n'est pas accessible en écriture autrement (par exemple dans Program Files). Prend effet au prochain démarrage du launcher.",
+        "Redémarre le launcher, et donc le jeu, en tant qu'administrateur pour cette session seulement. Utile seulement si votre dossier Spellbreak n'est pas accessible en écriture autrement (par exemple dans Program Files). Windows demande d'abord l'autorisation.",
+      elevated: "Exécuté en tant qu'administrateur.",
     },
     steam: {
       title: "Steam",
@@ -370,12 +371,12 @@ export const fr: Catalogue = {
     oneDrive:
       "Ce dossier se trouve dans OneDrive. OneDrive verrouille et restaure les fichiers pendant la synchronisation, donc les mises à jour ne tiennent pas et le jeu continue d'utiliser d'anciens fichiers. Déplacez le dossier Spellbreak par exemple dans C:\\Games, puis localisez-le à nouveau (ou téléchargez le jeu à cet endroit).",
     notWritable:
-      "Le launcher ne peut pas écrire dans {path}, donc les mises à jour et les mods ne peuvent pas y être installés. Déplacez le dossier Spellbreak par exemple dans C:\\Games, ou activez Exécuter en tant qu'administrateur dans les paramètres.",
+      "Le launcher ne peut pas écrire dans {path}, donc les mises à jour et les mods ne peuvent pas y être installés. Déplacez le dossier Spellbreak par exemple dans C:\\Games, ou utilisez Redémarrer en tant qu'administrateur dans les paramètres.",
     fixed:
       "Les autorisations du dossier Spellbreak ont été réparées, les mises à jour peuvent être installées.",
     adminTitle: "Autorisation nécessaire",
     adminMessage:
-      "Elemental Fracture ne peut pas écrire dans le dossier Spellbreak ({path}), donc les mises à jour et les mods ne peuvent pas être installés. Redémarrer le launcher en tant qu'administrateur ? Il démarrera désormais en tant qu'administrateur (désactivable dans les paramètres).",
+      "Elemental Fracture ne peut pas écrire dans le dossier Spellbreak ({path}), donc les mises à jour et les mods ne peuvent pas être installés. Redémarrer le launcher en tant qu'administrateur pour cette session ?",
   },
   game: {
     title: "Jeu",

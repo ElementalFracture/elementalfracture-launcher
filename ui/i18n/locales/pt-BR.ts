@@ -33,9 +33,10 @@ export const ptBR: Catalogue = {
       closeOnLaunch: "Fechar o launcher quando o jogo iniciar",
       closeOnLaunchHelp:
         "Fecha o launcher automaticamente logo depois que o jogo abre, para liberar memória enquanto você joga.",
-      runAsAdmin: "Executar como administrador",
+      runAsAdmin: "Reiniciar como administrador",
       runAsAdminHelp:
-        "Inicia o launcher, e com ele o jogo, como administrador. Só é necessário quando não dá para gravar na pasta do Spellbreak de outra forma (por exemplo, dentro de Arquivos de Programas). Vale a partir da próxima vez que o launcher iniciar.",
+        "Reinicia o launcher, e com ele o jogo, como administrador só nesta sessão. Só é necessário quando não dá para gravar na pasta do Spellbreak de outra forma (por exemplo, dentro de Arquivos de Programas). O Windows pede permissão antes.",
+      elevated: "Executando como administrador.",
     },
     steam: {
       title: "Steam",
@@ -366,12 +367,12 @@ export const ptBR: Catalogue = {
     oneDrive:
       "Essa pasta está dentro do OneDrive. O OneDrive bloqueia e restaura arquivos enquanto sincroniza, então as atualizações não ficam e o jogo continua com arquivos antigos. Mova a pasta do Spellbreak para um lugar como C:\\Games e localize de novo (ou baixe o jogo lá).",
     notWritable:
-      "O launcher não consegue gravar em {path}, então atualizações e mods não podem ser instalados ali. Mova a pasta do Spellbreak para um lugar como C:\\Games ou ative Executar como administrador nas Configurações.",
+      "O launcher não consegue gravar em {path}, então atualizações e mods não podem ser instalados ali. Mova a pasta do Spellbreak para um lugar como C:\\Games ou use Reiniciar como administrador nas Configurações.",
     fixed:
       "As permissões da pasta do Spellbreak foram corrigidas, as atualizações já podem ser instaladas.",
     adminTitle: "Permissão necessária",
     adminMessage:
-      "O Elemental Fracture não consegue gravar na pasta do Spellbreak em {path}, então atualizações e mods não podem ser instalados. Reiniciar o launcher como administrador? A partir de agora ele vai iniciar como administrador (dá para desativar nas Configurações).",
+      "O Elemental Fracture não consegue gravar na pasta do Spellbreak em {path}, então atualizações e mods não podem ser instalados. Reiniciar o launcher como administrador só nesta sessão?",
   },
   game: {
     title: "Jogo",

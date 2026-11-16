@@ -40,17 +40,29 @@ async pickGameDir(title: string | null, startDir: string | null) : Promise<strin
     return await TAURI_INVOKE("pick_game_dir", { title, startDir });
 },
 /**
- * Whether the launcher is running as administrator (the Settings toggle shows it).
+ * Whether the launcher is running as administrator (Settings says so in
+ * place of the restart button).
  */
 async launcherElevated() : Promise<boolean> {
     return await TAURI_INVOKE("launcher_elevated");
+},
+/**
+ * Settings: start another copy as administrator for this session and stop
+ * this one. Only ever on a click, never on its own at startup, and nothing is
+ * remembered: a launcher that re-elevated itself every start looked like
+ * malware keeping its foothold. True when the new copy started (this one is
+ * exiting); false when the player declined UAC, or off Windows.
+ */
+async relaunchAsAdmin() : Promise<boolean> {
+    return await TAURI_INVOKE("relaunch_as_admin");
 },
 /**
  * Look at `path` before the launcher installs to it or runs from it.
  * 
  * With `fix`, a folder the player can't write to is repaired where possible
  * (see the module docs); with `admin_prompt` as well, a folder that only an
- * administrator can repair asks the player whether to restart as one.
+ * administrator can repair asks the player whether to restart as one, for
+ * this session only.
  */
 async checkGameFolder(path: string, fix: boolean, adminPrompt: AdminPrompt | null) : Promise<FolderCheck> {
     return await TAURI_INVOKE("check_game_folder", { path, fix, adminPrompt });
@@ -878,11 +890,6 @@ close_on_launch: boolean;
  * turns it back on.
  */
 steam_autostart: boolean; 
-/**
- * Windows: start the launcher (and so the game it starts) as administrator. Off by default; turned on when
- * the game folder can't be written to any other way (game/folder.rs), or from Settings.
- */
-run_as_admin: boolean; 
 /**
  * UI language: a tag the frontend catalogues know ("en", "fr"), or ""
  * for "follow the OS". Resolved in the UI, which is the only side that

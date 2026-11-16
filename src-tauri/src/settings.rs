@@ -69,9 +69,6 @@ pub struct Settings {
     /// unread on purpose: everyone starts from off once, and whoever wants it
     /// turns it back on.
     pub steam_autostart: bool,
-    /// Windows: start the launcher (and so the game it starts) as administrator. Off by default; turned on when
-    /// the game folder can't be written to any other way (game/folder.rs), or from Settings.
-    pub run_as_admin: bool,
     /// UI language: a tag the frontend catalogues know ("en", "fr"), or ""
     /// for "follow the OS". Resolved in the UI, which is the only side that
     /// holds prose — the backend never reads this.
@@ -149,7 +146,6 @@ impl Default for Settings {
             minimize_on_close: false,
             close_on_launch: false,
             steam_autostart: false,
-            run_as_admin: false,
             // Empty = follow the OS; the picker in Settings writes a tag.
             language: String::new(),
             manifest_version: 0,
@@ -269,7 +265,6 @@ fn reset_view_fields(s: &mut Settings) {
     // Launcher card.
     s.minimize_on_close = d.minimize_on_close;
     s.close_on_launch = d.close_on_launch;
-    s.run_as_admin = d.run_as_admin;
     // Steam card.
     s.steam_autostart = d.steam_autostart;
     // Language card.

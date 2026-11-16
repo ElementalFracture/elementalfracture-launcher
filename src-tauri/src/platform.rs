@@ -142,11 +142,27 @@ pub fn relaunch_elevated() -> bool {
     false
 }
 
-/// Whether the launcher is running as administrator (the Settings toggle shows it).
+/// Whether the launcher is running as administrator (Settings says so in
+/// place of the restart button).
 #[tauri::command]
 #[specta::specta]
 pub fn launcher_elevated() -> bool {
     is_elevated()
+}
+
+/// Settings: start another copy as administrator for this session and stop
+/// this one. Only ever on a click, never on its own at startup, and nothing is
+/// remembered: a launcher that re-elevated itself every start looked like
+/// malware keeping its foothold. True when the new copy started (this one is
+/// exiting); false when the player declined UAC, or off Windows.
+#[tauri::command]
+#[specta::specta]
+pub fn relaunch_as_admin(app: tauri::AppHandle) -> bool {
+    if is_elevated() || !relaunch_elevated() {
+        return false;
+    }
+    app.exit(0);
+    true
 }
 
 /// Bytes this user may still write on the filesystem holding `path` — what

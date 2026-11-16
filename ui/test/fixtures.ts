@@ -23,7 +23,6 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     onboarded: true,
     minimize_on_close: false,
     close_on_launch: false,
-    run_as_admin: false,
     steam_autostart: false,
     language: "",
     manifest_version: 0,

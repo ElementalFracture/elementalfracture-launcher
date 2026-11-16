@@ -37,9 +37,10 @@ export const en = {
       closeOnLaunch: "Close launcher when the game starts",
       closeOnLaunchHelp:
         "Automatically closes the launcher a moment after the game launches, to free up memory while you play.",
-      runAsAdmin: "Run as administrator",
+      runAsAdmin: "Restart as administrator",
       runAsAdminHelp:
-        "Starts the launcher, and the game with it, as administrator. Only needed when your Spellbreak folder can't be written to otherwise (for example, inside Program Files). Takes effect the next time the launcher starts.",
+        "Starts the launcher again as administrator, and the game with it, for this session only. Only needed when your Spellbreak folder can't be written to otherwise (for example, inside Program Files). Windows asks for permission first.",
+      elevated: "Running as administrator.",
     },
     steam: {
       title: "Steam",
@@ -402,12 +403,12 @@ export const en = {
     oneDrive:
       "That folder is inside OneDrive. OneDrive locks and restores files while it syncs, so updates don't stick and the game keeps running old files. Move the Spellbreak folder somewhere like C:\\Games, then Locate it again (or Download the game there).",
     notWritable:
-      "The launcher can't write to {path}, so updates and mods can't be installed there. Move the Spellbreak folder somewhere like C:\\Games, or turn on Run as administrator in Settings.",
+      "The launcher can't write to {path}, so updates and mods can't be installed there. Move the Spellbreak folder somewhere like C:\\Games, or use Restart as administrator in Settings.",
     fixed:
       "Fixed the Spellbreak folder's permissions so updates can be installed.",
     adminTitle: "Permission needed",
     adminMessage:
-      "Elemental Fracture can't write to the Spellbreak folder at {path}, so updates and mods can't be installed. Restart the launcher as administrator? It will start as administrator from now on (you can turn this off in Settings).",
+      "Elemental Fracture can't write to the Spellbreak folder at {path}, so updates and mods can't be installed. Restart the launcher as administrator for this session?",
   },
   game: {
     title: "Game",

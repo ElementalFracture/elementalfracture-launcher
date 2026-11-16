@@ -32,9 +32,10 @@ export const de: Catalogue = {
       closeOnLaunch: "Launcher schließen, wenn das Spiel startet",
       closeOnLaunchHelp:
         "Schließt den Launcher automatisch kurz nach dem Spielstart, damit beim Spielen Arbeitsspeicher frei wird.",
-      runAsAdmin: "Als Administrator ausführen",
+      runAsAdmin: "Als Administrator neu starten",
       runAsAdminHelp:
-        "Startet den Launcher und damit auch das Spiel als Administrator. Nur nötig, wenn in deinen Spellbreak-Ordner sonst nicht geschrieben werden kann (zum Beispiel unter „Programme“). Gilt ab dem nächsten Start des Launchers.",
+        "Startet den Launcher und damit auch das Spiel neu als Administrator, nur für diese Sitzung. Nur nötig, wenn in deinen Spellbreak-Ordner sonst nicht geschrieben werden kann (zum Beispiel unter „Programme“). Windows fragt vorher nach Erlaubnis.",
+      elevated: "Läuft als Administrator.",
     },
     steam: {
       title: "Steam",
@@ -369,12 +370,12 @@ export const de: Catalogue = {
     oneDrive:
       "Dieser Ordner liegt in OneDrive. OneDrive sperrt Dateien beim Synchronisieren und stellt alte Versionen wieder her, daher bleiben Updates nicht erhalten und das Spiel startet mit alten Dateien. Verschiebe den Spellbreak-Ordner z. B. nach C:\\Games und suche ihn dann erneut (oder lade das Spiel dorthin herunter).",
     notWritable:
-      "Der Launcher kann nicht in {path} schreiben, daher können dort keine Updates und Mods installiert werden. Verschiebe den Spellbreak-Ordner z. B. nach C:\\Games oder aktiviere „Als Administrator ausführen“ in den Einstellungen.",
+      "Der Launcher kann nicht in {path} schreiben, daher können dort keine Updates und Mods installiert werden. Verschiebe den Spellbreak-Ordner z. B. nach C:\\Games oder nutze „Als Administrator neu starten“ in den Einstellungen.",
     fixed:
       "Die Berechtigungen des Spellbreak-Ordners wurden repariert, Updates können jetzt installiert werden.",
     adminTitle: "Berechtigung erforderlich",
     adminMessage:
-      "Elemental Fracture kann nicht in den Spellbreak-Ordner unter {path} schreiben, daher können keine Updates und Mods installiert werden. Launcher als Administrator neu starten? Er startet ab jetzt immer als Administrator (das kannst du in den Einstellungen ausschalten).",
+      "Elemental Fracture kann nicht in den Spellbreak-Ordner unter {path} schreiben, daher können keine Updates und Mods installiert werden. Launcher für diese Sitzung als Administrator neu starten?",
   },
   game: {
     title: "Spiel",

@@ -36,9 +36,10 @@ export const zhHans: Catalogue = {
       closeOnLaunch: "游戏启动后关闭启动器",
       closeOnLaunchHelp:
         "游戏启动后稍等片刻自动关闭启动器，以便在游戏时释放内存。",
-      runAsAdmin: "以管理员身份运行",
+      runAsAdmin: "以管理员身份重启",
       runAsAdminHelp:
-        "以管理员身份启动启动器，以及由它启动的游戏。仅当 Spellbreak 文件夹无法以其他方式写入时（例如位于 Program Files 中）才需要。下次启动启动器时生效。",
+        "仅在本次会话中以管理员身份重新启动启动器，以及由它启动的游戏。仅当 Spellbreak 文件夹无法以其他方式写入时（例如位于 Program Files 中）才需要。Windows 会先请求许可。",
+      elevated: "正以管理员身份运行。",
     },
     steam: {
       title: "Steam",
@@ -359,11 +360,11 @@ export const zhHans: Catalogue = {
     oneDrive:
       "该文件夹位于 OneDrive 中。OneDrive 在同步时会锁定并还原文件，导致更新无法保留，游戏一直运行旧文件。请将 Spellbreak 文件夹移到 C:\\Games 等位置，然后重新定位（或将游戏下载到那里）。",
     notWritable:
-      "启动器无法写入 {path}，因此无法在那里安装更新和模组。请将 Spellbreak 文件夹移到 C:\\Games 等位置，或在设置中开启“以管理员身份运行”。",
+      "启动器无法写入 {path}，因此无法在那里安装更新和模组。请将 Spellbreak 文件夹移到 C:\\Games 等位置，或在设置中使用“以管理员身份重启”。",
     fixed: "已修复 Spellbreak 文件夹的权限，现在可以安装更新了。",
     adminTitle: "需要权限",
     adminMessage:
-      "Elemental Fracture 无法写入位于 {path} 的 Spellbreak 文件夹，因此无法安装更新和模组。要以管理员身份重启启动器吗？之后它将始终以管理员身份启动（可在设置中关闭）。",
+      "Elemental Fracture 无法写入位于 {path} 的 Spellbreak 文件夹，因此无法安装更新和模组。要仅在本次会话中以管理员身份重启启动器吗？",
   },
   game: {
     title: "游戏",

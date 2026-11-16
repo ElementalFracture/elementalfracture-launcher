@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/shadcn/button";
 import {
   Card,
@@ -13,7 +13,9 @@ import { InfoPopover } from "@/components/InfoPopover";
 import { isWindows } from "@/lib/platform";
 import { useGame } from "@/context/GameContext";
 import { atLeast } from "@/lib/timing";
+import * as rust from "@/lib/rust";
 import { toast } from "@/lib/toast";
+import { toastError } from "@/i18n/errors";
 import { _ } from "@/i18n";
 import type { SettingsForm } from "./useSettingsForm";
 
@@ -25,6 +27,29 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
     setLauncherUpdatePop,
   } = useGame();
   const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [elevated, setElevated] = useState(false);
+
+  /* Elevation is a one-shot restart the player asks for here, never a
+     setting: a launcher that re-elevated itself on every start read as
+     malware keeping its foothold. */
+  useEffect(() => {
+    if (!isWindows) {
+      return;
+    }
+    rust
+      .launcherElevated()
+      .then(setElevated)
+      .catch(() => {});
+  }, []);
+
+  const onRelaunchAsAdmin = async () => {
+    try {
+      await rust.relaunchAsAdmin();
+      // True means this copy is exiting; false, the player declined.
+    } catch (e) {
+      toastError(e);
+    }
+  };
 
   const onCheckLauncherUpdates = async () => {
     setCheckingUpdates(true);
@@ -108,11 +133,15 @@ export function LauncherCard({ form }: { form: SettingsForm }) {
                 <p>{_("settings.launcher.runAsAdminHelp")}</p>
               </InfoPopover>
             </span>
-            <Switch
-              aria-label={_("settings.launcher.runAsAdmin")}
-              checked={form.runAsAdmin}
-              onCheckedChange={form.setRunAsAdmin}
-            />
+            {elevated ? (
+              <span className="card-note">
+                {_("settings.launcher.elevated")}
+              </span>
+            ) : (
+              <Button variant="secondary" onClick={onRelaunchAsAdmin}>
+                {_("settings.launcher.runAsAdmin")}
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
