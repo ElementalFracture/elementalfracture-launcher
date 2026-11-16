@@ -22,6 +22,12 @@ pub struct Settings {
     /// Base URL of the account portal (serves web/api.php).
     pub play_base: String,
     pub cdn_base: String,
+    /// Where launcher binaries are published: GitHub Releases, one tag per
+    /// version, so a self-update pulls `{launcher_base}/v{version}/ef-launcher.exe`
+    /// (or `.AppImage`) and checks it against the signed manifest on the CDN
+    /// like any other payload. Not drawn in Settings; edit settings.json to
+    /// point a build at a fork.
+    pub launcher_base: String,
     /// HTTPS endpoint that validates a live session → username.
     /// The in-game server host the injector connects to is derived from this.
     pub auth_url: String,
@@ -110,6 +116,10 @@ fn portal_base() -> &'static str {
 /// downloaded. And with one running, an update installs *fixture* paks and a
 /// stub loader into whatever `game_path` the profile points at, so point that
 /// at a copy. Overridable in Settings → URLs either way.
+/// The GitHub Releases download root for this repository. The test env serves
+/// no launcher binaries, so debug builds point here too.
+const LAUNCHER_BASE: &str = "https://github.com/ElementalFracture/elementalfracture-launcher/releases/download";
+
 fn cdn_base() -> &'static str {
     if cfg!(debug_assertions) {
         "http://localhost:8787"
@@ -130,6 +140,7 @@ impl Default for Settings {
             proton_path: String::new(),
             play_base: "https://play.elefrac.com".into(),
             cdn_base: cdn_base().into(),
+            launcher_base: LAUNCHER_BASE.into(),
             auth_url: format!("{}/auth", portal_base()),
             players_url: format!("{}/players", portal_base()),
             username: String::new(),

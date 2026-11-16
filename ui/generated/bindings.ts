@@ -223,16 +223,17 @@ async getVersions() : Promise<VersionInfo> {
     return await TAURI_INVOKE("get_versions");
 },
 /**
- * Compare this launcher against {cdn}/launcher/version.txt. Also cleans up
- * the .old binary a previous self-update left behind.
+ * Compare this launcher against LauncherVersion in {cdn}/launcher/config.ini.
+ * Also cleans up the .old binary a previous self-update left behind.
  */
 async getLauncherUpdate() : Promise<LauncherUpdateInfo> {
     return await TAURI_INVOKE("get_launcher_update");
 },
 /**
- * Self-update: pull the new binary from the CDN, swap it in place of the
- * running one (rename the live exe aside first, Windows allows that but
- * not overwriting), bump the local version marker, restart.
+ * Self-update: pull the new binary from the GitHub release for the version
+ * config.ini names, check it against the signed manifest, swap it in place
+ * of the running one (rename the live exe aside first, Windows allows that
+ * but not overwriting), bump the local version marker, restart.
  */
 async updateLauncher() : Promise<Result<null, AppError>> {
     try {
@@ -817,6 +818,14 @@ proton_path: string;
  * Base URL of the account portal (serves web/api.php).
  */
 play_base: string; cdn_base: string; 
+/**
+ * Where launcher binaries are published: GitHub Releases, one tag per
+ * version, so a self-update pulls `{launcher_base}/v{version}/ef-launcher.exe`
+ * (or `.AppImage`) and checks it against the signed manifest on the CDN
+ * like any other payload. Not drawn in Settings; edit settings.json to
+ * point a build at a fork.
+ */
+launcher_base: string; 
 /**
  * HTTPS endpoint that validates a live session → username.
  * The in-game server host the injector connects to is derived from this.

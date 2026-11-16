@@ -33,3 +33,12 @@ fn legacy_marker_and_no_marker() {
     assert!(!marker_suppresses(Some("3.5.5"), "3.5.6", || None));
     assert!(!marker_suppresses(None, "3.5.6", || None));
 }
+
+#[test]
+fn a_release_asset_url_is_the_tag_folder_under_the_base() {
+    assert_eq!(
+        release_asset_url("https://github.com/ElementalFracture/elementalfracture-launcher/releases/download/", "3.6.2", "ef-launcher.exe"),
+        "https://github.com/ElementalFracture/elementalfracture-launcher/releases/download/v3.6.2/ef-launcher.exe"
+    );
+    assert_eq!(release_asset_url("http://localhost:8787/releases", "3.6.2", "ef-launcher.AppImage"), "http://localhost:8787/releases/v3.6.2/ef-launcher.AppImage");
+}

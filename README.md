@@ -193,18 +193,19 @@ on `workflow_dispatch` and version tags.
 ### Packaging (from Linux)
 
 Release version comes from `src-tauri/Cargo.toml` + `tauri.conf.json` +
-`package.json` (`scripts/release.sh` bumps all three; keep them identical); a release means uploading the matching binary AND setting the
-same number in the CDN `config.ini`.
+`package.json` (`scripts/release.sh` bumps all three; keep them identical). A
+release is a GitHub Release tagged `v<version>` carrying the exe, the AppImage
+and the MSI, plus the same number in `LauncherVersion` of the CDN's
+`config.ini`, plus a re-signed manifest. See **Publishing** below.
 
-**MSI** (needs `msitools`): bundles the exe + `WebView2Loader.dll`, installs
-per-user to `%LocalAppData%\Programs\Elemental Fracture` (no elevation, so
-self-update can swap the binary), Start Menu shortcut included.
+**MSI** (needs `msitools`): the install wizard (Welcome, Terms of Service,
+folder, progress) around the exe + `WebView2Loader.dll`, installing per-user
+to `%LocalAppData%\Programs\Elemental Fracture` (no elevation, so self-update
+can swap the binary), Start Menu shortcut included. `release.sh` builds it;
+by hand:
 
 ```sh
-wixl -a x64 -D Version=1.0.0 \
-  -D ExeSource=path/to/ef-launcher.exe \
-  -D DllSource=dist/windows/WebView2Loader.dll \
-  -o ElementalFractureInstall.msi packaging/ElementalFractureInstall.wxs
+scripts/build-msi.sh --version 3.7.0 --exe path/to/ef-launcher.exe -o InstallElementalFracture.msi
 ```
 
 **AppImage** (needs `cargo-tauri`; bundles webkit/gtk via linuxdeploy):
@@ -216,8 +217,11 @@ APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=true cargo tauri build --bundles appimage
 ```
 
 Self-update on Linux replaces the `.AppImage` file itself (`$APPIMAGE`),
-pulling `{cdn}/launcher/ef-launcher.AppImage`; plain binaries and Windows
-pull `ef-launcher`/`ef-launcher.exe` and swap in place.
+pulling `ef-launcher.AppImage` from the GitHub Release for the version
+`config.ini` names; Windows pulls `ef-launcher.exe` the same way and swaps in
+place. The URL root is the `launcher_base` setting
+(`https://github.com/ElementalFracture/elementalfracture-launcher/releases/download`),
+so a fork can point its builds at its own releases.
 
 The AppImage inherits the **glibc of the box that built it** (linuxdeploy
 bundles gtk/webkit, not libc). Build it on Ubuntu 22.04 (glibc 2.35, the
@@ -225,11 +229,34 @@ bundles gtk/webkit, not libc). Build it on Ubuntu 22.04 (glibc 2.35, the
 that floor, because a build from a newer distro fails on every LTS and the
 Steam Deck with `GLIBC_2.4x not found`.
 
+### Publishing
+
+```sh
+# in the Humble-ROS2 toolbox: bump, build, stage
+bash scripts/release.sh 3.7.0
+git add -A && git commit -m "Launcher v3.7.0" && git push origin main
+# on the host (needs ~/.config/ef-release/github.token, the mc alias and the release key)
+bash scripts/release.sh 3.7.0 --upload-only
+```
+
+`--upload` / `--upload-only` runs `scripts/github-release.sh`, which creates the
+release `v<version>` at HEAD and uploads the three assets (re-running replaces
+them), then writes `LauncherVersion` into the CDN's `config.ini` and re-signs
+the manifest. Download links that never change:
+
+- `https://github.com/ElementalFracture/elementalfracture-launcher/releases/latest/download/InstallElementalFracture.msi`
+- `https://github.com/ElementalFracture/elementalfracture-launcher/releases/latest/download/ef-launcher.AppImage`
+- `.../releases/download/v<version>/<asset>` for any past version.
+
+Launchers older than 3.6.2 self-update from the CDN's `launcher/` folder, so
+until they are gone `EF_CDN_MIRROR=1` (the default) also copies the exe and
+AppImage there. Set `EF_CDN_MIRROR=0` to stop.
+
 ### Release integrity
 
 Every payload the launcher downloads (base game, balance patch, playtest pak,
-`mod.zip`, the launcher binaries, the umu runtime tarball) has to hash to an
-entry in `{cdn}/launcher/manifest.json`, and that manifest has to carry a valid
+`mod.zip`, the launcher binaries from the GitHub Release, the umu runtime
+tarball) has to hash to an entry in `{cdn}/launcher/manifest.json`, and that manifest has to carry a valid
 ed25519 signature (`manifest.json.sig`) from a key compiled into the launcher
 (`RELEASE_KEYS` in `download/manifest.rs`). No entry, no signature, or a bad
 hash: the install is refused and nothing on disk is touched. The manifest's
@@ -260,12 +287,18 @@ on the hash check above, which is what makes trusting partial bytes safe.
 ## Repo layout
 
 ```
-ui/                     Frontend (HTML/CSS/JS + assets)
+ui/                     Frontend (React + TypeScript, assets, locales, tests)
 src-tauri/              Rust core, Tauri config, icons
-  src/                    Command modules
+  src/                    Command modules (download/, game/, steam/, ...)
   .cargo/config.toml      Windows cross-compile linker
-.github/workflows/      CI build
+scripts/                release.sh, github-release.sh, sign-manifest.sh, build-msi.sh
+packaging/              Install wizard (WiX sources, art, ToS) and WebView2Loader.dll
+test-env/               Local stand-in for the backend and CDN (npm run test-env)
+.github/workflows/      CI: checks on every push, bundle builds on main and tags
 ```
+
+The CDN itself (Cloudflare worker, the BR spoke, the base-archive parts
+publisher) lives in the infrastructure repo under `cdn/`.
 
 ## License
 

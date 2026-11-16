@@ -8,6 +8,8 @@ export function makeSettings(over: Partial<Settings> = {}): Settings {
     proton_path: "",
     play_base: "https://play.elefrac.com",
     cdn_base: "https://cdn.elefrac.com",
+    launcher_base:
+      "https://github.com/ElementalFracture/elementalfracture-launcher/releases/download",
     auth_url: "https://play.elefrac.com/auth",
     players_url: "https://play.elefrac.com/players",
     username: "Lytion",

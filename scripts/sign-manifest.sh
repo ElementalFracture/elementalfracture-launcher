@@ -41,11 +41,11 @@ while [ $# -gt 0 ]; do
 done
 
 # Every CDN object the launcher downloads. Keys are the CDN-relative paths the
-# launcher looks up (install.rs, mods.rs, self_update.rs). Keep this exhaustive:
-# a payload that isn't listed is a payload the launcher will refuse.
+# launcher looks up (install.rs, mods.rs). Keep this exhaustive: a payload that
+# isn't listed is a payload the launcher will refuse. The launcher binaries are
+# keyed `launcher/<name>` too but come from GitHub Releases (self_update.rs);
+# they are hashed from the release for LAUNCHER_VERSION below.
 PAYLOADS=(
-    launcher/ef-launcher.AppImage
-    launcher/ef-launcher.exe
     game/elefracbase.zip
     patch/latest.zip
     patch/dev.zip
@@ -58,6 +58,12 @@ PAYLOADS=(
 OPTIONAL_PAYLOADS=(
     patch/mod/mod-dev.zip
 )
+# Launcher binaries: the GitHub Release tagged v<LauncherVersion>; the launcher
+# keys them as launcher/<asset name> (self_update.rs). Versioned release URLs
+# never change, so the hash cache is keyed by URL.
+GITHUB_REPO="${EF_GITHUB_REPO:-ElementalFracture/elementalfracture-launcher}"
+LAUNCHER_ASSETS=(ef-launcher.AppImage ef-launcher.exe)
+
 # The umu runtime is fetched from GitHub, not the CDN; the launcher keys it as
 # runtime/<file name> (runtime.rs). Read the pinned URL out of the source so the
 # two can't drift.
@@ -128,8 +134,11 @@ for p in "${OPTIONAL_PAYLOADS[@]}"; do
     fi
 done
 ENTRIES+=("runtime/$(basename "$UMU_URL")=$(hash_url "$UMU_URL")")
+for a in "${LAUNCHER_ASSETS[@]}"; do
+    ENTRIES+=("launcher/$a=$(hash_url "https://github.com/$GITHUB_REPO/releases/download/v$LAUNCHER_VERSION/$a")")
+done
 
-# The base archive's parts (scripts/publish-base-parts.sh): each part is a payload in its own right (its name
+# The base archive's parts (ef-docker cdn/scripts/publish-base-parts.sh): each part is a payload in its own right (its name
 # is its hash, and the launcher checks the bytes against the manifest entry, not the name), and the ordered
 # list goes under "parts" so launcher >= 3.5 can reassemble. An index older than the archive (ETag drifted)
 # is ignored with a warning: the manifest then simply has no parts and launchers fetch the whole archive.
@@ -158,7 +167,7 @@ EOF
         done
     fi
 else
-    echo "    no base-archive parts index on the CDN (scripts/publish-base-parts.sh); whole archive only" >&2
+    echo "    no base-archive parts index on the CDN (ef-docker cdn/scripts/publish-base-parts.sh); whole archive only" >&2
 fi
 
 # The manifest bytes are what gets signed, so they are written once and never

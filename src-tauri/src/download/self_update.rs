@@ -41,7 +41,7 @@ fn file_sha256(path: &std::path::Path) -> Option<String> {
     Some(hex(&hasher.finalize()))
 }
 
-/// What a self-update actually replaces, and the CDN file it pulls.
+/// What a self-update actually replaces, and the release asset it pulls.
 /// A plain binary swaps itself; an AppImage's mount is read-only, so we
 /// swap the .AppImage file it was launched from ($APPIMAGE, set by the
 /// AppImage runtime).
@@ -51,6 +51,12 @@ fn update_target() -> AppResult<(PathBuf, &'static str)> {
     }
     let exe = std::env::current_exe()?;
     Ok((exe, if cfg!(windows) { "ef-launcher.exe" } else { "ef-launcher" }))
+}
+
+/// `{launcher_base}/v{version}/{asset}`: GitHub's permanent URL for a release
+/// asset, which `releases/latest/download/` mirrors for the newest one.
+fn release_asset_url(base: &str, version: &str, asset: &str) -> String {
+    format!("{}/v{version}/{asset}", base.trim_end_matches('/'))
 }
 
 #[derive(Serialize, specta::Type)]
@@ -84,8 +90,8 @@ fn self_update_checked() -> bool {
     !cfg!(debug_assertions) || opt_in(std::env::var("EF_LAUNCHER_UPDATE").ok().as_deref())
 }
 
-/// Compare this launcher against {cdn}/launcher/version.txt. Also cleans up
-/// the .old binary a previous self-update left behind.
+/// Compare this launcher against LauncherVersion in {cdn}/launcher/config.ini.
+/// Also cleans up the .old binary a previous self-update left behind.
 #[tauri::command]
 #[specta::specta]
 pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
@@ -115,9 +121,10 @@ pub async fn get_launcher_update(app: tauri::AppHandle) -> LauncherUpdateInfo {
     LauncherUpdateInfo { current, remote, update, checked: true, game_running: crate::steam::game_running() }
 }
 
-/// Self-update: pull the new binary from the CDN, swap it in place of the
-/// running one (rename the live exe aside first, Windows allows that but
-/// not overwriting), bump the local version marker, restart.
+/// Self-update: pull the new binary from the GitHub release for the version
+/// config.ini names, check it against the signed manifest, swap it in place
+/// of the running one (rename the live exe aside first, Windows allows that
+/// but not overwriting), bump the local version marker, restart.
 #[tauri::command]
 #[specta::specta]
 pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
@@ -133,6 +140,7 @@ pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
 
     let s = settings::load(&app);
     let cdn = s.cdn_base.trim_end_matches('/').to_string();
+    let releases = s.launcher_base.trim_end_matches('/').to_string();
     let client = http()?;
     let remote = fetch_remote_launcher_version(&client, &cdn)
         .await
@@ -140,10 +148,12 @@ pub async fn update_launcher(app: tauri::AppHandle) -> AppResult<()> {
     let manifest = fetch_manifest(&app, &client, &cdn).await?;
 
     let (exe, binary) = update_target()?;
+    // The manifest keys launcher binaries as `launcher/<name>` (sign-manifest.sh
+    // hashes the release assets); the bytes come from the release itself.
     let key = format!("launcher/{binary}");
     let staged = exe.with_extension("new");
     let sha = manifest.hash_for(&key)?.to_string();
-    download_to_file(&app, "download-launcher", &format!("{cdn}/{key}"), &staged, &sha).await?;
+    download_to_file(&app, "download-launcher", &release_asset_url(&releases, &remote, binary), &staged, &sha).await?;
     let _ = fs::remove_file(state_path(&staged));
 
     let size = fs::metadata(&staged).map(|m| m.len()).unwrap_or(0);
